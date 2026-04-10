@@ -7,6 +7,7 @@ import { loadConfig } from '../../config.js'
 import { HardwareProbe } from '../../system/hardware.js'
 import { VibeVoiceClient } from '../../voice/vibevoice.js'
 import { restartServer } from './system-restart.js'
+import { scanHardware, recommendModels } from '../../models/hardware-scan.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -205,5 +206,12 @@ export async function systemRoutes(fastify: FastifyInstance) {
         console.error('[update] failed. Error code:', e.status, e.message)
       }
     }, 500)
+  })
+
+  // GET /api/admin/hardware-scan — scan hardware and recommend Ollama models
+  fastify.get('/api/admin/hardware-scan', async (_req, reply) => {
+    const hardware = scanHardware(config.dataDir)
+    const recommendations = recommendModels(hardware)
+    return reply.send({ hardware, recommendations })
   })
 }
