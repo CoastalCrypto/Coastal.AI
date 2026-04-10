@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 describe('scanHardware', () => {
-  beforeEach(() => vi.resetModules())
-  afterEach(() => vi.restoreAllMocks())
+  beforeEach(() => { vi.resetModules() })
+  afterEach(() => { vi.restoreAllMocks() })
 
   it('reads RAM and GPU from Linux /proc/meminfo + nvidia-smi', async () => {
     const procMeminfo = [
