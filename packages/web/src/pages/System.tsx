@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { coreClient, type SystemStats } from '../api/client'
+import { coreClient, type SystemStats, type HardwareScan, type ModelRecommendation } from '../api/client'
 import { NavBar, type NavPage } from '../components/NavBar'
 
 function fmtBytes(b: number): string {
@@ -82,6 +82,18 @@ export function System({ onNav }: { onNav: (page: NavPage) => void }) {
     const id = setInterval(checkUpdate, 24 * 60 * 60 * 1000) // recheck daily
     return () => clearInterval(id)
   }, [checkUpdate])
+
+  const [hwScan, setHwScan] = useState<HardwareScan | null>(null)
+  const [hwLoading, setHwLoading] = useState(false)
+  const [hwError, setHwError] = useState('')
+
+  useEffect(() => {
+    setHwLoading(true)
+    coreClient.getHardwareScan()
+      .then(setHwScan)
+      .catch(() => setHwError('Hardware scan unavailable'))
+      .finally(() => setHwLoading(false))
+  }, [])
 
   useEffect(() => { fetchLogs(logService) }, [logService, fetchLogs])
 
@@ -220,6 +232,51 @@ export function System({ onNav }: { onNav: (page: NavPage) => void }) {
             )}
           </div>
         )}
+
+        {/* Hardware + Model Recommendations */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-3">Hardware &amp; Model Recommendations</h2>
+          {hwLoading && <p className="text-gray-500 text-sm font-mono">Scanning hardware...</p>}
+          {hwError && <p className="text-red-400 text-sm">{hwError}</p>}
+          {hwScan && (
+            <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 space-y-4">
+              {/* Hardware summary */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm font-mono">
+                <div><span className="text-gray-500">RAM</span><br /><span className="text-white">{hwScan.hardware.ramGb} GB</span></div>
+                <div><span className="text-gray-500">Free</span><br /><span className="text-white">{hwScan.hardware.freeRamGb} GB</span></div>
+                <div><span className="text-gray-500">CPU</span><br /><span className="text-white">{hwScan.hardware.cpuCores} cores</span></div>
+                <div><span className="text-gray-500">VRAM</span><br /><span className="text-white">{hwScan.hardware.vramGb != null ? `${hwScan.hardware.vramGb} GB` : 'None'}</span></div>
+                {hwScan.hardware.gpuName && (
+                  <div className="col-span-2"><span className="text-gray-500">GPU</span><br /><span className="text-white">{hwScan.hardware.gpuName}</span></div>
+                )}
+                <div className="col-span-2"><span className="text-gray-500">Disk free</span><br /><span className="text-white">{hwScan.hardware.diskFreeGb} GB</span></div>
+              </div>
+
+              {/* Model recommendations */}
+              <div className="space-y-2">
+                {hwScan.recommendations.map((rec: ModelRecommendation) => (
+                  <div key={rec.tier} className="flex items-center gap-3 p-3 rounded border border-gray-800 bg-gray-950">
+                    <span className={`text-xs font-mono px-2 py-0.5 rounded ${
+                      rec.tier === 'optimal'      ? 'bg-green-900/50 text-green-400 border border-green-800' :
+                      rec.tier === 'recommended'  ? 'bg-cyan-900/50 text-cyan-400 border border-cyan-800' :
+                                                    'bg-gray-800 text-gray-400 border border-gray-700'
+                    }`}>{rec.tier}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-mono text-white truncate">{rec.model}</div>
+                      <div className="text-xs text-gray-500">{rec.reason} · {rec.sizeGb} GB</div>
+                    </div>
+                    <button
+                      onClick={() => coreClient.pullOllamaModel(rec.model, crypto.randomUUID())}
+                      className="text-xs px-3 py-1.5 bg-cyan-900/30 hover:bg-cyan-900/60 border border-cyan-800 text-cyan-400 rounded font-mono transition-colors flex-shrink-0"
+                    >
+                      Install
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Log viewer */}
         <div>
