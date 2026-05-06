@@ -12,6 +12,7 @@ import Database from 'better-sqlite3'
 import { openArchitectDb } from '@coastal-ai/core/architect/db'
 import { WorkItemStore } from '@coastal-ai/core/architect/store'
 import { CycleStore } from '@coastal-ai/core/architect/cycle-store'
+import { UserProfileStore } from '@coastal-ai/core/architect/user-profile/store'
 import { ArchitectDaemon } from './daemon.js'
 import { runPlanningStage } from './stages/planning.js'
 import { runBuildingStage } from './stages/building.js'
@@ -216,6 +217,11 @@ async function main(): Promise<void> {
       dailyBudget: Number(process.env.CC_CURRICULUM_DAILY_BUDGET ?? '1'),
     })
 
+    // Profile store reads the seven preference knobs (test_strictness,
+    // tone, etc.) per cycle so live edits via /api/admin/architect/user-profile
+    // take effect on the next cycle without a daemon restart.
+    const userProfileStore = new UserProfileStore(architectDb)
+
     const daemon = new ArchitectDaemon({
       workStore: new WorkItemStore(architectDb),
       cycleStore: new CycleStore(architectDb),
@@ -236,6 +242,7 @@ async function main(): Promise<void> {
         const { branchName, diff } = input
         const touchedPkgs = findTouchedPackages(diff, workspaceMap)
         const gateOpts = { cwd: REPO_ROOT, exec: execGate }
+        const profile = userProfileStore.getDefault()
         return runBuildingStage({
           diff,
           applyDiff: async (d) => {
@@ -246,6 +253,7 @@ async function main(): Promise<void> {
           runTypecheck: () => runTypeGate(touchedPkgs, gateOpts),
           runBuild:     () => runBuildGate(touchedPkgs, gateOpts),
           runTests:     () => runTestGate(touchedPkgs, gateOpts),
+          testStrictness: profile.testStrictness,
         })
       },
 

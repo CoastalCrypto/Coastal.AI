@@ -26,6 +26,10 @@
       "types": "./dist/architect/cycle-store.d.ts",
       "default": "./dist/architect/cycle-store.js"
     },
+    "./architect/user-profile/store": {
+      "types": "./dist/architect/user-profile/store.d.ts",
+      "default": "./dist/architect/user-profile/store.js"
+    },
     "./architect/dedup": {
       "types": "./dist/architect/dedup.d.ts",
       "default": "./dist/architect/dedup.js"

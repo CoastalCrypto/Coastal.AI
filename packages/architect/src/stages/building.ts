@@ -1,3 +1,5 @@
+import type { TestStrictness } from '@coastal-ai/core/architect/user-profile/store'
+
 export interface GateOutput { ok: boolean; output: string }
 
 export interface BuildingInput {
@@ -7,6 +9,9 @@ export interface BuildingInput {
   runTypecheck: () => Promise<GateOutput>
   runBuild: () => Promise<GateOutput>
   runTests: () => Promise<GateOutput>
+  // Reads from user_profile.test_strictness. Omitted = 'must-pass' (current
+  // behavior), so existing callers and tests are unaffected.
+  testStrictness?: TestStrictness
 }
 
 export type BuildingResult =
@@ -33,9 +38,25 @@ export async function runBuildingStage(input: BuildingInput): Promise<BuildingRe
   if (!build.ok) return { kind: 'soft_fail', failureKind: 'build', message: trunc(build.output) }
 
   const tests = await input.runTests()
-  if (!tests.ok) return { kind: 'soft_fail', failureKind: 'test', message: trunc(tests.output) }
+  if (tests.ok) return { kind: 'ok', testSummary: tests.output.slice(0, 500) }
 
-  return { kind: 'ok', testSummary: tests.output.slice(0, 500) }
+  // Tests failed. Strictness controls whether the cycle revises, warns, or
+  // ignores. 'must-pass' is the safe default for unset/legacy callers.
+  const strictness: TestStrictness = input.testStrictness ?? 'must-pass'
+  switch (strictness) {
+    case 'must-pass':
+      return { kind: 'soft_fail', failureKind: 'test', message: trunc(tests.output) }
+    case 'warn':
+      return {
+        kind: 'ok',
+        testSummary: `[WARN] tests failed (test_strictness=warn): ${tests.output.slice(0, 460)}`,
+      }
+    case 'advisory':
+      return {
+        kind: 'ok',
+        testSummary: `[ADVISORY] tests failed but did not block: ${tests.output.slice(0, 450)}`,
+      }
+  }
 }
 
 function trunc(s: string): string {
