@@ -16,9 +16,11 @@ import { architectInsightRoutes } from './api/routes/architect-insights.js'
 import { architectReceiptRoutes } from './api/routes/architect-receipts.js'
 import { architectCallbackRoutes } from './api/routes/architect-callbacks.js'
 import { architectSSERoutes } from './api/routes/architect-events-sse.js'
+import { architectUserProfileRoutes } from './api/routes/architect-user-profile.js'
 import { openArchitectDb } from './architect/db.js'
 import { WorkItemStore } from './architect/store.js'
 import { CycleStore } from './architect/cycle-store.js'
+import { UserProfileStore } from './architect/user-profile/store.js'
 import { agentRoutes } from './api/routes/agents.js'
 import { agentMemoryRoutes } from './api/routes/agent-memory.js'
 import { teamRoutes } from './api/routes/team.js'
@@ -170,9 +172,11 @@ export async function buildServer() {
   const architectDb = openArchitectDb(join(config.dataDir, 'architect.db'))
   const architectStore = new WorkItemStore(architectDb)
   const cycleStore = new CycleStore(architectDb)
+  const userProfileStore = new UserProfileStore(architectDb)
   await fastify.register(architectRoutes, { store: architectStore })
   await fastify.register(architectCycleRoutes, { cycleStore, workStore: architectStore })
   await fastify.register(architectControlRoutes, { dataDir: config.dataDir })
+  await fastify.register(architectUserProfileRoutes, { profileStore: userProfileStore })
   await fastify.register(architectInsightRoutes, { cycleStore, workStore: architectStore })
   await fastify.register(architectReceiptRoutes, { cycleStore })
   await fastify.register(architectCallbackRoutes, {
