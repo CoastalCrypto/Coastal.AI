@@ -175,7 +175,7 @@ export async function buildServer() {
   const userProfileStore = new UserProfileStore(architectDb)
   await fastify.register(architectRoutes, { store: architectStore })
   await fastify.register(architectCycleRoutes, { cycleStore, workStore: architectStore })
-  await fastify.register(architectControlRoutes, { dataDir: config.dataDir })
+  await fastify.register(architectControlRoutes, { dataDir: config.dataDir, profileStore: userProfileStore })
   await fastify.register(architectUserProfileRoutes, { profileStore: userProfileStore })
   await fastify.register(architectInsightRoutes, { cycleStore, workStore: architectStore })
   await fastify.register(architectReceiptRoutes, { cycleStore })

@@ -50,7 +50,7 @@ export const PREFERENCE_QUESTIONS: PreferenceQuestion[] = [
       { value: 'low-risk-only', label: 'Low-risk only', rationale: 'Auto-merge tests, docs, and small refactors' },
       { value: 'aggressive',    label: 'Aggressive',    rationale: 'Auto-merge whenever gates pass' },
     ],
-    default: 'low-risk-only',
+    default: 'never',
   },
   {
     id: 'gatePolicy',
@@ -60,7 +60,7 @@ export const PREFERENCE_QUESTIONS: PreferenceQuestion[] = [
       { value: 'plan-only',   label: 'Plan only',   rationale: 'Approve the plan, then it runs' },
       { value: 'merge-only',  label: 'Merge only',  rationale: 'Only ask before opening a PR' },
     ],
-    default: 'plan-only',
+    default: 'every-stage',
   },
   {
     id: 'testStrictness',

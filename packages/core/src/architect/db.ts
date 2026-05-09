@@ -140,9 +140,9 @@ export function openArchitectDb(dbPath: string): Database.Database {
     CREATE TABLE IF NOT EXISTS user_profile (
       id                       TEXT PRIMARY KEY,
       plan_verbosity           TEXT NOT NULL DEFAULT 'standard',
-      auto_approve_threshold   TEXT NOT NULL DEFAULT 'low-risk-only',
+      auto_approve_threshold   TEXT NOT NULL DEFAULT 'never',
       test_strictness          TEXT NOT NULL DEFAULT 'must-pass',
-      gate_policy              TEXT NOT NULL DEFAULT 'plan-only',
+      gate_policy              TEXT NOT NULL DEFAULT 'every-stage',
       tone                     TEXT NOT NULL DEFAULT 'standard',
       iteration_patience       TEXT NOT NULL DEFAULT 'stop-at-budget',
       risk_posture             TEXT NOT NULL DEFAULT 'balanced',

@@ -330,11 +330,14 @@ async function main(): Promise<void> {
       },
 
       isApprovalRequired: (gate) => {
-        const modeFile = join(DATA_DIR, '.architect-mode')
-        if (!existsSync(modeFile)) return false
-        const mode = readFileSync(modeFile, 'utf8').trim()
-        if (mode === 'manual') return true
-        if (mode === 'semi' && gate === 'pr') return true
+        // Pre-v1.6 this read a stale .architect-mode file with a vocabulary
+        // ('manual'/'semi') that didn't match what the route wrote, so it
+        // was effectively a no-op. v1.6 sources gating from the user_profile
+        // gate_policy knob, which the mode endpoint now fans out to.
+        const policy = userProfileStore.getDefault().gatePolicy
+        if (policy === 'every-stage') return true
+        if (policy === 'plan-only')   return gate === 'plan'
+        if (policy === 'merge-only')  return gate === 'pr'
         return false
       },
 
