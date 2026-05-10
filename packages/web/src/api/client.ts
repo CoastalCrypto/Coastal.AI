@@ -90,6 +90,44 @@ export interface Session {
   updated_at: number
 }
 
+// Mirrors the seven architect user_profile knobs. Keep in sync with
+// packages/core/src/architect/user-profile/store.ts — column enums.
+export type PlanVerbosity = 'brief' | 'standard' | 'detailed'
+export type AutoApproveThreshold = 'never' | 'low-risk-only' | 'aggressive'
+export type TestStrictness = 'must-pass' | 'warn' | 'advisory'
+export type GatePolicy = 'every-stage' | 'plan-only' | 'merge-only'
+export type Tone = 'terse' | 'standard' | 'explanatory'
+export type IterationPatience = 'stop-at-2' | 'stop-at-5' | 'stop-at-budget'
+export type RiskPosture = 'conservative' | 'balanced' | 'experimental'
+
+export interface UserProfile {
+  id: string
+  planVerbosity: PlanVerbosity
+  autoApproveThreshold: AutoApproveThreshold
+  testStrictness: TestStrictness
+  gatePolicy: GatePolicy
+  tone: Tone
+  iterationPatience: IterationPatience
+  riskPosture: RiskPosture
+  createdAt: number
+  updatedAt: number
+}
+
+export type UserProfilePatch = Partial<Omit<UserProfile, 'id' | 'createdAt' | 'updatedAt'>>
+
+export interface PreferenceOption {
+  value: string
+  label: string
+  rationale: string
+}
+
+export interface PreferenceQuestion {
+  id: keyof UserProfilePatch
+  prompt: string
+  options: PreferenceOption[]
+  default: string
+}
+
 export class CoreClient {
   private baseUrl: string
   private sessionToken: string | undefined
@@ -571,6 +609,31 @@ export class CoreClient {
     const res = await fetch(`${this.baseUrl}/api/admin/architect/receipts`, { headers: this.adminHeaders() })
     this.checkAuth(res)
     if (!res.ok) throw new Error(`Receipts failed (${res.status})`)
+    return res.json()
+  }
+
+  async architectGetUserProfile(): Promise<UserProfile> {
+    const res = await fetch(`${this.baseUrl}/api/admin/architect/user-profile`, { headers: this.adminHeaders() })
+    this.checkAuth(res)
+    if (!res.ok) throw new Error(`User profile fetch failed (${res.status})`)
+    return res.json()
+  }
+
+  async architectUpdateUserProfile(patch: UserProfilePatch): Promise<UserProfile> {
+    const res = await fetch(`${this.baseUrl}/api/admin/architect/user-profile`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...this.adminHeaders() },
+      body: JSON.stringify(patch),
+    })
+    this.checkAuth(res)
+    if (!res.ok) await this.extractError(res, `User profile update failed (${res.status})`)
+    return res.json()
+  }
+
+  async architectGetWizardQuestions(): Promise<{ questions: PreferenceQuestion[] }> {
+    const res = await fetch(`${this.baseUrl}/api/admin/architect/user-profile/questions`, { headers: this.adminHeaders() })
+    this.checkAuth(res)
+    if (!res.ok) throw new Error(`Wizard questions fetch failed (${res.status})`)
     return res.json()
   }
 
