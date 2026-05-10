@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync } from 'node:fs'
+import { mkdtempSync, rmSync, writeFileSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import Fastify, { type FastifyInstance } from 'fastify'
@@ -43,14 +43,6 @@ describe('GET /api/admin/architect/status', () => {
     const res = await app.inject({ method: 'GET', url: '/api/admin/architect/status' })
     expect(res.statusCode).toBe(200)
     expect(JSON.parse(res.body).power).toBe('on')
-  })
-
-  it("derives mode from the profile, not the legacy .architect-mode file", async () => {
-    // Write a misleading file — the new derivation should ignore it entirely.
-    writeFileSync(join(tempDir, '.architect-mode'), JSON.stringify({ mode: 'autopilot' }))
-    const res = await app.inject({ method: 'GET', url: '/api/admin/architect/status' })
-    const body = JSON.parse(res.body)
-    expect(body.mode).toBe('hands-on') // from profile, not file
   })
 
   it("returns 'custom' when a mode-controlled knob drifts off-preset", async () => {
@@ -123,16 +115,6 @@ describe('POST /api/admin/architect/mode', () => {
       payload: { mode: 'invalid-mode' },
     })
     expect(res.statusCode).toBe(400)
-  })
-
-  it('still writes the legacy .architect-mode file for backward compat', async () => {
-    await app.inject({
-      method: 'POST', url: '/api/admin/architect/mode',
-      payload: { mode: 'autopilot' },
-    })
-    const file = join(tempDir, '.architect-mode')
-    expect(existsSync(file)).toBe(true)
-    expect(JSON.parse(readFileSync(file, 'utf8')).mode).toBe('autopilot')
   })
 
   it('accepts all four valid mode values', async () => {

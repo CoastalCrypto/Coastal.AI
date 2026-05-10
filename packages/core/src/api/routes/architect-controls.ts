@@ -9,10 +9,8 @@ import {
 
 export interface ControlRouteDeps {
   dataDir: string
-  // Profile store is the single source of truth for `mode`. The legacy
-  // .architect-mode JSON file is still written for backward compat with
-  // any out-of-band tooling, but no production code reads it anymore —
-  // see deriveMode() for what GET /status reflects.
+  // Profile store is the single source of truth for `mode`. GET /status
+  // derives the mode name from the engagement-axis knobs via deriveMode().
   profileStore: UserProfileStore
 }
 
@@ -22,7 +20,6 @@ const modeSchema = z.object({
 
 export async function architectControlRoutes(app: FastifyInstance, deps: ControlRouteDeps): Promise<void> {
   const { dataDir, profileStore } = deps
-  const modeFile = join(dataDir, '.architect-mode')
   const pidFile = join(dataDir, '.architect-pid')
 
   function getState(): { power: 'on' | 'off'; mode: ModeOrCustom } {
@@ -51,10 +48,8 @@ export async function architectControlRoutes(app: FastifyInstance, deps: Control
     if (!parsed.success) return reply.code(400).send({ error: 'invalid_payload', details: parsed.error.flatten() })
     const { mode } = parsed.data
 
-    // Fan out the preset into the profile (no-op for 'custom'). Profile
-    // is now the source of truth; the file write below is compat ballast.
+    // Fan out the preset into the profile (no-op for 'custom').
     applyMode(profileStore, 'default', mode)
-    writeFileSync(modeFile, JSON.stringify({ mode, updatedAt: Date.now() }))
 
     return { ok: true, mode }
   })

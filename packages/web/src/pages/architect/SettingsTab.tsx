@@ -37,7 +37,7 @@ export function SettingsTab({ onStatusChange }: { onStatusChange: (s: any) => vo
     try {
       await coreClient.architectSetPower(state)
       await refreshStatus()
-    } catch {} finally { setActing(false) }
+    } catch { /* best-effort UI action — keep last-known state on failure */ } finally { setActing(false) }
   }
 
   const setMode = async (mode: string) => {
@@ -51,7 +51,7 @@ export function SettingsTab({ onStatusChange }: { onStatusChange: (s: any) => vo
         coreClient.architectGetUserProfile(),
       ])
       setStatus(s); setProfile(p); onStatusChange(s)
-    } catch {} finally { setActing(false) }
+    } catch { /* best-effort UI action — keep last-known state on failure */ } finally { setActing(false) }
   }
 
   const setKnob = async (key: keyof UserProfilePatch, value: string) => {
@@ -63,12 +63,12 @@ export function SettingsTab({ onStatusChange }: { onStatusChange: (s: any) => vo
       // The change may have moved us off (or back onto) a mode preset;
       // refresh status so the Custom badge reflects current truth.
       await refreshStatus()
-    } catch {} finally { setSavingKnob('') }
+    } catch { /* knob update failed — leave the row showing the previous value */ } finally { setSavingKnob('') }
   }
 
   const runNow = async () => {
     setActing(true)
-    try { await coreClient.architectRunNow() } catch {} finally { setActing(false) }
+    try { await coreClient.architectRunNow() } catch { /* best-effort UI action */ } finally { setActing(false) }
   }
 
   if (loading) return <div className="animate-pulse font-mono text-xs text-cyan-400/60">loading settings...</div>
