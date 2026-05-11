@@ -10,7 +10,14 @@
 // already carries `allowSelfModify: boolean` and a non-nullable `budgetLoc:
 // number`, so the plan body is used as-written without field substitutions.
 import type { WorkItem } from '@coastal-ai/core/architect/types'
+import { registerPrompt, getPrompt } from '@coastal-ai/core/prompts/registry'
 import type { ArchitectModelRouterClient } from '../model-router-client.js'
+import { plannerPromptV1 } from '../prompts/planner.v1.js'
+
+// Register the planner prompt with the core registry on module load.
+// idempotent — registry refuses duplicate (id, version) but accepts the
+// SAME definition object so re-imports during HMR / tests don't blow up.
+registerPrompt(plannerPromptV1)
 
 export interface PlanningInput {
   workItem: WorkItem
@@ -68,7 +75,16 @@ export async function runPlanningStage(input: PlanningInput): Promise<PlanningRe
     ? `\n\nDESIGN SYSTEM (respect existing tokens + idioms — do not introduce new ones)\n${designContext.slice(0, 8000)}\n`
     : ''
 
-  const prompt = buildPlannerPrompt(workItem, sourceSnippets.join('\n\n'), reviseBlock + impactBlock + designBlock)
+  const planner = getPrompt<import('../prompts/planner.v1.js').PlannerPromptVars>('planner', 1)
+  const prompt = planner.render({
+    title: workItem.title,
+    body: workItem.body,
+    targetHints: (workItem.targetHints ?? []).join(', ') || '(none)',
+    acceptance: workItem.acceptance ?? '(none)',
+    budgetLoc: workItem.budgetLoc,
+    sources: sourceSnippets.join('\n\n') || '(none provided)',
+    reviseBlock: reviseBlock + impactBlock + designBlock,
+  })
 
   let text: string
   let modelUsed: string
@@ -106,30 +122,6 @@ export async function runPlanningStage(input: PlanningInput): Promise<PlanningRe
   }
 
   return { kind: 'ok', plan, diff, modelUsed }
-}
-
-function buildPlannerPrompt(item: WorkItem, sources: string, reviseBlock: string): string {
-  return `You are the Coastal.AI Architect. Produce one plan and one unified-diff change for this work item.
-
-WORK ITEM
-Title: ${item.title}
-Body: ${item.body}
-Target hints: ${(item.targetHints ?? []).join(', ') || '(none)'}
-Acceptance: ${item.acceptance ?? '(none)'}
-Budget: ${item.budgetLoc} added lines max
-
-SOURCE FILES
-${sources || '(none provided)'}
-${reviseBlock}
-INSTRUCTIONS
-- Output exactly: <plan>...</plan><diff>\`\`\`diff
-  ...unified diff...
-\`\`\`</diff>
-- Plan: 2-5 sentences, prose, what you'll change and why.
-- Diff: standard unified format, may touch multiple files.
-- Keep added LOC under the budget.
-- Do not modify unrelated code.
-`
 }
 
 function extractTouchedPaths(diff: string): string[] {

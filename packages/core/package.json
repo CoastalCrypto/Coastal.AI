@@ -73,6 +73,18 @@
     "./memory/design-context": {
       "types": "./dist/memory/design-context.d.ts",
       "default": "./dist/memory/design-context.js"
+    },
+    "./prompts/registry": {
+      "types": "./dist/prompts/registry.d.ts",
+      "default": "./dist/prompts/registry.js"
+    },
+    "./prompts/eval-runner": {
+      "types": "./dist/prompts/eval-runner.d.ts",
+      "default": "./dist/prompts/eval-runner.js"
+    },
+    "./prompts/eval-notes": {
+      "types": "./dist/prompts/eval-notes.d.ts",
+      "default": "./dist/prompts/eval-notes.js"
     }
   },
   "bin": {

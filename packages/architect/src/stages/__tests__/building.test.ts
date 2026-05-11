@@ -155,4 +155,48 @@ describe('runBuildingStage', () => {
       }
     })
   })
+
+  describe('eval gate (optional)', () => {
+    const passingGates = {
+      ...baseDeps,
+      applyDiff: vi.fn().mockResolvedValue(undefined),
+      runLint: vi.fn().mockResolvedValue({ ok: true, output: '' }),
+      runTypecheck: vi.fn().mockResolvedValue({ ok: true, output: '' }),
+      runBuild: vi.fn().mockResolvedValue({ ok: true, output: '' }),
+      runTests: vi.fn().mockResolvedValue({ ok: true, output: '4 passed' }),
+    }
+
+    it('skips the eval gate entirely when runEvals is omitted (legacy)', async () => {
+      const result = await runBuildingStage(passingGates as any)
+      expect(result.kind).toBe('ok')
+      if (result.kind === 'ok') expect(result.testSummary).not.toContain('[evals]')
+    })
+
+    it('appends [evals] note to the testSummary on a passing eval gate', async () => {
+      const runEvals = vi.fn().mockReturnValue({ ok: true, output: '3/3 fixtures passing' })
+      const result = await runBuildingStage({ ...passingGates, runEvals } as any)
+      expect(result.kind).toBe('ok')
+      if (result.kind === 'ok') expect(result.testSummary).toContain('[evals] 3/3 fixtures passing')
+    })
+
+    it('soft_fails with kind=eval when the gate fails', async () => {
+      const runEvals = vi.fn().mockReturnValue({ ok: false, output: '1/3 FAILING\n  - bad-fixture' })
+      const result = await runBuildingStage({ ...passingGates, runEvals } as any)
+      expect(result.kind).toBe('soft_fail')
+      if (result.kind === 'soft_fail') {
+        expect(result.failureKind).toBe('eval')
+        expect(result.message).toContain('1/3 FAILING')
+      }
+    })
+
+    it('does NOT run the eval gate when tests fail (no point evaluating broken builds)', async () => {
+      const runEvals = vi.fn()
+      await runBuildingStage({
+        ...passingGates,
+        runTests: vi.fn().mockResolvedValue({ ok: false, output: 'tests failed' }),
+        runEvals,
+      } as any)
+      expect(runEvals).not.toHaveBeenCalled()
+    })
+  })
 })

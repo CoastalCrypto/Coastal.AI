@@ -37,6 +37,10 @@ import { syncMarkdownIngest } from '@coastal-ai/core/memory/markdown-sync'
 import { getDesignContextForTargets } from '@coastal-ai/core/memory/design-context'
 import { scanCodeGraph } from './learnings/code-graph.js'
 import { ingestDesignDocs } from './learnings/design-ingest.js'
+import { runPromptEvals } from './learnings/run-evals.js'
+import { runEvalGate } from './learnings/eval-gate.js'
+import { plannerPromptV1 } from './prompts/planner.v1.js'
+import { PLANNER_FIXTURES } from './prompts/planner.fixtures.js'
 
 const REPO_ROOT    = process.env.CC_REPO_ROOT          ?? process.cwd()
 const DATA_DIR     = process.env.CC_DATA_DIR            ?? join(REPO_ROOT, 'data')
@@ -260,6 +264,25 @@ async function main(): Promise<void> {
       console.warn('[coastal-architect] design ingest failed:', err)
     }
 
+    // Optional planner-prompt eval pass on startup. Opt-in via
+    // CC_ARCHITECT_RUN_EVALS=1 — this issues real LLM calls (one per fixture)
+    // so we don't run it on every cold boot by default. The eval gate
+    // remains active either way; it just reads existing eval notes.
+    if (process.env.CC_ARCHITECT_RUN_EVALS === '1') {
+      try {
+        const summary = await runPromptEvals({
+          prompt: plannerPromptV1,
+          fixtures: PLANNER_FIXTURES,
+          llm: async (prompt) => (await modelClient.callPlan(prompt)).text,
+          store: noteStore,
+          model: OLLAMA_MODEL,
+        })
+        console.log(`[coastal-architect] planner evals: ${summary.passed} passed, ${summary.failed} failed`)
+      } catch (err) {
+        console.warn('[coastal-architect] planner eval run failed:', err)
+      }
+    }
+
     const daemon = new ArchitectDaemon({
       workStore: new WorkItemStore(architectDb),
       cycleStore: new CycleStore(architectDb),
@@ -310,6 +333,11 @@ async function main(): Promise<void> {
           runBuild:     () => runBuildGate(touchedPkgs, gateOpts),
           runTests:     () => runTestGate(touchedPkgs, gateOpts),
           testStrictness: profile.testStrictness,
+          // Eval gate is a pure read against the notes layer — fast, no LLM.
+          // When no eval history exists yet, runEvalGate returns ok=true with
+          // a "skipped" message, so the build pipeline isn't blocked on
+          // fresh installs that haven't run evals.
+          runEvals: () => runEvalGate(noteStore, plannerPromptV1.id, plannerPromptV1.version),
         })
       },
 
