@@ -89,6 +89,10 @@
     "./memory/dom-snapshots": {
       "types": "./dist/memory/dom-snapshots.d.ts",
       "default": "./dist/memory/dom-snapshots.js"
+    },
+    "./memory/visual-diff": {
+      "types": "./dist/memory/visual-diff.d.ts",
+      "default": "./dist/memory/visual-diff.js"
     }
   },
   "bin": {
