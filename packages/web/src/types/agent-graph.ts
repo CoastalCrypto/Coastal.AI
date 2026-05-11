@@ -1,5 +1,5 @@
 export type AgentStatus = 'idle' | 'thinking' | 'executing' | 'error' | 'offline'
-export type NodeType = 'agent' | 'tool' | 'model' | 'channel'
+export type NodeType = 'agent' | 'tool' | 'model' | 'channel' | 'note'
 
 export interface GraphNode {
   id: string
@@ -18,7 +18,7 @@ export interface GraphEdge {
   target: string
   label?: string
   active: boolean
-  edgeType?: 'agent-tool' | 'agent-model' | 'agent-channel' | 'agent-agent'
+  edgeType?: 'agent-tool' | 'agent-model' | 'agent-channel' | 'agent-agent' | 'note-note'
   /** Normalized 0-1 strength derived from interaction history. 1 = heavily used */
   weight?: number
   /** Timestamp of the most recent interaction across this edge */

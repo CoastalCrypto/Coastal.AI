@@ -17,6 +17,7 @@ import { architectReceiptRoutes } from './api/routes/architect-receipts.js'
 import { architectCallbackRoutes } from './api/routes/architect-callbacks.js'
 import { architectSSERoutes } from './api/routes/architect-events-sse.js'
 import { architectUserProfileRoutes } from './api/routes/architect-user-profile.js'
+import { noteRoutes } from './api/routes/notes.js'
 import { openArchitectDb } from './architect/db.js'
 import { WorkItemStore } from './architect/store.js'
 import { CycleStore } from './architect/cycle-store.js'
@@ -208,6 +209,7 @@ export async function buildServer() {
   const sharedSearchMemory = new UnifiedMemory({ dataDir: config.dataDir, mem0ApiKey: config.mem0ApiKey, cloudConsentGranted: config.cloudConsentGranted })
   const sharedKnowledgeStore = new KnowledgeStore(db, sharedContextStore, sharedSearchMemory)
 
+  await fastify.register(noteRoutes, { memory: sharedSearchMemory })
   await fastify.register(uploadRoutes, { knowledgeStore: sharedKnowledgeStore, router: pipelineRouter })
   await fastify.register(streamRoutes, { gate })
   const pipelineBackend = await createBackend(config.agentTrustLevel, [config.agentWorkdir])

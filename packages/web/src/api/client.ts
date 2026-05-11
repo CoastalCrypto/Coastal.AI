@@ -128,6 +128,66 @@ export interface PreferenceQuestion {
   default: string
 }
 
+// ── Notes / knowledge graph ────────────────────────────────────────────────
+// Mirror of the backend enums in packages/core/src/memory/notes.ts. Keep in
+// sync if either side changes.
+export const NOTE_KINDS = [
+  'cycle', 'learning', 'code', 'design', 'eval',
+  'dom', 'visual_diff', 'trade', 'user',
+] as const
+export type NoteKind = typeof NOTE_KINDS[number]
+
+export const LINK_KINDS = [
+  'mentions', 'derives_from', 'contradicts', 'supersedes', 'contains',
+] as const
+export type LinkKind = typeof LINK_KINDS[number]
+
+export interface NoteRecord {
+  id: string
+  title: string
+  body: string
+  kind: NoteKind
+  sourceType: string | null
+  sourceId: string | null
+  createdAt: number
+  updatedAt: number
+}
+
+export interface NoteLinkRecord {
+  fromId: string
+  toId: string
+  kind: LinkKind
+  createdAt: number
+}
+
+export interface NoteWithLinks {
+  note: NoteRecord
+  outgoing: NoteLinkRecord[]
+  backlinks: NoteLinkRecord[]
+}
+
+export interface NoteSubgraph {
+  nodes: NoteRecord[]
+  edges: NoteLinkRecord[]
+}
+
+export interface MentionFeedbackRecord {
+  target: string
+  rejectedCount: number
+  lastRejectedAt: number | null
+}
+
+export interface NoteCreateInput {
+  title: string
+  body: string
+  kind: NoteKind
+  sourceType?: string | null
+  sourceId?: string | null
+  id?: string
+}
+
+export type NotePatchInput = Partial<Omit<NoteCreateInput, 'id'>>
+
 export class CoreClient {
   private baseUrl: string
   private sessionToken: string | undefined
@@ -634,6 +694,104 @@ export class CoreClient {
     const res = await fetch(`${this.baseUrl}/api/admin/architect/user-profile/questions`, { headers: this.adminHeaders() })
     this.checkAuth(res)
     if (!res.ok) throw new Error(`Wizard questions fetch failed (${res.status})`)
+    return res.json()
+  }
+
+  // ── Notes / knowledge graph ───────────────────────────────────────────────
+
+  async listNotes(filter: { kind?: NoteKind; limit?: number; offset?: number } = {}): Promise<{ notes: NoteRecord[]; count: number }> {
+    const params = new URLSearchParams()
+    if (filter.kind) params.set('kind', filter.kind)
+    if (filter.limit !== undefined) params.set('limit', String(filter.limit))
+    if (filter.offset !== undefined) params.set('offset', String(filter.offset))
+    const qs = params.toString()
+    const res = await fetch(`${this.baseUrl}/api/admin/notes${qs ? '?' + qs : ''}`, { headers: this.adminHeaders() })
+    this.checkAuth(res)
+    if (!res.ok) throw new Error(`Notes list failed (${res.status})`)
+    return res.json()
+  }
+
+  async getNote(id: string): Promise<NoteWithLinks> {
+    const res = await fetch(`${this.baseUrl}/api/admin/notes/${encodeURIComponent(id)}`, { headers: this.adminHeaders() })
+    this.checkAuth(res)
+    if (!res.ok) await this.extractError(res, `Note fetch failed (${res.status})`)
+    return res.json()
+  }
+
+  async getNoteSubgraph(id: string, depth = 1): Promise<NoteSubgraph> {
+    const res = await fetch(`${this.baseUrl}/api/admin/notes/${encodeURIComponent(id)}/graph?depth=${depth}`, { headers: this.adminHeaders() })
+    this.checkAuth(res)
+    if (!res.ok) await this.extractError(res, `Note subgraph failed (${res.status})`)
+    return res.json()
+  }
+
+  async createNote(input: NoteCreateInput): Promise<{ note: NoteRecord; mentioned: string[] }> {
+    const res = await fetch(`${this.baseUrl}/api/admin/notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...this.adminHeaders() },
+      body: JSON.stringify(input),
+    })
+    this.checkAuth(res)
+    if (!res.ok) await this.extractError(res, `Note create failed (${res.status})`)
+    return res.json()
+  }
+
+  async updateNote(id: string, patch: NotePatchInput): Promise<{ note: NoteRecord; mentioned: string[] }> {
+    const res = await fetch(`${this.baseUrl}/api/admin/notes/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...this.adminHeaders() },
+      body: JSON.stringify(patch),
+    })
+    this.checkAuth(res)
+    if (!res.ok) await this.extractError(res, `Note update failed (${res.status})`)
+    return res.json()
+  }
+
+  async deleteNote(id: string): Promise<{ ok: true }> {
+    const res = await fetch(`${this.baseUrl}/api/admin/notes/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: this.adminHeaders(),
+    })
+    this.checkAuth(res)
+    if (!res.ok) await this.extractError(res, `Note delete failed (${res.status})`)
+    return res.json()
+  }
+
+  async linkNotes(fromId: string, toId: string, kind: LinkKind = 'mentions'): Promise<{ link: NoteLinkRecord }> {
+    const res = await fetch(`${this.baseUrl}/api/admin/notes/${encodeURIComponent(fromId)}/links`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...this.adminHeaders() },
+      body: JSON.stringify({ toId, kind }),
+    })
+    this.checkAuth(res)
+    if (!res.ok) await this.extractError(res, `Link create failed (${res.status})`)
+    return res.json()
+  }
+
+  /** Removing a 'mentions' edge here records user feedback that suppresses
+   *  future auto-mentions of the target. Other link kinds are removed cleanly. */
+  async unlinkNotes(fromId: string, toId: string, kind?: LinkKind): Promise<{ ok: true; removed: number }> {
+    const url = `${this.baseUrl}/api/admin/notes/${encodeURIComponent(fromId)}/links/${encodeURIComponent(toId)}${kind ? `?kind=${kind}` : ''}`
+    const res = await fetch(url, { method: 'DELETE', headers: this.adminHeaders() })
+    this.checkAuth(res)
+    if (!res.ok) await this.extractError(res, `Unlink failed (${res.status})`)
+    return res.json()
+  }
+
+  async listMentionFeedback(): Promise<{ feedback: MentionFeedbackRecord[] }> {
+    const res = await fetch(`${this.baseUrl}/api/admin/notes/policy/feedback`, { headers: this.adminHeaders() })
+    this.checkAuth(res)
+    if (!res.ok) throw new Error(`Feedback list failed (${res.status})`)
+    return res.json()
+  }
+
+  async clearMentionFeedback(target: string): Promise<{ ok: true }> {
+    const res = await fetch(`${this.baseUrl}/api/admin/notes/policy/feedback/${encodeURIComponent(target)}`, {
+      method: 'DELETE',
+      headers: this.adminHeaders(),
+    })
+    this.checkAuth(res)
+    if (!res.ok) await this.extractError(res, `Feedback clear failed (${res.status})`)
     return res.json()
   }
 

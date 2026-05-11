@@ -43,6 +43,9 @@ const NODE_COLOR: Record<NodeType, { core: string; ring: string }> = {
   tool:    { core: '#10b981', ring: '16,185,129' },
   model:   { core: '#8b5cf6', ring: '139,92,246' },
   channel: { core: '#f59e0b', ring: '245,158,11' },
+  // Obsidian violet — knowledge notes read as the "thoughts" layer
+  // distinct from the agent/tool/model machinery.
+  note:    { core: '#a78bfa', ring: '167,139,250' },
 }
 
 const NODE_RADIUS: Record<NodeType, number> = {
@@ -50,6 +53,7 @@ const NODE_RADIUS: Record<NodeType, number> = {
   tool: 14,
   model: 14,
   channel: 14,
+  note: 12,
 }
 
 const EDGE_COLOR: Record<string, string> = {
@@ -59,6 +63,9 @@ const EDGE_COLOR: Record<string, string> = {
   // Warm coral — agent↔agent handoffs read as "relationship" rather than
   // the cooler tool/model/channel palette. Distinct enough at a glance.
   'agent-agent': '#fb7185',
+  // Soft violet to match the note nodes — wikilinks/mentions feel like
+  // ideas connecting ideas, not tools wiring to engines.
+  'note-note': '#a78bfa',
 }
 
 // Deterministic hash → stable per-edge organic offset

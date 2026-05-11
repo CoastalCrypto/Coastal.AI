@@ -1,6 +1,8 @@
 import { LosslessAdapter } from './lossless.js'
 import { Mem0Adapter } from './mem0.js'
 import { InfinityClient, type SearchResult } from './infinity-client.js'
+import { NoteStore, type Note } from './notes.js'
+import { parseAll, makeLearnedPolicy } from './wikilinks.js'
 import type { MemoryEntry, MemoryQuery } from './types.js'
 
 export interface UnifiedMemoryConfig {
@@ -15,9 +17,14 @@ export class UnifiedMemory {
   private mem0: Mem0Adapter | null
   private infinity: InfinityClient
   private infinityAvailable = false
+  /** Long-term, navigable knowledge graph (notes + backlinks). Populated by
+   *  the architect's learning slices (code-review-graph, eval results, etc.)
+   *  and exposed verbatim to the canvas. */
+  readonly notes: NoteStore
 
   constructor(config: UnifiedMemoryConfig) {
     this.lossless = new LosslessAdapter({ dataDir: config.dataDir })
+    this.notes = new NoteStore({ dataDir: config.dataDir })
     if (config.mem0ApiKey && config.cloudConsentGranted) {
       this.mem0 = new Mem0Adapter({ apiKey: config.mem0ApiKey })
       console.log('[memory] Mem0 cloud memory: ENABLED (user consented)')
@@ -100,10 +107,63 @@ export class UnifiedMemory {
     }
   }
 
+  /**
+   * Reconcile auto-`mentions` links for `note` based on its current body.
+   *
+   * Steps:
+   *   1. Build the entity table from all other notes (id → [title]).
+   *   2. Parse wikilinks and entity mentions through the learned policy.
+   *   3. Resolve targets: wikilinks match by title or by id; mentions
+   *      already resolve to canonical ids via the entity table.
+   *   4. Diff against the current outgoing `mentions` edges from this note.
+   *      Add new ones; remove ones the new parse no longer produces — but
+   *      pass `recordFeedback: false` so this internal churn does not
+   *      poison the learned policy.
+   *
+   * Returns the set of target ids the note now mentions, for callers that
+   * want to render or log them.
+   */
+  materializeMentions(note: Note): Set<string> {
+    const allOthers = this.notes.list({ limit: 10_000 }).filter(n => n.id !== note.id)
+    const entities = new Map<string, string[]>()
+    const titleIndex = new Map<string, string>() // lowercased title → id
+    for (const n of allOthers) {
+      entities.set(n.id, [n.title])
+      titleIndex.set(n.title.toLowerCase().trim(), n.id)
+    }
+
+    const policy = makeLearnedPolicy(t => this.notes.getMentionStats(t))
+    const parsed = parseAll(note.body, entities, policy)
+
+    const resolved = new Set<string>()
+    for (const m of parsed.mentions) resolved.add(m.target)
+    for (const w of parsed.wikilinks) {
+      // Wikilinks may be a title or a raw id. Try title first.
+      const byTitle = titleIndex.get(w.target.toLowerCase().trim())
+      if (byTitle && byTitle !== note.id) { resolved.add(byTitle); continue }
+      // Treat as id only if we can confirm a note exists with that id.
+      if (w.target !== note.id && this.notes.get(w.target)) resolved.add(w.target)
+    }
+
+    const existing = new Set(
+      this.notes.outgoing(note.id).filter(l => l.kind === 'mentions').map(l => l.toId),
+    )
+    for (const targetId of resolved) {
+      if (!existing.has(targetId)) this.notes.link(note.id, targetId, 'mentions')
+    }
+    for (const targetId of existing) {
+      if (!resolved.has(targetId)) {
+        this.notes.unlink(note.id, targetId, 'mentions', { recordFeedback: false })
+      }
+    }
+    return resolved
+  }
+
   async close(): Promise<void> {
     await this.lossless.close()
+    this.notes.close()
     // Note: mem0ai MemoryClient has no close() — HTTP connections drain naturally
   }
 }
 
-export type { MemoryEntry, MemoryQuery }
+export type { MemoryEntry, MemoryQuery, Note }
