@@ -106,4 +106,38 @@ ${bigDiff}\`\`\`</diff>`,
     expect(result.kind).toBe('hard_fail')
     if (result.kind === 'hard_fail') expect(result.failureKind).toBe('env_llm')
   })
+
+  it('injects impactSummary into the prompt when provided', async () => {
+    const callPlan = vi.fn().mockResolvedValue({
+      text: `<plan>p</plan><diff>\`\`\`diff\n--- a/x.ts\n+++ b/x.ts\n@@\n+x\n\`\`\`</diff>`,
+      modelId: 'm',
+    })
+    await runPlanningStage({
+      workItem: { id: 'w', title: 't', body: '', targetHints: ['x.ts'], budgetLoc: 100, allowSelfModify: false } as any,
+      reviseContext: null,
+      readSourceFile: async () => '',
+      client: { callPlan } as any,
+      lockedPathCheck: () => null,
+      impactSummary: '### IMPACT: x.ts\nImported by (3): a.ts, b.ts, c.ts',
+    })
+    const promptArg = callPlan.mock.calls[0][0] as string
+    expect(promptArg).toContain('IMPACT RADIUS')
+    expect(promptArg).toContain('Imported by (3): a.ts, b.ts, c.ts')
+  })
+
+  it("does NOT inject impactSummary when null/empty (backwards compatible)", async () => {
+    const callPlan = vi.fn().mockResolvedValue({
+      text: `<plan>p</plan><diff>\`\`\`diff\n--- a/x.ts\n+++ b/x.ts\n@@\n+x\n\`\`\`</diff>`,
+      modelId: 'm',
+    })
+    await runPlanningStage({
+      workItem: { id: 'w', title: 't', body: '', targetHints: ['x.ts'], budgetLoc: 100, allowSelfModify: false } as any,
+      reviseContext: null,
+      readSourceFile: async () => '',
+      client: { callPlan } as any,
+      lockedPathCheck: () => null,
+      impactSummary: '',
+    })
+    expect(callPlan.mock.calls[0][0]).not.toContain('IMPACT RADIUS')
+  })
 })

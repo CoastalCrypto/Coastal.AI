@@ -18,6 +18,13 @@ export interface PlanningInput {
   readSourceFile: (relPath: string) => Promise<string>
   client: ArchitectModelRouterClient
   lockedPathCheck: (path: string) => string | null
+  /**
+   * Optional impact-radius prose for the targeted files. Comes from the
+   * code-graph notes layer; a daemon callsite resolves it once per cycle
+   * via getImpactSummaryForTargets(memory.notes, workItem.targetHints).
+   * When absent, the planner runs exactly as before (backward compatible).
+   */
+  impactSummary?: string | null
 }
 
 export type PlanningResult =
@@ -29,7 +36,7 @@ const PLAN_RE = /<plan>([\s\S]*?)<\/plan>/i
 const DIFF_RE = /<diff>\s*```diff\r?\n([\s\S]*?)```\s*<\/diff>/i
 
 export async function runPlanningStage(input: PlanningInput): Promise<PlanningResult> {
-  const { workItem, reviseContext, readSourceFile, client, lockedPathCheck } = input
+  const { workItem, reviseContext, readSourceFile, client, lockedPathCheck, impactSummary } = input
 
   const sourceSnippets: string[] = []
   for (const hint of workItem.targetHints ?? []) {
@@ -43,7 +50,11 @@ export async function runPlanningStage(input: PlanningInput): Promise<PlanningRe
     ? `\n\nPRIOR ATTEMPT FEEDBACK\n${JSON.stringify(reviseContext, null, 2).slice(0, 2000)}\n`
     : ''
 
-  const prompt = buildPlannerPrompt(workItem, sourceSnippets.join('\n\n'), reviseBlock)
+  const impactBlock = impactSummary && impactSummary.trim().length > 0
+    ? `\n\nIMPACT RADIUS (from code-graph notes — keep blast surface in mind)\n${impactSummary.slice(0, 4000)}\n`
+    : ''
+
+  const prompt = buildPlannerPrompt(workItem, sourceSnippets.join('\n\n'), reviseBlock + impactBlock)
 
   let text: string
   let modelUsed: string

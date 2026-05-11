@@ -41,6 +41,26 @@
     "./models/router": {
       "types": "./dist/models/router.d.ts",
       "default": "./dist/models/router.js"
+    },
+    "./memory": {
+      "types": "./dist/memory/index.d.ts",
+      "default": "./dist/memory/index.js"
+    },
+    "./memory/notes": {
+      "types": "./dist/memory/notes.d.ts",
+      "default": "./dist/memory/notes.js"
+    },
+    "./memory/code-graph-id": {
+      "types": "./dist/memory/code-graph-id.d.ts",
+      "default": "./dist/memory/code-graph-id.js"
+    },
+    "./memory/code-graph-sync": {
+      "types": "./dist/memory/code-graph-sync.d.ts",
+      "default": "./dist/memory/code-graph-sync.js"
+    },
+    "./memory/impact": {
+      "types": "./dist/memory/impact.d.ts",
+      "default": "./dist/memory/impact.js"
     }
   },
   "bin": {

@@ -134,6 +134,29 @@ describe('NoteStore links', () => {
   })
 })
 
+describe('NoteStore upsert', () => {
+  it('inserts when the id is absent', () => {
+    const note = store.upsert({ id: 'fixed', title: 'A', body: 'B', kind: 'code' })
+    expect(note.id).toBe('fixed')
+    expect(store.get('fixed')?.title).toBe('A')
+  })
+
+  it('updates when the id already exists, preserving createdAt', async () => {
+    const first = store.upsert({ id: 'fixed', title: 'A', body: 'B', kind: 'code' })
+    await new Promise(r => setTimeout(r, 5))
+    const second = store.upsert({ id: 'fixed', title: 'A2', body: 'B2', kind: 'code' })
+    expect(second.title).toBe('A2')
+    expect(second.body).toBe('B2')
+    expect(second.createdAt).toBe(first.createdAt)
+    expect(second.updatedAt).toBeGreaterThan(first.updatedAt)
+  })
+
+  it('falls back to create when no id is supplied', () => {
+    const note = store.upsert({ title: 'X', body: '', kind: 'code' })
+    expect(note.id).toMatch(/^[0-9a-f-]{36}$/)
+  })
+})
+
 describe('NoteStore learned mention policy', () => {
   it('records a rejection when a mentions edge is unlinked by the user', () => {
     const a = store.create({ title: 'A', body: '', kind: 'user' })

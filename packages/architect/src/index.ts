@@ -29,6 +29,10 @@ import { findStaleTodos, findChurnHotspots } from './curriculum/signals.js'
 import { runLintGate, runTypeGate, runBuildGate, runTestGate } from './gates.js'
 import { loadWorkspaceMapSync } from './workspace-map.js'
 import { findTouchedPackages } from './touched-packages.js'
+import { NoteStore } from '@coastal-ai/core/memory/notes'
+import { syncCodeGraph } from '@coastal-ai/core/memory/code-graph-sync'
+import { getImpactSummaryForTargets } from '@coastal-ai/core/memory/impact'
+import { scanCodeGraph } from './learnings/code-graph.js'
 
 const REPO_ROOT    = process.env.CC_REPO_ROOT          ?? process.cwd()
 const DATA_DIR     = process.env.CC_DATA_DIR            ?? join(REPO_ROOT, 'data')
@@ -222,11 +226,37 @@ async function main(): Promise<void> {
     // take effect on the next cycle without a daemon restart.
     const userProfileStore = new UserProfileStore(architectDb)
 
+    // Note store + code-graph ingest. Opened once and reused across cycles;
+    // the planner reads impact-radius prose from this on every runPlan call.
+    // Lives in the same DATA_DIR as the core server so they share obsidian.db.
+    const noteStore = new NoteStore({ dataDir: DATA_DIR })
+    try {
+      const scan = scanCodeGraph({ rootDir: REPO_ROOT })
+      const syncResult = syncCodeGraph(noteStore, scan)
+      console.log(
+        `[coastal-architect] code-graph synced: ${syncResult.added} new, ${syncResult.updated} updated, ` +
+        `${syncResult.removed} removed; ${syncResult.edgesAdded} edges added, ${syncResult.edgesRemoved} pruned`,
+      )
+    } catch (err) {
+      // Non-fatal — the planner just won't see impact-radius prose this cycle.
+      console.warn('[coastal-architect] code-graph sync failed:', err)
+    }
+
     const daemon = new ArchitectDaemon({
       workStore: new WorkItemStore(architectDb),
       cycleStore: new CycleStore(architectDb),
 
       runPlan: async (input) => {
+        const targetHints = input.workItem.targetHints ?? []
+        // Resolve impact-radius prose from the notes layer. Empty string
+        // when there's no graph data yet (e.g. fresh install before the
+        // first scan completes) — planner falls back to current behavior.
+        let impactSummary = ''
+        try {
+          impactSummary = getImpactSummaryForTargets(noteStore, targetHints)
+        } catch (err) {
+          console.warn('[coastal-architect] impact summary failed:', err)
+        }
         return runPlanningStage({
           workItem: input.workItem,
           reviseContext: input.reviseContext ?? null,
@@ -235,6 +265,7 @@ async function main(): Promise<void> {
           },
           client: modelClient,
           lockedPathCheck: isLockedPath,
+          impactSummary,
         })
       },
 

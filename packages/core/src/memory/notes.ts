@@ -183,6 +183,34 @@ export class NoteStore {
     return note
   }
 
+  /**
+   * Insert-or-update by id. Used by deterministic ingestion pipelines
+   * (code graph, design tokens, eval results) where the id is a stable
+   * derived key and the body changes as the source of truth changes.
+   *
+   * Always returns the resulting note. Bumps `updatedAt` to now;
+   * preserves the original `createdAt` if the row already existed.
+   */
+  upsert(input: NoteInput): Note {
+    if (!input.id) {
+      // Without a stable id, upsert collapses to create.
+      return this.create(input)
+    }
+    const existing = this.get(input.id)
+    if (existing) {
+      const patched = this.update(input.id, {
+        title: input.title,
+        body: input.body,
+        kind: input.kind,
+        sourceType: input.sourceType ?? null,
+        sourceId: input.sourceId ?? null,
+      })
+      // update() returned non-null because we just confirmed existence above.
+      return patched as Note
+    }
+    return this.create(input)
+  }
+
   update(id: string, patch: NotePatch): Note | null {
     const existing = this.get(id)
     if (!existing) return null
