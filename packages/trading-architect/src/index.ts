@@ -12,4 +12,8 @@ export type {
 
 export { createFileMarketProvider, type FileProviderConfig } from './providers/file-provider.js'
 export { createRsiThresholdGenerator, computeRsi, type RsiThresholdConfig } from './generators/rsi-threshold.js'
+export {
+  createKronosAdapter,
+  type KronosAdapterConfig, type KronosPrediction,
+} from './generators/kronos-adapter.js'
 export { runTradeTick, type TradeTickInput, type TradeTickResult } from './runner.js'

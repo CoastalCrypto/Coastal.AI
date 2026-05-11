@@ -54,7 +54,16 @@ export async function runTradeTick(input: TradeTickInput): Promise<TradeTickResu
         continue
       }
       for (const generator of input.generators) {
-        const signal = generator.generate(snapshot)
+        let signal
+        try {
+          signal = await generator.generate(snapshot)
+        } catch (err) {
+          result.errors.push({
+            symbol, providerId: provider.id,
+            message: `generator ${generator.id} threw: ${err instanceof Error ? err.message : String(err)}`,
+          })
+          continue
+        }
         if (!signal) continue
         const ref = writeTradeSignalAsNote(input.store, signal)
         result.refs.push(ref)

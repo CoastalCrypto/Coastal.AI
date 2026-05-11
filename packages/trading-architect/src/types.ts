@@ -59,8 +59,11 @@ export interface MarketProvider {
 export interface SignalGenerator {
   id: string
   description: string
-  /** Pure-ish: given a market snapshot, emit zero-or-one signal.
-   *  Generators may return null when no actionable verdict exists
-   *  (insufficient data, conflicting indicators, etc). */
-  generate(snapshot: MarketSnapshot): TradeSignal | null
+  /** Given a market snapshot, emit zero-or-one signal. Generators may
+   *  return null when no actionable verdict exists (insufficient data,
+   *  conflicting indicators, sidecar offline). The return type is widened
+   *  to `T | Promise<T>` so generators can run synchronously (RSI) or
+   *  call out over the network (Kronos, TradingAgents) through the same
+   *  interface. The runner always awaits. */
+  generate(snapshot: MarketSnapshot): TradeSignal | null | Promise<TradeSignal | null>
 }
