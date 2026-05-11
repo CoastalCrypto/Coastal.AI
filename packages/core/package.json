@@ -85,6 +85,10 @@
     "./prompts/eval-notes": {
       "types": "./dist/prompts/eval-notes.d.ts",
       "default": "./dist/prompts/eval-notes.js"
+    },
+    "./memory/dom-snapshots": {
+      "types": "./dist/memory/dom-snapshots.d.ts",
+      "default": "./dist/memory/dom-snapshots.js"
     }
   },
   "bin": {
