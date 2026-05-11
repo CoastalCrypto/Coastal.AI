@@ -25,6 +25,13 @@ export interface PlanningInput {
    * When absent, the planner runs exactly as before (backward compatible).
    */
   impactSummary?: string | null
+  /**
+   * Optional design-system prose surfaced when target files live under a
+   * package that has its own DESIGN.md. The daemon resolves this via
+   * getDesignContextForTargets(noteStore, workItem.targetHints). Empty
+   * string → block omitted.
+   */
+  designContext?: string | null
 }
 
 export type PlanningResult =
@@ -36,7 +43,7 @@ const PLAN_RE = /<plan>([\s\S]*?)<\/plan>/i
 const DIFF_RE = /<diff>\s*```diff\r?\n([\s\S]*?)```\s*<\/diff>/i
 
 export async function runPlanningStage(input: PlanningInput): Promise<PlanningResult> {
-  const { workItem, reviseContext, readSourceFile, client, lockedPathCheck, impactSummary } = input
+  const { workItem, reviseContext, readSourceFile, client, lockedPathCheck, impactSummary, designContext } = input
 
   const sourceSnippets: string[] = []
   for (const hint of workItem.targetHints ?? []) {
@@ -54,7 +61,14 @@ export async function runPlanningStage(input: PlanningInput): Promise<PlanningRe
     ? `\n\nIMPACT RADIUS (from code-graph notes — keep blast surface in mind)\n${impactSummary.slice(0, 4000)}\n`
     : ''
 
-  const prompt = buildPlannerPrompt(workItem, sourceSnippets.join('\n\n'), reviseBlock + impactBlock)
+  // Cap design context generously — it can be longer than impact prose
+  // because it includes section bodies, but we still need a bound so a
+  // huge DESIGN.md can't blow the prompt budget.
+  const designBlock = designContext && designContext.trim().length > 0
+    ? `\n\nDESIGN SYSTEM (respect existing tokens + idioms — do not introduce new ones)\n${designContext.slice(0, 8000)}\n`
+    : ''
+
+  const prompt = buildPlannerPrompt(workItem, sourceSnippets.join('\n\n'), reviseBlock + impactBlock + designBlock)
 
   let text: string
   let modelUsed: string

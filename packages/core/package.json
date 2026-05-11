@@ -61,6 +61,18 @@
     "./memory/impact": {
       "types": "./dist/memory/impact.d.ts",
       "default": "./dist/memory/impact.js"
+    },
+    "./memory/markdown-ingest": {
+      "types": "./dist/memory/markdown-ingest.d.ts",
+      "default": "./dist/memory/markdown-ingest.js"
+    },
+    "./memory/markdown-sync": {
+      "types": "./dist/memory/markdown-sync.d.ts",
+      "default": "./dist/memory/markdown-sync.js"
+    },
+    "./memory/design-context": {
+      "types": "./dist/memory/design-context.d.ts",
+      "default": "./dist/memory/design-context.js"
     }
   },
   "bin": {

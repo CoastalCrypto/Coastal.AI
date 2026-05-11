@@ -32,7 +32,11 @@ import { findTouchedPackages } from './touched-packages.js'
 import { NoteStore } from '@coastal-ai/core/memory/notes'
 import { syncCodeGraph } from '@coastal-ai/core/memory/code-graph-sync'
 import { getImpactSummaryForTargets } from '@coastal-ai/core/memory/impact'
+import { ingestMarkdown } from '@coastal-ai/core/memory/markdown-ingest'
+import { syncMarkdownIngest } from '@coastal-ai/core/memory/markdown-sync'
+import { getDesignContextForTargets } from '@coastal-ai/core/memory/design-context'
 import { scanCodeGraph } from './learnings/code-graph.js'
+import { ingestDesignDocs } from './learnings/design-ingest.js'
 
 const REPO_ROOT    = process.env.CC_REPO_ROOT          ?? process.cwd()
 const DATA_DIR     = process.env.CC_DATA_DIR            ?? join(REPO_ROOT, 'data')
@@ -242,6 +246,20 @@ async function main(): Promise<void> {
       console.warn('[coastal-architect] code-graph sync failed:', err)
     }
 
+    try {
+      const design = ingestDesignDocs(noteStore, REPO_ROOT)
+      if (design.files === 0) {
+        console.log('[coastal-architect] no DESIGN.md files found under packages/')
+      } else {
+        console.log(
+          `[coastal-architect] design docs synced: ${design.files} files (${design.paths.join(', ')}); ` +
+          `${design.added}/${design.updated}/${design.removed} +/~/− notes`,
+        )
+      }
+    } catch (err) {
+      console.warn('[coastal-architect] design ingest failed:', err)
+    }
+
     const daemon = new ArchitectDaemon({
       workStore: new WorkItemStore(architectDb),
       cycleStore: new CycleStore(architectDb),
@@ -252,10 +270,16 @@ async function main(): Promise<void> {
         // when there's no graph data yet (e.g. fresh install before the
         // first scan completes) — planner falls back to current behavior.
         let impactSummary = ''
+        let designContext = ''
         try {
           impactSummary = getImpactSummaryForTargets(noteStore, targetHints)
         } catch (err) {
           console.warn('[coastal-architect] impact summary failed:', err)
+        }
+        try {
+          designContext = getDesignContextForTargets(noteStore, targetHints)
+        } catch (err) {
+          console.warn('[coastal-architect] design context failed:', err)
         }
         return runPlanningStage({
           workItem: input.workItem,
@@ -266,6 +290,7 @@ async function main(): Promise<void> {
           client: modelClient,
           lockedPathCheck: isLockedPath,
           impactSummary,
+          designContext,
         })
       },
 

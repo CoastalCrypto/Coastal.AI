@@ -262,6 +262,18 @@ export class NoteStore {
     return rows.map(rowToNote)
   }
 
+  /**
+   * All notes derived from a single (sourceType, sourceId) origin. Used by
+   * ingest pipelines (markdown, code graph) to scope reconciliation to the
+   * notes they own, leaving everything else untouched.
+   */
+  bySource(sourceType: string, sourceId: string): Note[] {
+    const rows = this.db
+      .prepare(`SELECT * FROM notes WHERE source_type = ? AND source_id = ? ORDER BY updated_at DESC`)
+      .all(sourceType, sourceId) as NoteRow[]
+    return rows.map(rowToNote)
+  }
+
   search(query: string, limit = 20): Note[] {
     if (!query.trim()) return []
     const rows = this.db
