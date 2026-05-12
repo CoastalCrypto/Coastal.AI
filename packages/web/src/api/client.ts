@@ -83,6 +83,28 @@ export interface SystemStats {
   uptime: number
 }
 
+export interface HardwareSummary {
+  ramGb: number
+  freeRamGb: number
+  cpuCores: number
+  vramGb: number | null
+  gpuName: string | null
+  diskFreeGb: number
+  dataDir: string
+}
+
+export interface ModelRecommendation {
+  model: string
+  reason: string
+  sizeGb: number
+  tier: 'minimum' | 'recommended' | 'optimal'
+}
+
+export interface HardwareScan {
+  hardware: HardwareSummary
+  recommendations: ModelRecommendation[]
+}
+
 export interface Session {
   id: string
   title: string
@@ -367,6 +389,14 @@ export class CoreClient {
   async getSystemStats(): Promise<SystemStats> {
     const res = await fetch(`${this.baseUrl}/api/system/stats`)
     if (!res.ok) throw new Error(`Failed to get system stats (${res.status})`)
+    return res.json()
+  }
+
+  async getHardwareScan(): Promise<HardwareScan> {
+    const res = await fetch(`${this.baseUrl}/api/admin/hardware-scan`, {
+      headers: this.adminHeaders(),
+    })
+    if (!res.ok) throw new Error(`Hardware scan failed (${res.status})`)
     return res.json()
   }
 
