@@ -70,8 +70,11 @@ export async function runWorkItemCycle(deps: RunCycleDeps): Promise<RunCycleOutc
       await new Promise(r => setTimeout(r, COOLDOWN_MS(iteration - 1)))
     }
 
+    // Loop invariant: priorReviseContext is set together with priorCycleId
+    // at the soft_fail branches below. When priorCycleId is truthy here,
+    // priorReviseContext is non-null. The ! reflects that invariant.
     const cycle: Cycle = priorCycleId
-      ? cycleStore.startRevise(workItem.id, priorCycleId, priorReviseContext)
+      ? cycleStore.startRevise(workItem.id, priorCycleId, priorReviseContext!)
       : cycleStore.start(workItem.id)
 
     iteration = cycle.iteration

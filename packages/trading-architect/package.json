@@ -1,0 +1,25 @@
+{
+  "name": "@coastal-ai/trading-architect",
+  "version": "1.6.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "node --loader ts-node/esm src/index.ts",
+    "pretest": "pnpm --filter @coastal-ai/core build",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@coastal-ai/core": "workspace:*",
+    "better-sqlite3": "^11.10.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^22.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "~5.9.3",
+    "vitest": "^1.6.0"
+  }
+}

@@ -31,6 +31,7 @@ const NODE_ICON: Record<NodeType, string> = {
   tool:    '⚙',
   model:   '◈',
   channel: '⬡',
+  note:    '◎',
 }
 
 const NODE_COLOR: Record<NodeType, { bg: string; border: string; label: string }> = {
@@ -38,6 +39,7 @@ const NODE_COLOR: Record<NodeType, { bg: string; border: string; label: string }
   tool:    { bg: 'rgba(10,28,20,0.95)',   border: 'rgba(16,185,129,0.30)', label: '#6ee7b7' },
   model:   { bg: 'rgba(20,15,35,0.95)',   border: 'rgba(139,92,246,0.30)', label: '#c4b5fd' },
   channel: { bg: 'rgba(28,20,8,0.95)',    border: 'rgba(245,158,11,0.30)', label: '#fcd34d' },
+  note:    { bg: 'rgba(22,15,40,0.95)',   border: 'rgba(167,139,250,0.30)', label: '#cfe6ff' },
 }
 
 interface Props {

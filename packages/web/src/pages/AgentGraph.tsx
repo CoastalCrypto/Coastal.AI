@@ -1,12 +1,13 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { NavBar, type NavPage } from '../components/NavBar'
 import { MyceliumCanvas } from '../components/MyceliumCanvas'
 import { KnowledgeLibrary } from '../components/KnowledgeLibrary'
 import { useAgentGraph } from '../hooks/useAgentGraph'
 import { useAgentDependencies } from '../hooks/useAgentDependencies'
 import { useAgentMemory } from '../hooks/useAgentMemory'
-import { coreClient } from '../api/client'
-import type { GraphEdge } from '../types/agent-graph'
+import { useNotes } from '../hooks/useNotes'
+import { coreClient, type NoteWithLinks } from '../api/client'
+import type { GraphEdge, GraphNode } from '../types/agent-graph'
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -66,6 +67,12 @@ interface SidebarPanelProps {
   isLoading: boolean
   errors: string[]
   onClose: () => void
+  /** Note-mode extras — present only when selectedNode.nodeType === 'note'. */
+  noteDetail?: NoteWithLinks | null
+  noteBacklinks?: GraphEdge[]
+  noteOutgoing?: GraphEdge[]
+  onUnlinkNote?: (fromCanvasId: string, toCanvasId: string) => void
+  onSelectNoteId?: (canvasId: string) => void
 }
 
 function SidebarPanel({
@@ -78,7 +85,13 @@ function SidebarPanel({
   isLoading,
   errors,
   onClose,
+  noteDetail,
+  noteBacklinks = [],
+  noteOutgoing = [],
+  onUnlinkNote,
+  onSelectNoteId,
 }: SidebarPanelProps) {
+  const isNote = selectedNode.nodeType === 'note'
   return (
     <div style={{
       position: 'absolute', top: 16, right: 16, width: 320, maxHeight: 'calc(100vh - 100px)',
@@ -131,6 +144,87 @@ function SidebarPanel({
       {errors.length > 0 && errors.map((err) => (
         <ErrorBanner key={err} message={err} />
       ))}
+
+      {isNote && (
+        <div style={{ marginBottom: 14 }}>
+          {noteDetail?.note.body && (
+            <div style={{
+              fontSize: 11, color: '#cfe6ff', lineHeight: 1.55,
+              padding: '8px 10px', marginBottom: 10,
+              background: 'rgba(167,139,250,0.06)',
+              border: '1px solid rgba(167,139,250,0.18)',
+              borderRadius: 6, maxHeight: 160, overflowY: 'auto',
+              fontFamily: 'Space Grotesk, sans-serif',
+              whiteSpace: 'pre-wrap',
+            }}>
+              {noteDetail.note.body}
+            </div>
+          )}
+          {noteBacklinks.length > 0 && (
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#a78bfa', marginBottom: 6, letterSpacing: '0.05em' }}>
+                BACKLINKS ({noteBacklinks.length})
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {noteBacklinks.map(edge => (
+                  <button
+                    key={edge.id}
+                    onClick={() => onSelectNoteId?.(edge.source)}
+                    style={{
+                      textAlign: 'left', fontSize: 10, color: '#cfe6ff',
+                      padding: '4px 8px', background: 'rgba(167,139,250,0.06)',
+                      border: '1px solid rgba(167,139,250,0.18)', borderRadius: 4,
+                      cursor: 'pointer', fontFamily: 'JetBrains Mono, monospace',
+                    }}
+                  >
+                    ← {edge.source.replace(/^note:/, '').slice(0, 8)}…
+                    <span style={{ color: '#94adc4', marginLeft: 6 }}>{edge.label ?? 'mentions'}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {noteOutgoing.length > 0 && (
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#a78bfa', marginBottom: 6, letterSpacing: '0.05em' }}>
+                LINKS OUT ({noteOutgoing.length})
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {noteOutgoing.map(edge => (
+                  <div key={edge.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    padding: '4px 8px', background: 'rgba(167,139,250,0.04)',
+                    border: '1px solid rgba(167,139,250,0.12)', borderRadius: 4,
+                    fontFamily: 'JetBrains Mono, monospace',
+                  }}>
+                    <button
+                      onClick={() => onSelectNoteId?.(edge.target)}
+                      style={{
+                        flex: 1, textAlign: 'left', background: 'none', border: 'none',
+                        color: '#cfe6ff', fontSize: 10, cursor: 'pointer', padding: 0,
+                      }}
+                    >
+                      → {edge.target.replace(/^note:/, '').slice(0, 8)}…
+                      <span style={{ color: '#94adc4', marginLeft: 6 }}>{edge.label ?? 'mentions'}</span>
+                    </button>
+                    {onUnlinkNote && (
+                      <button
+                        onClick={() => onUnlinkNote(edge.source, edge.target)}
+                        title="Remove this link (also signals the policy if it's an auto-mention)"
+                        style={{
+                          cursor: 'pointer', background: 'rgba(239,68,68,0.08)',
+                          border: '1px solid rgba(239,68,68,0.25)', color: '#ef4444',
+                          borderRadius: 4, padding: '1px 6px', fontSize: 10, lineHeight: 1,
+                        }}
+                      >✕</button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {memory && selectedNode.nodeType === 'agent' && (memory.contexts + memory.toolsUsed + memory.actions + memory.bindings) > 0 && (
         <div style={{
@@ -317,6 +411,7 @@ function Legend() {
     { label: 'Model',   color: '#8b5cf6' },
     { label: 'Channel', color: '#f59e0b' },
     { label: 'Handoff', color: '#fb7185' },
+    { label: 'Note',    color: '#a78bfa' },
   ]
   return (
     <div style={{
@@ -341,14 +436,66 @@ function Legend() {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Knowledge toggle (top-right under header)                          */
+/* ------------------------------------------------------------------ */
+
+function KnowledgeToggle({
+  enabled,
+  noteCount,
+  onToggle,
+}: { enabled: boolean; noteCount: number; onToggle: () => void }) {
+  return (
+    <button
+      onClick={onToggle}
+      title={enabled ? 'Show full agent graph' : 'Focus on knowledge notes (Obsidian mode)'}
+      style={{
+        position: 'absolute', top: 16, left: 16, zIndex: 10,
+        background: enabled ? 'rgba(167,139,250,0.18)' : 'rgba(13,31,51,0.85)',
+        backdropFilter: 'blur(10px)',
+        border: `1px solid ${enabled ? 'rgba(167,139,250,0.55)' : 'rgba(167,139,250,0.20)'}`,
+        borderRadius: 10, padding: '8px 14px',
+        color: enabled ? '#cfe6ff' : '#a78bfa',
+        fontFamily: 'JetBrains Mono, monospace', fontSize: 11,
+        letterSpacing: '0.06em', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', gap: 8,
+      }}
+    >
+      <span style={{
+        display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
+        background: '#a78bfa',
+        boxShadow: enabled ? '0 0 10px #a78bfa' : 'none',
+      }} />
+      KNOWLEDGE
+      <span style={{ color: '#94adc4', fontSize: 10 }}>({noteCount})</span>
+    </button>
+  )
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main page                                                          */
 /* ------------------------------------------------------------------ */
 
 export function AgentGraph({ onNav }: { onNav: (page: NavPage) => void }) {
-  const { nodes, edges, connected, reactionsRef } = useAgentGraph()
+  const { nodes: agentNodes, edges: agentEdges, connected, reactionsRef } = useAgentGraph()
   const { summary: memorySummary, refresh: refreshMemory } = useAgentMemory()
+  const { noteNodes, noteEdges, refresh: refreshNotes, unlink: unlinkNote } = useNotes()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [dropToast, setDropToast] = useState<string | null>(null)
+  // Knowledge mode brings notes forward and dims the agent/tool/model
+  // machinery — Obsidian-style focus on the "thoughts" layer.
+  const [knowledgeMode, setKnowledgeMode] = useState(false)
+
+  // Merge notes into the canvas feed. In knowledge mode we dim the agent
+  // half; otherwise notes show alongside everything. Selection ids in the
+  // notes namespace are prefixed `note:<id>` to avoid collisions with agent ids.
+  const nodes = useMemo<GraphNode[]>(() => {
+    if (knowledgeMode) {
+      const dimmed = agentNodes.map(n => ({ ...n, status: 'offline' as const }))
+      return [...dimmed, ...noteNodes]
+    }
+    return [...agentNodes, ...noteNodes]
+  }, [agentNodes, noteNodes, knowledgeMode])
+  const edges = useMemo<GraphEdge[]>(() => [...agentEdges, ...noteEdges], [agentEdges, noteEdges])
 
   const {
     dependencies,
@@ -357,17 +504,48 @@ export function AgentGraph({ onNav }: { onNav: (page: NavPage) => void }) {
     impactError,
     cyclesError,
     isLoading,
-  } = useAgentDependencies(selectedId)
+  } = useAgentDependencies(selectedId && !selectedId.startsWith('note:') ? selectedId : null)
 
   const selectedNode = selectedId
     ? nodes.find((n) => n.id === selectedId) ?? null
     : null
+  const isNoteSelected = selectedNode?.nodeType === 'note'
 
   // Tool tendrils rooted at the selected agent — excluding suggested (growth)
   // edges so feedback applies only to real bindings the agent actually has.
-  const selectedToolEdges = selectedId
-    ? edges.filter(e => e.source === selectedId && e.edgeType === 'agent-tool' && !e.suggested)
+  const selectedToolEdges = selectedId && !isNoteSelected
+    ? agentEdges.filter(e => e.source === selectedId && e.edgeType === 'agent-tool' && !e.suggested)
     : []
+
+  // Backlinks for the selected note (incoming note-note edges in the merged feed).
+  const selectedNoteBacklinks = useMemo(() =>
+    isNoteSelected
+      ? noteEdges.filter(e => e.target === selectedId)
+      : [],
+  [isNoteSelected, selectedId, noteEdges])
+  const selectedNoteOutgoing = useMemo(() =>
+    isNoteSelected
+      ? noteEdges.filter(e => e.source === selectedId)
+      : [],
+  [isNoteSelected, selectedId, noteEdges])
+
+  // When a note is selected, fetch its full body for the sidebar preview.
+  const [selectedNoteDetail, setSelectedNoteDetail] = useState<NoteWithLinks | null>(null)
+  useEffect(() => {
+    if (!isNoteSelected || !selectedId) { setSelectedNoteDetail(null); return }
+    const noteId = selectedId.replace(/^note:/, '')
+    let cancelled = false
+    coreClient.getNote(noteId)
+      .then(d => { if (!cancelled) setSelectedNoteDetail(d) })
+      .catch(() => { if (!cancelled) setSelectedNoteDetail(null) })
+    return () => { cancelled = true }
+  }, [isNoteSelected, selectedId])
+
+  const handleUnlinkNote = useCallback(async (fromCanvasId: string, toCanvasId: string) => {
+    const fromId = fromCanvasId.replace(/^note:/, '')
+    const toId = toCanvasId.replace(/^note:/, '')
+    await unlinkNote(fromId, toId)
+  }, [unlinkNote])
 
   /**
    * Drop-on-agent handler — ingests each dropped file scoped to that agent,
@@ -468,6 +646,15 @@ export function AgentGraph({ onNav }: { onNav: (page: NavPage) => void }) {
 
         <Legend />
 
+        <KnowledgeToggle
+          enabled={knowledgeMode}
+          noteCount={noteNodes.length}
+          onToggle={() => {
+            setKnowledgeMode(v => !v)
+            void refreshNotes()
+          }}
+        />
+
         {selectedNode && (
           <SidebarPanel
             selectedNode={selectedNode}
@@ -479,6 +666,11 @@ export function AgentGraph({ onNav }: { onNav: (page: NavPage) => void }) {
             isLoading={isLoading}
             errors={analysisErrors}
             onClose={() => setSelectedId(null)}
+            noteDetail={selectedNoteDetail}
+            noteBacklinks={selectedNoteBacklinks}
+            noteOutgoing={selectedNoteOutgoing}
+            onUnlinkNote={handleUnlinkNote}
+            onSelectNoteId={(canvasId) => setSelectedId(canvasId)}
           />
         )}
       </div>

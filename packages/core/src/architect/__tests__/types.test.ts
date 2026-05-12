@@ -52,7 +52,7 @@ describe('architect status vocabulary', () => {
   it('failure kinds cover soft-fail and hard env_* taxonomy', () => {
     expect(FAILURE_KINDS).toEqual([
       'parse', 'apply', 'locked', 'budget',
-      'lint', 'type', 'build', 'test',
+      'lint', 'type', 'build', 'test', 'eval',
       'env_branch', 'env_gh', 'env_push', 'env_perm', 'env_db', 'env_llm',
     ])
   })

@@ -133,7 +133,36 @@ export function openArchitectDb(dbPath: string): Database.Database {
 
     CREATE INDEX IF NOT EXISTS events_work_item ON architect_events(work_item_id, created_at);
     CREATE INDEX IF NOT EXISTS events_type ON architect_events(event_type, created_at);
+
+    -- user_profile holds the architect's behavior knobs per user. The
+    -- architect stages read from here to adapt verbosity, gating, risk
+    -- posture, etc. The 'default' row is created on first open.
+    CREATE TABLE IF NOT EXISTS user_profile (
+      id                       TEXT PRIMARY KEY,
+      plan_verbosity           TEXT NOT NULL DEFAULT 'standard',
+      auto_approve_threshold   TEXT NOT NULL DEFAULT 'never',
+      test_strictness          TEXT NOT NULL DEFAULT 'must-pass',
+      gate_policy              TEXT NOT NULL DEFAULT 'every-stage',
+      tone                     TEXT NOT NULL DEFAULT 'standard',
+      iteration_patience       TEXT NOT NULL DEFAULT 'stop-at-budget',
+      risk_posture             TEXT NOT NULL DEFAULT 'balanced',
+      created_at               INTEGER NOT NULL,
+      updated_at               INTEGER NOT NULL,
+      CHECK (plan_verbosity IN ('brief','standard','detailed')),
+      CHECK (auto_approve_threshold IN ('never','low-risk-only','aggressive')),
+      CHECK (test_strictness IN ('must-pass','warn','advisory')),
+      CHECK (gate_policy IN ('every-stage','plan-only','merge-only')),
+      CHECK (tone IN ('terse','standard','explanatory')),
+      CHECK (iteration_patience IN ('stop-at-2','stop-at-5','stop-at-budget')),
+      CHECK (risk_posture IN ('conservative','balanced','experimental'))
+    );
   `)
+
+  // Ensure the default profile row exists. Idempotent.
+  db.prepare(`
+    INSERT OR IGNORE INTO user_profile (id, created_at, updated_at)
+    VALUES ('default', ?, ?)
+  `).run(Date.now(), Date.now())
 
   return db
 }

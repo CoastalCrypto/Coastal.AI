@@ -12,6 +12,7 @@ import Database from 'better-sqlite3'
 import { openArchitectDb } from '@coastal-ai/core/architect/db'
 import { WorkItemStore } from '@coastal-ai/core/architect/store'
 import { CycleStore } from '@coastal-ai/core/architect/cycle-store'
+import { UserProfileStore } from '@coastal-ai/core/architect/user-profile/store'
 import { ArchitectDaemon } from './daemon.js'
 import { runPlanningStage } from './stages/planning.js'
 import { runBuildingStage } from './stages/building.js'
@@ -28,6 +29,18 @@ import { findStaleTodos, findChurnHotspots } from './curriculum/signals.js'
 import { runLintGate, runTypeGate, runBuildGate, runTestGate } from './gates.js'
 import { loadWorkspaceMapSync } from './workspace-map.js'
 import { findTouchedPackages } from './touched-packages.js'
+import { NoteStore } from '@coastal-ai/core/memory/notes'
+import { syncCodeGraph } from '@coastal-ai/core/memory/code-graph-sync'
+import { getImpactSummaryForTargets } from '@coastal-ai/core/memory/impact'
+import { ingestMarkdown } from '@coastal-ai/core/memory/markdown-ingest'
+import { syncMarkdownIngest } from '@coastal-ai/core/memory/markdown-sync'
+import { getDesignContextForTargets } from '@coastal-ai/core/memory/design-context'
+import { scanCodeGraph } from './learnings/code-graph.js'
+import { ingestDesignDocs } from './learnings/design-ingest.js'
+import { runPromptEvals } from './learnings/run-evals.js'
+import { runEvalGate } from './learnings/eval-gate.js'
+import { plannerPromptV1 } from './prompts/planner.v1.js'
+import { PLANNER_FIXTURES } from './prompts/planner.fixtures.js'
 
 const REPO_ROOT    = process.env.CC_REPO_ROOT          ?? process.cwd()
 const DATA_DIR     = process.env.CC_DATA_DIR            ?? join(REPO_ROOT, 'data')
@@ -216,11 +229,81 @@ async function main(): Promise<void> {
       dailyBudget: Number(process.env.CC_CURRICULUM_DAILY_BUDGET ?? '1'),
     })
 
+    // Profile store reads the seven preference knobs (test_strictness,
+    // tone, etc.) per cycle so live edits via /api/admin/architect/user-profile
+    // take effect on the next cycle without a daemon restart.
+    const userProfileStore = new UserProfileStore(architectDb)
+
+    // Note store + code-graph ingest. Opened once and reused across cycles;
+    // the planner reads impact-radius prose from this on every runPlan call.
+    // Lives in the same DATA_DIR as the core server so they share obsidian.db.
+    const noteStore = new NoteStore({ dataDir: DATA_DIR })
+    try {
+      const scan = scanCodeGraph({ rootDir: REPO_ROOT })
+      const syncResult = syncCodeGraph(noteStore, scan)
+      console.log(
+        `[coastal-architect] code-graph synced: ${syncResult.added} new, ${syncResult.updated} updated, ` +
+        `${syncResult.removed} removed; ${syncResult.edgesAdded} edges added, ${syncResult.edgesRemoved} pruned`,
+      )
+    } catch (err) {
+      // Non-fatal — the planner just won't see impact-radius prose this cycle.
+      console.warn('[coastal-architect] code-graph sync failed:', err)
+    }
+
+    try {
+      const design = ingestDesignDocs(noteStore, REPO_ROOT)
+      if (design.files === 0) {
+        console.log('[coastal-architect] no DESIGN.md files found under packages/')
+      } else {
+        console.log(
+          `[coastal-architect] design docs synced: ${design.files} files (${design.paths.join(', ')}); ` +
+          `${design.added}/${design.updated}/${design.removed} +/~/− notes`,
+        )
+      }
+    } catch (err) {
+      console.warn('[coastal-architect] design ingest failed:', err)
+    }
+
+    // Optional planner-prompt eval pass on startup. Opt-in via
+    // CC_ARCHITECT_RUN_EVALS=1 — this issues real LLM calls (one per fixture)
+    // so we don't run it on every cold boot by default. The eval gate
+    // remains active either way; it just reads existing eval notes.
+    if (process.env.CC_ARCHITECT_RUN_EVALS === '1') {
+      try {
+        const summary = await runPromptEvals({
+          prompt: plannerPromptV1,
+          fixtures: PLANNER_FIXTURES,
+          llm: async (prompt) => (await modelClient.callPlan(prompt)).text,
+          store: noteStore,
+          model: OLLAMA_MODEL,
+        })
+        console.log(`[coastal-architect] planner evals: ${summary.passed} passed, ${summary.failed} failed`)
+      } catch (err) {
+        console.warn('[coastal-architect] planner eval run failed:', err)
+      }
+    }
+
     const daemon = new ArchitectDaemon({
       workStore: new WorkItemStore(architectDb),
       cycleStore: new CycleStore(architectDb),
 
       runPlan: async (input) => {
+        const targetHints = input.workItem.targetHints ?? []
+        // Resolve impact-radius prose from the notes layer. Empty string
+        // when there's no graph data yet (e.g. fresh install before the
+        // first scan completes) — planner falls back to current behavior.
+        let impactSummary = ''
+        let designContext = ''
+        try {
+          impactSummary = getImpactSummaryForTargets(noteStore, targetHints)
+        } catch (err) {
+          console.warn('[coastal-architect] impact summary failed:', err)
+        }
+        try {
+          designContext = getDesignContextForTargets(noteStore, targetHints)
+        } catch (err) {
+          console.warn('[coastal-architect] design context failed:', err)
+        }
         return runPlanningStage({
           workItem: input.workItem,
           reviseContext: input.reviseContext ?? null,
@@ -229,6 +312,8 @@ async function main(): Promise<void> {
           },
           client: modelClient,
           lockedPathCheck: isLockedPath,
+          impactSummary,
+          designContext,
         })
       },
 
@@ -236,6 +321,7 @@ async function main(): Promise<void> {
         const { branchName, diff } = input
         const touchedPkgs = findTouchedPackages(diff, workspaceMap)
         const gateOpts = { cwd: REPO_ROOT, exec: execGate }
+        const profile = userProfileStore.getDefault()
         return runBuildingStage({
           diff,
           applyDiff: async (d) => {
@@ -246,6 +332,12 @@ async function main(): Promise<void> {
           runTypecheck: () => runTypeGate(touchedPkgs, gateOpts),
           runBuild:     () => runBuildGate(touchedPkgs, gateOpts),
           runTests:     () => runTestGate(touchedPkgs, gateOpts),
+          testStrictness: profile.testStrictness,
+          // Eval gate is a pure read against the notes layer — fast, no LLM.
+          // When no eval history exists yet, runEvalGate returns ok=true with
+          // a "skipped" message, so the build pipeline isn't blocked on
+          // fresh installs that haven't run evals.
+          runEvals: () => runEvalGate(noteStore, plannerPromptV1.id, plannerPromptV1.version),
         })
       },
 
@@ -322,11 +414,14 @@ async function main(): Promise<void> {
       },
 
       isApprovalRequired: (gate) => {
-        const modeFile = join(DATA_DIR, '.architect-mode')
-        if (!existsSync(modeFile)) return false
-        const mode = readFileSync(modeFile, 'utf8').trim()
-        if (mode === 'manual') return true
-        if (mode === 'semi' && gate === 'pr') return true
+        // Pre-v1.6 this read a stale .architect-mode file with a vocabulary
+        // ('manual'/'semi') that didn't match what the route wrote, so it
+        // was effectively a no-op. v1.6 sources gating from the user_profile
+        // gate_policy knob, which the mode endpoint now fans out to.
+        const policy = userProfileStore.getDefault().gatePolicy
+        if (policy === 'every-stage') return true
+        if (policy === 'plan-only')   return gate === 'plan'
+        if (policy === 'merge-only')  return gate === 'pr'
         return false
       },
 

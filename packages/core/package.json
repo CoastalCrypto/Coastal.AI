@@ -26,6 +26,10 @@
       "types": "./dist/architect/cycle-store.d.ts",
       "default": "./dist/architect/cycle-store.js"
     },
+    "./architect/user-profile/store": {
+      "types": "./dist/architect/user-profile/store.d.ts",
+      "default": "./dist/architect/user-profile/store.js"
+    },
     "./architect/dedup": {
       "types": "./dist/architect/dedup.d.ts",
       "default": "./dist/architect/dedup.js"
@@ -37,6 +41,62 @@
     "./models/router": {
       "types": "./dist/models/router.d.ts",
       "default": "./dist/models/router.js"
+    },
+    "./memory": {
+      "types": "./dist/memory/index.d.ts",
+      "default": "./dist/memory/index.js"
+    },
+    "./memory/notes": {
+      "types": "./dist/memory/notes.d.ts",
+      "default": "./dist/memory/notes.js"
+    },
+    "./memory/code-graph-id": {
+      "types": "./dist/memory/code-graph-id.d.ts",
+      "default": "./dist/memory/code-graph-id.js"
+    },
+    "./memory/code-graph-sync": {
+      "types": "./dist/memory/code-graph-sync.d.ts",
+      "default": "./dist/memory/code-graph-sync.js"
+    },
+    "./memory/impact": {
+      "types": "./dist/memory/impact.d.ts",
+      "default": "./dist/memory/impact.js"
+    },
+    "./memory/markdown-ingest": {
+      "types": "./dist/memory/markdown-ingest.d.ts",
+      "default": "./dist/memory/markdown-ingest.js"
+    },
+    "./memory/markdown-sync": {
+      "types": "./dist/memory/markdown-sync.d.ts",
+      "default": "./dist/memory/markdown-sync.js"
+    },
+    "./memory/design-context": {
+      "types": "./dist/memory/design-context.d.ts",
+      "default": "./dist/memory/design-context.js"
+    },
+    "./prompts/registry": {
+      "types": "./dist/prompts/registry.d.ts",
+      "default": "./dist/prompts/registry.js"
+    },
+    "./prompts/eval-runner": {
+      "types": "./dist/prompts/eval-runner.d.ts",
+      "default": "./dist/prompts/eval-runner.js"
+    },
+    "./prompts/eval-notes": {
+      "types": "./dist/prompts/eval-notes.d.ts",
+      "default": "./dist/prompts/eval-notes.js"
+    },
+    "./memory/dom-snapshots": {
+      "types": "./dist/memory/dom-snapshots.d.ts",
+      "default": "./dist/memory/dom-snapshots.js"
+    },
+    "./memory/visual-diff": {
+      "types": "./dist/memory/visual-diff.d.ts",
+      "default": "./dist/memory/visual-diff.js"
+    },
+    "./memory/kinds-registry": {
+      "types": "./dist/memory/kinds-registry.d.ts",
+      "default": "./dist/memory/kinds-registry.js"
     }
   },
   "bin": {

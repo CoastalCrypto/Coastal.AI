@@ -33,7 +33,7 @@ export type Source = typeof SOURCES[number]
 
 export const FAILURE_KINDS = [
   'parse', 'apply', 'locked', 'budget',
-  'lint', 'type', 'build', 'test',
+  'lint', 'type', 'build', 'test', 'eval',
   'env_branch', 'env_gh', 'env_push', 'env_perm', 'env_db', 'env_llm',
 ] as const
 export type FailureKind = typeof FAILURE_KINDS[number]
