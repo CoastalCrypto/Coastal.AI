@@ -102,13 +102,21 @@ Flash a bootable USB drive. Plug it into any UEFI machine and boot — no instal
 | **High-Performance Data** | Ultra-fast local analysis of million-row CSV/JSON datasets via the CFO agent, powered by the Rust-based Polars engine |
 | **Multi-User Auth** | Username + password login with three roles: admin, operator, viewer |
 | **Self-Build Loop** | The system can read its own code, propose improvements, and open pull requests |
+| **Architect Preferences** *(v1.6)* | Seven preference knobs (plan verbosity, auto-approve threshold, test strictness, gate policy, tone, iteration patience, risk posture) control how the architect behaves per cycle |
+| **Knowledge Graph** *(v1.7)* | Notes substrate with wikilinks + auto-detected entity mentions, rendered on the Agent Graph page in Obsidian-style violet with clickable backlinks |
+| **Impact Radius** *(v1.7)* | Code-graph scanner emits "who imports this file" into the planner prompt for every change — the architect sees its blast surface before it acts |
+| **Design Context** *(v1.7)* | `DESIGN.md` files per package are ingested as atomic section notes; relevant design tokens auto-inject into the planner prompt when UI files are touched |
+| **Eval Gate** *(v1.7)* | Versioned planner prompts with structural fixtures (must emit `<plan>` + `<diff>`, target hint must appear, etc.); the building stage soft-fails on regressions |
+| **DOM Snapshot Gate** *(v1.7)* | HTTP browser snapshotter persists kind=`dom` notes; gate compares fresh vs. last-OK baseline (status / shrink / new console errors). Opt-in via `CC_ARCHITECT_DOM_URLS` |
+| **Hardware Scan** | `GET /api/admin/hardware-scan` returns GPU/RAM/disk + minimum/recommended/optimal model trio; rendered as a Hardware card on the System page |
+| **Trading Architect** *(optional)* | Peer package adds market-data providers + RSI/Kronos signal generators that persist as `kind='trade'` notes. Delete the package to remove all financial surface — kernel stays vertical-neutral |
 | **Privacy First** | Entirely local inference — no external API keys or cloud accounts required |
 
 ---
 
-## 🏗 Architect — Self-Healing System (v1.5.0)
+## 🏗 Architect — Self-Healing System (v1.7.0-dev)
 
-The Architect is Coastal.AI's autonomous improvement daemon. It takes work items, writes plans using your local models, runs them against lint/typecheck/build/test gates, opens PRs, and shows its work.
+The Architect is Coastal.AI's autonomous improvement daemon. It takes work items, writes plans using your local models, runs them against lint/typecheck/build/test gates, opens PRs, and shows its work. Since v1.6 the architect's behavior is tuned through a 7-knob preference profile; since v1.7 it operates over a unified knowledge graph (code-graph, design context, eval history, DOM snapshots) so every plan sees its impact radius.
 
 ### Quick Start
 
@@ -123,13 +131,38 @@ coastal-ai architect status                # check status
 # Navigate to the Architect page in the dashboard
 ```
 
-### Three Modes
+### Modes (presets over the user-profile preference knobs)
 
-| Mode | What it does |
-|------|-------------|
-| **Hands-on** | Shows you every change before it happens. Plan + PR review gates. |
-| **Hands-off** | Only shows pull requests. No plan gate. |
-| **Autopilot** | Auto-merges anything that passes all tests. No gates. |
+| Mode | Gate policy | Auto-approve | Test strictness | Use case |
+|------|-------------|--------------|-----------------|----------|
+| **Hands-on** | every stage | never | must-pass | Review every change before it lands |
+| **Hands-off** | plan only | low-risk only | must-pass | Approve plans, auto-handle the rest |
+| **Autopilot** | merge only | aggressive | warn (don't block) | Trust the gates, intervene on failure |
+| **Custom** | (you choose) | (you choose) | (you choose) | Any combination of the 7 knobs |
+
+Selecting a mode writes its preset values into `user_profile`. Tweak any individual knob in the **Preferences** panel under Settings → Architect and the mode badge flips to **CUSTOM** automatically.
+
+### Preference Knobs (v1.6+)
+
+| Knob | Options |
+|------|---------|
+| **planVerbosity** | brief / standard / detailed |
+| **autoApproveThreshold** | never / low-risk-only / aggressive |
+| **testStrictness** | must-pass / warn / advisory |
+| **gatePolicy** | every-stage / plan-only / merge-only |
+| **tone** | terse / standard / explanatory |
+| **iterationPatience** | stop-at-2 / stop-at-5 / stop-at-budget |
+| **riskPosture** | conservative / balanced / experimental |
+
+### Unified Knowledge Graph (v1.7)
+
+Every cycle the architect now reads + writes a shared note graph stored in `obsidian.db`. Notes are typed (`code` / `design` / `eval` / `dom` / `visual_diff` / `learning` / `user` / `cycle`) and connected via wikilinks + auto-detected entity mentions. The graph renders on the **Agent Graph** page in violet — toggle **KNOWLEDGE** to fade the agent layer and browse the knowledge layer Obsidian-style with clickable backlinks.
+
+Ingesters that feed the graph on each daemon startup:
+- **Code-graph** — scans `packages/*/src` for imports + exports; every file becomes a note, every import becomes an edge. The planner pulls the *impact radius* (who imports the targeted file) into every prompt.
+- **Design-context** — parses every `packages/<name>/DESIGN.md` into atomic H2 sections. When a work item touches a UI package, the relevant design tokens get pasted into the planner prompt automatically.
+- **Eval gate** — runs structural assertions against the planner prompt's output; failures soft-fail the build with `failureKind='eval'`.
+- **DOM snapshot + visual diff** — substrate ready, gate opt-in via `CC_ARCHITECT_DOM_URLS`.
 
 ### How It Works
 

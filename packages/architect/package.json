@@ -1,6 +1,6 @@
 {
   "name": "@coastal-ai/architect",
-  "version": "1.5.0",
+  "version": "1.7.0-dev",
   "private": true,
   "type": "module",
   "main": "dist/index.js",
