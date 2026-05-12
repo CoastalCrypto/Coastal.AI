@@ -2,13 +2,19 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { NoteStore } from '../notes.js'
+import { NoteStore } from '@coastal-ai/core/memory/notes'
+import { registerKind } from '@coastal-ai/core/memory/kinds-registry'
 import {
   writeTradeSignalAsNote, writeTradeSignalsAsNotes,
   recentTradeNotes,
   tradeNoteId, tradeSourceId,
   type TradeSignalLike,
-} from '../trade-notes.js'
+} from '../notes.js'
+
+// Register 'trade' explicitly. In real use, importing the package
+// entry point does this as a side effect; tests bypass the entry point.
+// Idempotent — safe to call from every test file in this package.
+registerKind('trade')
 
 let dir: string
 let store: NoteStore

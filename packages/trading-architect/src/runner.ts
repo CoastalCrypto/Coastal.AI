@@ -12,7 +12,7 @@
 // borrow whatever cadence model the parent architect already uses.
 
 import type { NoteStore } from '@coastal-ai/core/memory/notes'
-import { writeTradeSignalAsNote, type PersistedTradeRef } from '@coastal-ai/core/memory/trade-notes'
+import { writeTradeSignalAsNote, type PersistedTradeRef } from './notes.js'
 import type { MarketProvider, SignalGenerator } from './types.js'
 
 export interface TradeTickInput {

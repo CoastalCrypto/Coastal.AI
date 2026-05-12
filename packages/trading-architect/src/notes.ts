@@ -1,15 +1,16 @@
-// packages/core/src/memory/trade-notes.ts
+// packages/trading-architect/src/notes.ts
 //
-// Persists TradeSignal objects as `kind='trade'` notes. Same hygiene as
-// dom-snapshots / eval-notes: deterministic note id sortable by emit
-// time, sourceType+sourceId scoping per (generator, symbol).
+// Persists TradeSignal objects as `kind='trade'` notes against any core
+// NoteStore. Lives here (in the trading vertical) rather than in core so
+// the kernel stays vertical-neutral — `kind='trade'` is registered with
+// the core kinds-registry by this package's entry point on import.
 //
-// The trade-architect package owns the TradeSignal type — but to keep
-// core free of trade-architect imports, we accept a structurally typed
-// signal here. Any `{ symbol, action, confidence, reasoning, generatorId,
-// emittedAt, priceAtEmit }` shape works.
+// Pre-Tier-2 (commit f9179f0..1a6f337) this module lived in
+// `@coastal-ai/core/memory/trade-notes`. It was moved here in commit
+// (Tier-2 cleanup) so users who never install trading-architect get a
+// kernel that doesn't know about markets at all.
 
-import type { NoteStore, Note } from './notes.js'
+import type { NoteStore, Note } from '@coastal-ai/core/memory/notes'
 
 export type SignalActionLike = 'buy' | 'sell' | 'hold'
 

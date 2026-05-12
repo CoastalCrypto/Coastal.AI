@@ -129,13 +129,22 @@ export interface PreferenceQuestion {
 }
 
 // ── Notes / knowledge graph ────────────────────────────────────────────────
-// Mirror of the backend enums in packages/core/src/memory/notes.ts. Keep in
-// sync if either side changes.
-export const NOTE_KINDS = [
+// CORE_NOTE_KINDS mirrors the kernel's CORE_KINDS in
+// packages/core/src/memory/kinds-registry.ts. Vertical packages
+// (trading-architect, future image-architect, etc.) register additional
+// kinds at runtime, so the wire-level NoteKind is intentionally `string`
+// — the web client renders any kind the server returns without compile-
+// time gating. Use CORE_NOTE_KINDS when filtering UI to known-built-ins.
+export const CORE_NOTE_KINDS = [
   'cycle', 'learning', 'code', 'design', 'eval',
-  'dom', 'visual_diff', 'trade', 'user',
+  'dom', 'visual_diff', 'user',
 ] as const
-export type NoteKind = typeof NOTE_KINDS[number]
+export type CoreNoteKind = typeof CORE_NOTE_KINDS[number]
+/** Wire-level kind: any string the registry has accepted server-side. */
+export type NoteKind = string
+
+/** @deprecated alias for CORE_NOTE_KINDS during the Tier-2 transition. */
+export const NOTE_KINDS = CORE_NOTE_KINDS
 
 export const LINK_KINDS = [
   'mentions', 'derives_from', 'contradicts', 'supersedes', 'contains',

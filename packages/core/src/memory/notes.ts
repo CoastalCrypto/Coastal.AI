@@ -2,22 +2,22 @@ import Database from 'better-sqlite3'
 import { join } from 'node:path'
 import { mkdirSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
+import { CORE_KINDS, isRegisteredKind, type CoreNoteKind } from './kinds-registry.js'
 
-// Note kinds map to where the note came from. Each downstream slice
-// (code-review-graph, DESIGN.md, promptfoo, browser-use, trading) writes
-// notes of one specific kind so the canvas can color/group by origin.
-export const NOTE_KINDS = [
-  'cycle',       // architect cycle outcome
-  'learning',    // distilled lesson the architect remembered
-  'code',        // code-review-graph: function/file/module
-  'design',      // DESIGN.md tokens, component patterns
-  'eval',        // promptfoo result
-  'dom',         // browser-use DOM/console snapshot
-  'visual_diff', // UI-TARS before/after diff
-  'trade',       // TradingAgents signal/regime
-  'user',        // user-authored note (Obsidian-style)
-] as const
-export type NoteKind = typeof NOTE_KINDS[number]
+// Re-exported for back-compat: `NOTE_KINDS` was the canonical list before
+// the kinds-registry split. Code that only needs the core set still works.
+// Plugins that contribute additional kinds should import from
+// './kinds-registry.js' directly and call registerKind() at module load.
+export { CORE_KINDS as NOTE_KINDS }
+
+/**
+ * NoteKind is intentionally widened to `string` post-Tier-2: plugins
+ * register their own kinds (`trade`, future: `image_gen`, `audio_clip`)
+ * without forking core. Use `CoreNoteKind` when you specifically need
+ * compile-time guarantee of one of the eight built-in kinds.
+ */
+export type NoteKind = string
+export type { CoreNoteKind }
 
 // Link kinds describe the relationship between two notes. `mentions` is
 // the auto-derived default from wikilinks/entity scans; the others are
@@ -103,7 +103,6 @@ interface FeedbackRow {
   last_rejected_at: number | null
 }
 
-const noteKindList = NOTE_KINDS.map(k => `'${k}'`).join(',')
 const linkKindList = LINK_KINDS.map(k => `'${k}'`).join(',')
 
 export class NoteStore {
@@ -115,11 +114,16 @@ export class NoteStore {
     this.db.pragma('journal_mode = WAL')
     this.db.pragma('foreign_keys = ON')
     this.db.exec(`
+      -- kind is validated at the application layer (NoteStore.create /
+      -- upsert call assertRegisteredKind) so plugins can register
+      -- additional kinds at runtime via the kinds-registry without
+      -- needing a schema migration. The DB-level CHECK was dropped in
+      -- the Tier 2 refactor (2026-05-11).
       CREATE TABLE IF NOT EXISTS notes (
         id          TEXT PRIMARY KEY,
         title       TEXT NOT NULL,
         body        TEXT NOT NULL,
-        kind        TEXT NOT NULL CHECK (kind IN (${noteKindList})),
+        kind        TEXT NOT NULL,
         source_type TEXT,
         source_id   TEXT,
         created_at  INTEGER NOT NULL,
@@ -159,6 +163,7 @@ export class NoteStore {
   }
 
   create(input: NoteInput): Note {
+    assertRegisteredKind(input.kind)
     const now = Date.now()
     const id = input.id ?? randomUUID()
     const note: Note = {
@@ -214,6 +219,7 @@ export class NoteStore {
   update(id: string, patch: NotePatch): Note | null {
     const existing = this.get(id)
     if (!existing) return null
+    if (patch.kind !== undefined) assertRegisteredKind(patch.kind)
     const next: Note = {
       ...existing,
       ...(patch.title !== undefined && { title: patch.title }),
@@ -443,6 +449,20 @@ export class NoteStore {
 
   close(): void {
     this.db.close()
+  }
+}
+
+/**
+ * Replaces the dropped SQLite CHECK constraint. Throws when an
+ * unregistered kind shows up at write time. Plugins must call
+ * `registerKind('foo')` (idempotent) before writing notes of kind 'foo'.
+ */
+function assertRegisteredKind(kind: string): void {
+  if (!isRegisteredKind(kind)) {
+    throw new Error(
+      `NoteStore: unregistered note kind "${kind}". ` +
+      `Call registerKind("${kind}") from your package's entry point first.`,
+    )
   }
 }
 

@@ -738,6 +738,35 @@ Coastal.AI runs as three cooperating processes:
 └──────────┘ └───────────────────────────────────┘
 ```
 
+### Package Layout — Core vs. Optional
+
+Coastal.AI is a **kernel + optional verticals** workspace. The kernel
+is domain-neutral; verticals plug additional capabilities into it
+through a small contract (the kinds-registry plus subpath exports).
+You can delete any optional vertical and the kernel keeps working.
+
+**Kernel (always installed):**
+
+| Package | What it does |
+|---------|--------------|
+| [`packages/core`](packages/core) | Fastify server, SQLite stores, model router, REST/WS API, unified memory + notes substrate |
+| [`packages/architect`](packages/architect) | Self-improvement daemon (planning → building → PR → review), gates, learnings (code-graph, design, evals) |
+| [`packages/web`](packages/web) | React 19 dashboard — chat, agent graph, settings |
+| [`packages/daemon`](packages/daemon) | Scheduled-agent runner (NL-cron) |
+| [`packages/shell`](packages/shell) | Tauri desktop shell |
+
+**Optional verticals (delete-safe):**
+
+| Package | Adds | Opt-in marker |
+|---------|------|---------------|
+| [`packages/trading-architect`](packages/trading-architect) | Market data + signal generators (RSI, Kronos adapter); `kind='trade'` notes | Importing the package registers `'trade'` with the core kinds-registry |
+| [`packages/video`](packages/video) | Motion-canvas video pipeline | Standalone build/play scripts |
+
+**The pattern:** new verticals follow trading-architect's lead — a peer
+package that imports from `@coastal-ai/core/memory/*`, calls
+`registerKind(...)` at module load to extend the note schema, and ships
+its own ingester/runner. The kernel never imports a vertical.
+
 ### Trust Tiers
 
 | Tier | What agents can do |

@@ -94,9 +94,9 @@
       "types": "./dist/memory/visual-diff.d.ts",
       "default": "./dist/memory/visual-diff.js"
     },
-    "./memory/trade-notes": {
-      "types": "./dist/memory/trade-notes.d.ts",
-      "default": "./dist/memory/trade-notes.js"
+    "./memory/kinds-registry": {
+      "types": "./dist/memory/kinds-registry.d.ts",
+      "default": "./dist/memory/kinds-registry.js"
     }
   },
   "bin": {

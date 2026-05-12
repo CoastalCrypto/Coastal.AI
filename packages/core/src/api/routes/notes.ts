@@ -1,14 +1,23 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import type { UnifiedMemory } from '../../memory/index.js'
-import { NOTE_KINDS, LINK_KINDS } from '../../memory/notes.js'
+import { LINK_KINDS } from '../../memory/notes.js'
+import { isRegisteredKind, allKinds } from '../../memory/kinds-registry.js'
 
 export interface NoteRouteDeps {
   memory: UnifiedMemory
 }
 
-const noteKindSchema = z.enum(NOTE_KINDS)
+// Accept any kind currently in the registry. Plugins (e.g. trading-architect)
+// register their kinds at module-load time; the schema reads the registry
+// per-request so plugins added after server start are honored.
+const noteKindSchema = z.string().refine(isRegisteredKind, {
+  message: 'unregistered note kind — call registerKind() first or check allKinds()',
+})
 const linkKindSchema = z.enum(LINK_KINDS)
+// Convenience: route can return the live kind list to callers who want
+// to enumerate (used by future SettingsTab / kind-color picker).
+export { allKinds as listRegisteredKinds }
 
 const createSchema = z.object({
   title: z.string().min(1).max(500),

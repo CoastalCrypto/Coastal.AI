@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { NoteStore } from '../notes.js'
+import { registerKind, _resetKindsRegistryForTests } from '../kinds-registry.js'
 
 let tempDir: string
 let store: NoteStore
@@ -33,10 +34,22 @@ describe('NoteStore CRUD', () => {
     expect(store.get('fixed-id')).toEqual(note)
   })
 
-  it('rejects notes with an unknown kind via SQLite CHECK constraint', () => {
+  it('rejects notes whose kind is not in the registry (app-level validation)', () => {
     expect(() =>
-      store.create({ title: 'x', body: 'y', kind: 'bogus' as never }),
-    ).toThrow()
+      store.create({ title: 'x', body: 'y', kind: 'bogus' }),
+    ).toThrow(/unregistered note kind/)
+  })
+
+  it('accepts notes for kinds that have been registered at runtime', () => {
+    // Registering 'trade' here mirrors what the trading-architect entry
+    // point does on import. Once registered, the store stops complaining.
+    registerKind('trade')
+    try {
+      const note = store.create({ title: 'BTC buy', body: 'rsi=22', kind: 'trade' })
+      expect(note.kind).toBe('trade')
+    } finally {
+      _resetKindsRegistryForTests()
+    }
   })
 
   it('updates a note immutably and bumps updated_at', async () => {
@@ -64,7 +77,7 @@ describe('NoteStore CRUD', () => {
 
   it('full-text search hits title or body', () => {
     store.create({ title: 'Fastify routes', body: 'admin auth pattern', kind: 'learning' })
-    store.create({ title: 'Unrelated', body: 'tradingview', kind: 'trade' })
+    store.create({ title: 'Unrelated', body: 'something else', kind: 'design' })
     const hits = store.search('fastify')
     expect(hits).toHaveLength(1)
     expect(hits[0].title).toContain('Fastify')

@@ -6,10 +6,15 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { NoteStore } from '@coastal-ai/core/memory/notes'
-import { recentTradeNotes, tradeSourceId } from '@coastal-ai/core/memory/trade-notes'
+import { registerKind } from '@coastal-ai/core/memory/kinds-registry'
+import { recentTradeNotes, tradeSourceId } from '../notes.js'
 import { createFileMarketProvider } from '../providers/file-provider.js'
 import { createRsiThresholdGenerator } from '../generators/rsi-threshold.js'
 import { runTradeTick } from '../runner.js'
+
+// Tests bypass the package entry point (which would auto-register
+// 'trade'), so register explicitly. Idempotent.
+registerKind('trade')
 
 let fixturesDir: string
 let dbDir: string
