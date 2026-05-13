@@ -14,6 +14,7 @@ const mockSession = (tools: string[] = ['read_file']) => ({
   recordAction: vi.fn(),
   actionSummary: () => '',
   invalidateSoulCache: vi.fn(),
+  getTrustLevel: () => null,
 }) as unknown as AgentSession
 
 const mockRegistry = (executor?: (name: string, args: any) => Promise<string>) => ({
