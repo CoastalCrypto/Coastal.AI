@@ -123,7 +123,7 @@ export async function chatRoutes(
     const agent = agentRegistry.getByDomain(decision.domain) ?? agentRegistry.get('general')!
     const toolDefs = toolRegistry.getDefinitionsFor(agent.tools)
     const contextDocs = contextStore.listForAgent(agent.id)
-    const session = new AgentSession(agent, toolDefs, personaMgr.get(), contextDocs, userModelStore)
+    const session = new AgentSession(agent, toolDefs, personaMgr.get(), contextDocs, userModelStore, config.agentTrustLevel)
 
     // Pending approval callback — sends WS event to client
     const pendingApprovals = new Map<string, string>()
@@ -162,7 +162,7 @@ export async function chatRoutes(
     setTimeout(async () => {
       try {
         const predictiveAgent = agentRegistry.get('general')!
-        const predSession = new AgentSession(predictiveAgent, toolDefs, personaMgr.get())
+        const predSession = new AgentSession(predictiveAgent, toolDefs, personaMgr.get(), [], null, config.agentTrustLevel)
         const prompt = `Based on the latest user message "${message}" and your reply "${result.reply}", proactively predict the single most helpful next action or follow-up question the user might need. Respond ONLY with a short, actionable phrasing (max 6 words). Do not execute tools. Just provide the suggestion string.`
         const predLoop = new AgenticLoop(router.ollama, toolRegistry, gate, log, onApprovalNeeded)
         const pResult = await predLoop.run(predSession, prompt, sessionId, [], undefined, predControllers.get(sessionId)?.signal)

@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3'
 import { randomUUID } from 'node:crypto'
 import type { GateDecision } from './types.js'
+import type { TrustLevel } from '../config.js'
 
 const APPROVAL_TIMEOUT_MS = Number(process.env.CC_APPROVAL_TIMEOUT_MS ?? 300_000)
 
@@ -22,14 +23,18 @@ export class PermissionGate {
     toolName: string,
     reversible: boolean,
     permittedTools?: string[],
+    trustLevel?: TrustLevel,
   ): GateDecision {
     // Step 1: check permitted list
     if (!permittedTools || !permittedTools.includes(toolName)) return 'block'
 
-    // Step 2: if reversible, allow
+    // Step 2: in autonomous mode, auto-allow all permitted tools
+    if (trustLevel === 'autonomous') return 'allow'
+
+    // Step 3: if reversible, allow
     if (reversible) return 'allow'
 
-    // Step 3: check always-allow
+    // Step 4: check always-allow
     const alwaysAllow = this.db
       .prepare('SELECT 1 FROM agent_always_allow WHERE agent_id = ? AND tool_name = ?')
       .get(agentId, toolName)

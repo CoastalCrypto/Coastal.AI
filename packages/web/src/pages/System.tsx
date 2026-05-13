@@ -87,6 +87,9 @@ export function System({ onNav }: { onNav: (page: NavPage) => void }) {
   const [hwLoading, setHwLoading] = useState(false)
   const [hwError, setHwError] = useState('')
 
+  const [architectPower, setArchitectPower] = useState<boolean | null>(null)
+  const [architectLoading, setArchitectLoading] = useState(false)
+
   useEffect(() => {
     setHwLoading(true)
     coreClient.getHardwareScan()
@@ -94,6 +97,27 @@ export function System({ onNav }: { onNav: (page: NavPage) => void }) {
       .catch(() => setHwError('Hardware scan unavailable'))
       .finally(() => setHwLoading(false))
   }, [])
+
+  useEffect(() => {
+    setArchitectLoading(true)
+    coreClient.architectStatus()
+      .then(({ power }) => setArchitectPower(power === 'on'))
+      .catch(() => setArchitectPower(null))
+      .finally(() => setArchitectLoading(false))
+  }, [])
+
+  const handleArchitectToggle = async () => {
+    if (architectPower === null) return
+    setArchitectLoading(true)
+    try {
+      await coreClient.architectSetPower(!architectPower ? 'on' : 'off')
+      setArchitectPower(!architectPower)
+    } catch (e: any) {
+      console.error('Failed to toggle architect power:', e)
+    } finally {
+      setArchitectLoading(false)
+    }
+  }
 
   useEffect(() => { fetchLogs(logService) }, [logService, fetchLogs])
 
@@ -230,6 +254,33 @@ export function System({ onNav }: { onNav: (page: NavPage) => void }) {
                 </StatCard>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Architect Power */}
+        {architectPower !== null && (
+          <div className="mb-8 p-5 rounded-xl border border-gray-700 bg-gray-900/50">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-white">Self-Healing Architect</p>
+                <p className="text-sm text-gray-400 mt-1">
+                  {architectPower
+                    ? 'Active — agent self-improvement loop is running.'
+                    : 'Disabled — agent self-improvement features are paused.'}
+                </p>
+              </div>
+              <button
+                onClick={handleArchitectToggle}
+                disabled={architectLoading}
+                className={`px-4 py-2 rounded-lg font-semibold transition-colors disabled:opacity-40 ${
+                  architectPower
+                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                    : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                }`}
+              >
+                {architectLoading ? 'Updating...' : architectPower ? 'On' : 'Off'}
+              </button>
+            </div>
           </div>
         )}
 

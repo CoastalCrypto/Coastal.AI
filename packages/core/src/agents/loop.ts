@@ -161,7 +161,7 @@ export class AgenticLoop {
   ): Promise<{ tc: typeof tc; output: string }> {
     const start = Date.now()
     const reversible = this.registry.isReversible(tc.name, tc.args)
-    const decision = this.gate.evaluate(session.agent.id, tc.name, reversible, session.agent.tools)
+    const decision = this.gate.evaluate(session.agent.id, tc.name, reversible, session.agent.tools, session.getTrustLevel() ?? undefined)
 
     if (decision === 'block') {
       const duration = Date.now() - start

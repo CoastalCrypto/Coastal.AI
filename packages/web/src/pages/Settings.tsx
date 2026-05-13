@@ -34,6 +34,7 @@ export function Settings({ onNav }: { onNav: (page: NavPage) => void }) {
   const [trustLevel, setTrustLevel] = useState<TrustLevel>('trusted')
   const [trustSaving, setTrustSaving] = useState(false)
   const [trustSaved, setTrustSaved] = useState(false)
+  const [restarting, setRestarting] = useState(false)
 
   const input = 'w-full bg-gray-900 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-cyan-500'
 
@@ -71,6 +72,17 @@ export function Settings({ onNav }: { onNav: (page: NavPage) => void }) {
     }
   }
 
+  const handleRestart = async () => {
+    setRestarting(true)
+    try {
+      await coreClient.restartServer()
+      setTimeout(() => window.location.reload(), 5000)
+    } catch (e: any) {
+      setError(`Failed to restart server: ${e.message ?? 'unknown error'}`)
+      setRestarting(false)
+    }
+  }
+
   const handleSave = async () => {
     setSaving(true)
     setError('')
@@ -105,7 +117,16 @@ export function Settings({ onNav }: { onNav: (page: NavPage) => void }) {
                   : 'Agents are heavily restricted and cannot access the filesystem.'}
               </p>
               {trustSaved && (
-                <p className="text-xs text-yellow-400 mt-1">Saved — restart the server for the change to take effect.</p>
+                <div className="mt-3 flex items-center gap-3">
+                  <p className="text-xs text-yellow-400">Saved — restart the server for the change to take effect.</p>
+                  <button
+                    onClick={handleRestart}
+                    disabled={restarting}
+                    className="text-xs px-3 py-1 bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-700 text-white rounded transition-colors"
+                  >
+                    {restarting ? 'Restarting…' : 'Restart Gateway'}
+                  </button>
+                </div>
               )}
             </div>
             <div className="flex items-center gap-3">

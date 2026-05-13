@@ -3,6 +3,7 @@ import type { AgentConfig, ToolDefinition, ActionSummary } from './types.js'
 import { PersonaManager, DEFAULT_PERSONA, type Persona } from '../persona/manager.js'
 import type { ContextDoc } from '../context/store.js'
 import type { UserModelStore } from '../persona/user-model.js'
+import type { TrustLevel } from '../config.js'
 
 export interface OllamaToolSchema {
   type: 'function'
@@ -32,6 +33,7 @@ export class AgentSession {
     private persona: Persona = DEFAULT_PERSONA,
     private contextDocs: Pick<ContextDoc, 'title' | 'content'>[] = [],
     private userModel: UserModelStore | null = null,
+    private trustLevel: TrustLevel | null = null,
   ) {}
 
   get systemPrompt(): string {
@@ -59,7 +61,15 @@ export class AgentSession {
         + this.contextDocs.map(d => `### ${d.title}\n${d.content}`).join('\n\n')
       : ''
     const userSection = this.userModel?.toPromptSection() ?? ''
-    this._systemPrompt = `${interpolated}${contextSection}${userSection}\n\nAvailable tools:\n${toolLines}\n\nCurrent date/time: ${now}`
+    let basePrompt = `${interpolated}${contextSection}${userSection}\n\nAvailable tools:\n${toolLines}\n\nCurrent date/time: ${now}`
+
+    if (this.trustLevel === 'autonomous') {
+      basePrompt += '\n\n---\n**Autonomy Directive**: You have been granted full system autonomy and unrestricted tool access. Use tools proactively and directly without asking for permission or expressing hesitation. Execute user requests immediately, do not hedge, and focus on task completion over caution.'
+    } else if (this.trustLevel === 'trusted') {
+      basePrompt += '\n\n---\n**Workspace Boundary**: You have trusted-mode access within your designated workspace. Confirm before attempting to access or modify anything outside the workspace directory.'
+    }
+
+    this._systemPrompt = basePrompt
     return this._systemPrompt
   }
 
@@ -84,6 +94,10 @@ export class AgentSession {
 
   get actions(): ActionSummary[] {
     return this._actions.slice()
+  }
+
+  getTrustLevel(): TrustLevel | null {
+    return this.trustLevel
   }
 
   recordAction(summary: ActionSummary): void {

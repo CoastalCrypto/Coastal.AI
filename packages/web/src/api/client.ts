@@ -997,6 +997,14 @@ export class CoreClient {
     })
     if (!res.ok) throw new Error(`Failed to set trust level (${res.status})`)
   }
+
+  async restartServer(): Promise<void> {
+    const res = await fetch(`${this.baseUrl}/api/admin/restart`, {
+      method: 'POST',
+      headers: this.adminHeaders(),
+    })
+    if (!res.ok) throw new Error(`Failed to restart server (${res.status})`)
+  }
 }
 
 // Development: use explicit core API URL. Production: relative URLs work via proxy

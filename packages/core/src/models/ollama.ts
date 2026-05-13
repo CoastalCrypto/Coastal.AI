@@ -24,7 +24,7 @@ export class OllamaClient {
     const res = await fetch(`${this.config.baseUrl}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages, stream: false }),
+      body: JSON.stringify({ model, messages, stream: false, keep_alive: -1 }),
       signal: AbortSignal.timeout(180_000),
     })
     if (!res.ok) throw new Error(`Ollama error ${res.status}: ${await res.text()}`)
@@ -36,7 +36,7 @@ export class OllamaClient {
     const res = await fetch(`${this.config.baseUrl}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages, stream: true }),
+      body: JSON.stringify({ model, messages, stream: true, keep_alive: -1 }),
       signal: AbortSignal.timeout(300_000),
     })
     if (!res.ok) throw new Error(`Ollama stream error ${res.status}: ${await res.text()}`)
@@ -67,7 +67,7 @@ export class OllamaClient {
     const res = await fetch(`${this.config.baseUrl}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages, tools, stream: false }),
+      body: JSON.stringify({ model, messages, tools, stream: false, keep_alive: -1 }),
       signal: AbortSignal.timeout(180_000),
     })
     if (!res.ok) throw new Error(`Ollama error ${res.status}: ${await res.text()}`)

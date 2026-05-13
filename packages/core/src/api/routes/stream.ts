@@ -79,7 +79,7 @@ export async function streamRoutes(
         ?? agentRegistry.get('general')!
       write('domain', { domain: agent.id })
       const toolDefs = toolRegistry.getDefinitionsFor(agent.tools)
-      const session = new AgentSession(agent, toolDefs, personaMgr.get())
+      const session = new AgentSession(agent, toolDefs, personaMgr.get(), [], null, config.agentTrustLevel)
 
       const onApprovalNeeded = (approvalId: string, agentName: string, toolName: string, cmd: string) => {
         write('approval', { approvalId, agentName, toolName, cmd })
