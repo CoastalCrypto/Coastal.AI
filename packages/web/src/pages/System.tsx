@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import { coreClient, type SystemStats, type HardwareScan, type ModelRecommendation } from '../api/client'
-import { NavBar, type NavPage } from '../components/NavBar'
 
 function fmtBytes(b: number): string {
   if (b === 0) return '0 B'
@@ -138,7 +137,6 @@ export function System({ onNav }: { onNav: (page: NavPage) => void }) {
 
   return (
     <div className="min-h-screen text-white" style={{ background: '#050a0f' }}>
-      <NavBar page="system" onNav={onNav} />
 
       <div className="pt-20 px-4 sm:px-6 max-w-4xl mx-auto pb-12">
         <div className="flex items-center justify-between mb-6">

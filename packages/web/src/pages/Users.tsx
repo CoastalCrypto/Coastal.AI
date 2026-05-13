@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { NavBar, type NavPage } from '../components/NavBar'
 import { coreClient } from '../api/client'
 
 type UserRole = 'admin' | 'operator' | 'viewer'
@@ -99,7 +98,6 @@ export function Users({ onNav, currentUserId }: { onNav: (page: NavPage) => void
 
   return (
     <div className="min-h-screen text-white" style={{ background: '#050a0f' }}>
-      <NavBar page="users" onNav={onNav} />
 
       <div className="pt-20 pb-12 px-4 sm:px-6 max-w-3xl mx-auto">
         <div className="flex items-center justify-between mb-8">

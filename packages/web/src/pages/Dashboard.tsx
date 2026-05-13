@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useEventStream, type AgentEvent } from '../hooks/useEventStream'
-import { NavBar, type NavPage } from '../components/NavBar'
 import { EmptyState } from '../components/ui/EmptyState.js'
 
 function relativeTime(ts: number): string {
@@ -362,7 +361,6 @@ export function Dashboard({ onNav }: { onNav: (page: NavPage) => void }) {
 
   return (
     <div className="min-h-screen text-white" style={{ background: '#050a0f' }}>
-      <NavBar page="dashboard" onNav={onNav} />
 
       <div className="pt-20 pb-12 px-4 sm:px-6 max-w-6xl mx-auto">
 

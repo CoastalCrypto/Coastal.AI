@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { NavBar, type NavPage } from '../components/NavBar'
 import { EmptyState } from '../components/ui/EmptyState.js'
 
 interface Skill {
@@ -127,7 +126,6 @@ export function Skills({ onNav }: { onNav: (page: NavPage) => void }) {
 
   return (
     <div className="min-h-screen text-white" style={{ background: '#050a0f' }}>
-      <NavBar page="skills" onNav={onNav} />
 
       <div className="pt-20 pb-12 px-4 sm:px-6 max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-8">

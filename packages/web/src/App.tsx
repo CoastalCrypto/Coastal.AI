@@ -6,7 +6,7 @@ import { Login } from './pages/Login'
 import { ChangePassword } from './pages/ChangePassword'
 import { Chat } from './pages/Chat'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { NavBar, type NavPage } from './components/NavBar'
+import { SideNav, type NavPage } from './components/SideNav'
 import { TitleBar } from './components/TitleBar'
 import { CommandPalette } from './components/CommandPalette'
 import { coreClient } from './api/client'
@@ -160,35 +160,37 @@ export default function App() {
   return (
     <ApolloProvider client={apolloClient}>
       <AuthContext.Provider value={{ currentUser, onLogout: handleLogout }}>
-        <TitleBar />
-        {paletteOpen && currentUser && (
-          <CommandPalette onNav={(p) => { setPage(p); setPaletteOpen(false) }} onClose={() => setPaletteOpen(false)} />
-        )}
-        {page === 'dashboard'   && <PageLoader><Dashboard onNav={nav} /></PageLoader>}
-        {page === 'analytics'   && <PageLoader><Analytics onNav={nav} /></PageLoader>}
-        {page === 'tools'       && <PageLoader><Tools onNav={nav} /></PageLoader>}
-        {page === 'skills'      && <PageLoader><Skills onNav={nav} /></PageLoader>}
-        {page === 'channels'    && <PageLoader><Channels onNav={nav} /></PageLoader>}
-        {page === 'agents'      && <PageLoader><Agents onNav={nav} /></PageLoader>}
-        {page === 'pipeline'    && <PageLoader><Pipeline onNav={nav} /></PageLoader>}
-        {page === 'agent-graph' && <PageLoader><AgentGraph onNav={nav} /></PageLoader>}
-        {page === 'settings'    && <PageLoader><Settings onNav={nav} /></PageLoader>}
-        {page === 'system'      && <PageLoader><System onNav={nav} /></PageLoader>}
-        {page === 'architect'   && <ErrorBoundary><PageLoader><Architect onNav={nav} /></PageLoader></ErrorBoundary>}
-        {page === 'users'       && <PageLoader><Users onNav={nav} currentUserId={currentUser.id} /></PageLoader>}
-        {page === 'models'      && (
-          <PageLoader>
-            <div className="min-h-screen" style={{ background: '#050a0f', color: '#e2f4ff' }}>
-              <NavBar page="models" onNav={nav} />
-              <div className="pt-20 px-4 sm:px-6 max-w-4xl mx-auto pb-12">
-                <Models />
+        <SideNav page={page} onNav={nav} />
+        <div style={{ marginLeft: window.innerWidth >= 768 ? '240px' : '0' }}>
+          <TitleBar />
+          {paletteOpen && currentUser && (
+            <CommandPalette onNav={(p) => { setPage(p); setPaletteOpen(false) }} onClose={() => setPaletteOpen(false)} />
+          )}
+          {page === 'dashboard'   && <PageLoader><Dashboard onNav={nav} /></PageLoader>}
+          {page === 'analytics'   && <PageLoader><Analytics onNav={nav} /></PageLoader>}
+          {page === 'tools'       && <PageLoader><Tools onNav={nav} /></PageLoader>}
+          {page === 'skills'      && <PageLoader><Skills onNav={nav} /></PageLoader>}
+          {page === 'channels'    && <PageLoader><Channels onNav={nav} /></PageLoader>}
+          {page === 'agents'      && <PageLoader><Agents onNav={nav} /></PageLoader>}
+          {page === 'pipeline'    && <PageLoader><Pipeline onNav={nav} /></PageLoader>}
+          {page === 'agent-graph' && <PageLoader><AgentGraph onNav={nav} /></PageLoader>}
+          {page === 'settings'    && <PageLoader><Settings onNav={nav} /></PageLoader>}
+          {page === 'system'      && <PageLoader><System onNav={nav} /></PageLoader>}
+          {page === 'architect'   && <ErrorBoundary><PageLoader><Architect onNav={nav} /></PageLoader></ErrorBoundary>}
+          {page === 'users'       && <PageLoader><Users onNav={nav} currentUserId={currentUser.id} /></PageLoader>}
+          {page === 'models'      && (
+            <PageLoader>
+              <div className="min-h-screen" style={{ background: '#050a0f', color: '#e2f4ff' }}>
+                <div className="pt-20 px-4 sm:px-6 max-w-4xl mx-auto pb-12">
+                  <Models />
+                </div>
               </div>
-            </div>
-          </PageLoader>
-        )}
-        {/* Always mounted so chat history and session survive page navigation */}
-        <div style={{ display: page === 'chat' ? 'block' : 'none' }}>
-          <Chat sessionId={sessionId} onNav={p => nav(p as NavPage)} />
+            </PageLoader>
+          )}
+          {/* Always mounted so chat history and session survive page navigation */}
+          <div style={{ display: page === 'chat' ? 'block' : 'none' }}>
+            <Chat sessionId={sessionId} onNav={p => nav(p as NavPage)} />
+          </div>
         </div>
       </AuthContext.Provider>
     </ApolloProvider>

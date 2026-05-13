@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { AgentCard } from '../components/AgentCard'
 import { AgentEditor } from '../components/AgentEditor'
-import { NavBar, type NavPage } from '../components/NavBar'
 import { EmptyState } from '../components/ui/EmptyState.js'
 
 interface Agent {
@@ -314,7 +313,6 @@ export function Agents({ onNav }: { onNav: (page: NavPage) => void }) {
 
   return (
     <div className="min-h-screen text-white" style={{ background: '#050a0f' }}>
-      <NavBar page="agents" onNav={onNav} />
 
       {credAgent && (
         <CredentialsPanel agentId={credAgent.id} agentName={credAgent.name} onClose={() => setCredAgentId(null)} />

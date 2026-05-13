@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { coreClient, type Persona } from '../api/client'
-import { NavBar, type NavPage } from '../components/NavBar'
 
 type TrustLevel = 'sandboxed' | 'trusted' | 'autonomous'
 
@@ -101,7 +100,6 @@ export function Settings({ onNav }: { onNav: (page: NavPage) => void }) {
 
   return (
     <div className="min-h-screen text-white" style={{ background: '#050a0f' }}>
-      <NavBar page="settings" onNav={onNav} />
 
       <div className="pt-20 px-4 sm:px-6 max-w-xl mx-auto py-12">
 

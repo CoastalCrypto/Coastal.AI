@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import { NavBar, type NavPage } from '../components/NavBar'
 import { coreClient } from '../api/client'
 import { useArchitectSSE } from '../hooks/useArchitectSSE'
 import { StatusCard } from './architect/StatusCard'
@@ -28,7 +27,6 @@ export function Architect({ onNav }: { onNav: (page: NavPage) => void }) {
 
   return (
     <div className="min-h-screen text-white" style={{ background: '#050a0f' }}>
-      <NavBar page={'architect' as NavPage} onNav={onNav} />
 
       {showWizard && (
         <FirstRunWizard onComplete={() => {

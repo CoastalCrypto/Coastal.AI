@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react'
-import { NavBar } from '../components/NavBar'
-import type { NavPage } from '../components/NavBar'
 import { PipelineRun } from './PipelineRun.js'
 import { PipelineCanvas } from '../components/PipelineCanvas.js'
 import { PANEL, BTN_CYAN, INPUT_STYLE, PAGE_BG, SECTION_LABEL } from '../styles/tokens.js'
@@ -170,7 +168,6 @@ export function Pipeline({ onNav }: { onNav: (p: NavPage) => void }) {
 
   return (
     <div className="text-white" style={PAGE_BG}>
-      <NavBar page="pipeline" onNav={onNav} />
       <div className="pt-20 px-4 sm:px-6 max-w-3xl mx-auto pb-16">
 
         <div className="mb-8">

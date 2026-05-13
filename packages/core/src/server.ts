@@ -68,6 +68,7 @@ import { CustomToolLoader } from './tools/custom/loader.js'
 import { EdgeFeedbackStore } from './agents/edge-feedback.js'
 import { ChannelManager } from './channels/manager.js'
 import { McpStore } from './tools/mcp/store.js'
+import { BrowserSessionManager } from './tools/browser/session-manager.js'
 import { loadConfig } from './config.js'
 import multipart from '@fastify/multipart'
 import Database from 'better-sqlite3'
@@ -295,7 +296,7 @@ export async function buildServer() {
   const skillGaps = new SkillGapsLog(config.dataDir)
   const userModelStore = new UserModelStore(db)
 
-  await fastify.register(chatRoutes, { mcpStore, gate })
+  await fastify.register(chatRoutes, { mcpStore, gate, db, sessionsDb, router: chatRouter, memory: chatMemory, agentRegistry, toolRegistry: chatToolRegistry, log: chatLog, skillGaps: chatSkillGaps, personaMgr: chatPersonaMgr, contextStore: chatContextStore, userModelStore: chatUserModelStore })
   await fastify.register(skillRoutes, { store: skillStore, router: pipelineRouter, gaps: skillGaps })
   await fastify.register(skillPackRoutes, { skillStore, agentRegistry })
   await fastify.register(mcpRoutes, { store: mcpStore })
@@ -318,9 +319,14 @@ export async function buildServer() {
     agentRegistry.close()
     pipelinePersonaMgr.close()
     pipelineRouter.close()
+    chatPersonaMgr.close()
+    chatRouter.close()
+    chatSkillGaps.close()
     skillGaps.close()
     await sharedSearchMemory.close()
+    await chatMemory.close()
     architectDb.close()
+    sessionsDb.close()
     db.close()
   })
 

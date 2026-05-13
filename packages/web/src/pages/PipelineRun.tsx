@@ -1,7 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
 import { usePipelineRun, type LiveStage } from '../hooks/usePipelineRun.js'
-import { NavBar } from '../components/NavBar.js'
-import type { NavPage } from '../components/NavBar.js'
 import { PANEL, BTN_CYAN, BTN_RED, MONO, PAGE_BG, COLOR } from '../styles/tokens.js'
 
 const BTN: React.CSSProperties = { ...BTN_CYAN, padding: '8px 16px', fontWeight: 600 }
@@ -34,7 +32,6 @@ export function PipelineRun({ runId, pipelineName, stageCount, onBack, onNav }: 
 
   if (!state) return (
     <div style={PAGE_BG}>
-      <NavBar page="pipeline" onNav={onNav} />
       <div className="pt-20 px-4 max-w-3xl mx-auto" style={{ color: COLOR.muted }}>
         <p style={MONO}>Connecting to run {runId}...</p>
       </div>
@@ -59,7 +56,6 @@ export function PipelineRun({ runId, pipelineName, stageCount, onBack, onNav }: 
 
   return (
     <div style={PAGE_BG}>
-    <NavBar page="pipeline" onNav={p => confirmLeave(() => onNav(p))} />
     <div className="pt-20 px-4 max-w-3xl mx-auto pb-8" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
 
       {/* Header */}

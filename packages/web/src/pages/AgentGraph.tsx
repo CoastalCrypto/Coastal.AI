@@ -1,5 +1,4 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
-import { NavBar, type NavPage } from '../components/NavBar'
 import { MyceliumCanvas } from '../components/MyceliumCanvas'
 import { KnowledgeLibrary } from '../components/KnowledgeLibrary'
 import { useAgentGraph } from '../hooks/useAgentGraph'
@@ -591,7 +590,6 @@ export function AgentGraph({ onNav }: { onNav: (page: NavPage) => void }) {
 
   return (
     <div className="min-h-screen" style={{ background: '#050a0f' }}>
-      <NavBar page="agent-graph" onNav={onNav} />
 
       <div style={{ position: 'fixed', top: 56, left: 0, right: 0, bottom: 0 }}>
         {!connected && (
