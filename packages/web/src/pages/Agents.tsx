@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { AgentCard } from '../components/AgentCard'
 import { AgentEditor } from '../components/AgentEditor'
 import { EmptyState } from '../components/ui/EmptyState.js'
+import type { NavPage } from '../components/SideNav'
 
 interface Agent {
   id: string; name: string; role: string; tools: string[]; builtIn: boolean; active: boolean; voice?: string
@@ -225,7 +226,7 @@ function BindingsPanel({ agentId, agentName, onClose }: { agentId: string; agent
 }
 
 // ── Main page ─────────────────────────────────────────────────────
-export function Agents({ onNav }: { onNav: (page: NavPage) => void }) {
+export function Agents({ onNav: _onNav }: { onNav: (page: NavPage) => void }) {
   const [agents, setAgents] = useState<Agent[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
   const [editing, setEditing] = useState<Agent | null>(null)

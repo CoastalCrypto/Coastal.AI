@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useEventStream, type AgentEvent } from '../hooks/useEventStream'
 import { EmptyState } from '../components/ui/EmptyState.js'
+import type { NavPage } from '../components/SideNav'
 
 function relativeTime(ts: number): string {
   const diff = Date.now() - ts
@@ -344,7 +345,7 @@ function CronSection() {
 }
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
-export function Dashboard({ onNav }: { onNav: (page: NavPage) => void }) {
+export function Dashboard({ onNav: _onNav }: { onNav: (page: NavPage) => void }) {
   const { events, connected, clear } = useEventStream(200)
   const [expandedEvent, setExpandedEvent] = useState<number | null>(null)
 

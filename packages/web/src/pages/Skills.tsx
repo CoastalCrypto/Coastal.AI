@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { EmptyState } from '../components/ui/EmptyState.js'
+import type { NavPage } from '../components/SideNav'
 
 interface Skill {
   id: string
@@ -31,7 +32,7 @@ function extractVars(prompt: string): string[] {
   return [...new Set(matches.map(m => m[1]))]
 }
 
-export function Skills({ onNav }: { onNav: (page: NavPage) => void }) {
+export function Skills({ onNav: _onNav }: { onNav: (page: NavPage) => void }) {
   const [skills, setSkills] = useState<Skill[]>([])
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState(EMPTY)

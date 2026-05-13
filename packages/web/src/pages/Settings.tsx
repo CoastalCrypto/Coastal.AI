@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { coreClient, type Persona } from '../api/client'
+import type { NavPage } from '../components/SideNav'
 
 type TrustLevel = 'sandboxed' | 'trusted' | 'autonomous'
 
@@ -23,7 +24,7 @@ function detectPreset(personality: string): string {
   return personality ? 'custom' : ''
 }
 
-export function Settings({ onNav }: { onNav: (page: NavPage) => void }) {
+export function Settings({ onNav: _onNav }: { onNav: (page: NavPage) => void }) {
   const [persona, setPersona] = useState<Partial<Persona>>({})
   const [personalityPreset, setPersonalityPreset] = useState('')
   const [loading, setLoading] = useState(true)

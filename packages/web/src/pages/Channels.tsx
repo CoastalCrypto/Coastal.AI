@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { coreClient } from '../api/client'
 import { EmptyState } from '../components/ui/EmptyState.js'
+import type { NavPage } from '../components/SideNav'
 
 type ChannelType = 'telegram' | 'discord' | 'slack' | 'zapier'
 
@@ -81,7 +82,7 @@ function ChannelCard({ ch, onEdit, onDelete, onToggle, onTest }: {
   )
 }
 
-export function Channels({ onNav }: { onNav: (page: NavPage) => void }) {
+export function Channels({ onNav: _onNav }: { onNav: (page: NavPage) => void }) {
   const [channels, setChannels] = useState<ChannelRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<ChannelRecord | null>(null)

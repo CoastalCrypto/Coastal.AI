@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { coreClient } from '../api/client'
 import { EmptyState } from '../components/ui/EmptyState.js'
+import type { NavPage } from '../components/SideNav'
 
 interface CustomTool {
   id: string
@@ -51,7 +52,7 @@ function ToolCard({ tool, onEdit, onDelete, onToggle }: {
   )
 }
 
-export function Tools({ onNav }: { onNav: (page: NavPage) => void }) {
+export function Tools({ onNav: _onNav }: { onNav: (page: NavPage) => void }) {
   const [tools, setTools] = useState<CustomTool[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<CustomTool | null>(null)

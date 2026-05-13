@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { coreClient } from '../api/client'
 import { EmptyState } from '../components/ui/EmptyState.js'
+import type { NavPage } from '../components/SideNav'
 
 interface ToolStat { toolName: string; callCount: number; avgDurationMs: number; successRate: number }
 interface DayStat  { date: string; calls: number; sessions: number }

@@ -8,10 +8,11 @@ import { ActivityTab } from './architect/ActivityTab'
 import { InsightsTab } from './architect/InsightsTab'
 import { ReceiptsTab } from './architect/ReceiptsTab'
 import { SettingsTab } from './architect/SettingsTab'
+import type { NavPage } from '../components/SideNav'
 import { FirstRunWizard } from './architect/FirstRunWizard'
 import { PauseButton } from './architect/PauseButton'
 
-export function Architect({ onNav }: { onNav: (page: NavPage) => void }) {
+export function Architect({ onNav: _onNav }: { onNav: (page: NavPage) => void }) {
   const [tab, setTab] = useState<Tab>('queue')
   const [status, setStatus] = useState<{ power: string; mode: string } | null>(null)
   const [showWizard, setShowWizard] = useState(!localStorage.getItem('architect_setup_done'))

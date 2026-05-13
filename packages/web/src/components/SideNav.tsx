@@ -69,10 +69,23 @@ export function SideNav({ page, onNav }: { page: NavPage; onNav: (page: NavPage)
         isDesktop ? 'translate-x-0' : open ? 'translate-x-0' : '-translate-x-full'
       }`}>
         <div className="p-4 h-full flex flex-col">
-          {/* Logo/Brand */}
-          <div className="mb-8 pt-2">
-            <h1 className="text-xl font-bold text-cyan-400">Coastal.AI</h1>
-            <p className="text-xs text-gray-500 mt-1">{userEmail}</p>
+          {/* Logo/Brand + Mobile Close */}
+          <div className="mb-8 pt-2 flex items-start justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-cyan-400">Coastal.AI</h1>
+              <p className="text-xs text-gray-500 mt-1">{userEmail}</p>
+            </div>
+            {!isDesktop && (
+              <button
+                onClick={() => setOpen(false)}
+                className="p-1 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-gray-200"
+                aria-label="Close menu"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
           </div>
 
           {/* Update banner */}

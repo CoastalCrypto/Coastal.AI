@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { PipelineRun } from './PipelineRun.js'
 import { PipelineCanvas } from '../components/PipelineCanvas.js'
 import { PANEL, BTN_CYAN, INPUT_STYLE, PAGE_BG, SECTION_LABEL } from '../styles/tokens.js'
+import type { NavPage } from '../components/SideNav'
 
 function adminHeaders(): Record<string, string> {
   const session = sessionStorage.getItem('cc_admin_session') ?? ''

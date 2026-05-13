@@ -7,6 +7,7 @@ import { useAgentMemory } from '../hooks/useAgentMemory'
 import { useNotes } from '../hooks/useNotes'
 import { coreClient, type NoteWithLinks } from '../api/client'
 import type { GraphEdge, GraphNode } from '../types/agent-graph'
+import type { NavPage } from '../components/SideNav'
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -474,7 +475,7 @@ function KnowledgeToggle({
 /*  Main page                                                          */
 /* ------------------------------------------------------------------ */
 
-export function AgentGraph({ onNav }: { onNav: (page: NavPage) => void }) {
+export function AgentGraph({ onNav: _onNav }: { onNav: (page: NavPage) => void }) {
   const { nodes: agentNodes, edges: agentEdges, connected, reactionsRef } = useAgentGraph()
   const { summary: memorySummary, refresh: refreshMemory } = useAgentMemory()
   const { noteNodes, noteEdges, refresh: refreshNotes, unlink: unlinkNote } = useNotes()

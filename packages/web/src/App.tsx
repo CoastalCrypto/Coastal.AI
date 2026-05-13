@@ -7,7 +7,6 @@ import { ChangePassword } from './pages/ChangePassword'
 import { Chat } from './pages/Chat'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { SideNav, type NavPage } from './components/SideNav'
-import { TitleBar } from './components/TitleBar'
 import { CommandPalette } from './components/CommandPalette'
 import { coreClient } from './api/client'
 import { apolloClient } from './api/apolloClient'
@@ -162,7 +161,6 @@ export default function App() {
       <AuthContext.Provider value={{ currentUser, onLogout: handleLogout }}>
         <SideNav page={page} onNav={nav} />
         <div style={{ marginLeft: window.innerWidth >= 768 ? '240px' : '0' }}>
-          <TitleBar />
           {paletteOpen && currentUser && (
             <CommandPalette onNav={(p) => { setPage(p); setPaletteOpen(false) }} onClose={() => setPaletteOpen(false)} />
           )}

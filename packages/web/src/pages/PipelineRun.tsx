@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { usePipelineRun, type LiveStage } from '../hooks/usePipelineRun.js'
 import { PANEL, BTN_CYAN, BTN_RED, MONO, PAGE_BG, COLOR } from '../styles/tokens.js'
+import type { NavPage } from '../components/SideNav'
 
 const BTN: React.CSSProperties = { ...BTN_CYAN, padding: '8px 16px', fontWeight: 600 }
 
@@ -12,7 +13,7 @@ interface Props {
   onNav: (p: NavPage) => void
 }
 
-export function PipelineRun({ runId, pipelineName, stageCount, onBack, onNav }: Props) {
+export function PipelineRun({ runId, pipelineName, stageCount, onBack, onNav: _onNav }: Props) {
   const { state, steer, abort } = usePipelineRun(runId, stageCount)
   const [steerMsg, setSteerMsg] = useState('')
   const [expanded, setExpanded] = useState<Set<number>>(new Set([0]))

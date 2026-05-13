@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { coreClient } from '../api/client'
+import type { NavPage } from '../components/SideNav'
 
 type UserRole = 'admin' | 'operator' | 'viewer'
 
@@ -32,7 +33,7 @@ function timeAgo(ts: number): string {
   return `${Math.floor(s / 86400)}d ago`
 }
 
-export function Users({ onNav, currentUserId }: { onNav: (page: NavPage) => void; currentUserId: string }) {
+export function Users({ onNav: _onNav, currentUserId }: { onNav: (page: NavPage) => void; currentUserId: string }) {
   const [users,   setUsers]   = useState<UserRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState('')

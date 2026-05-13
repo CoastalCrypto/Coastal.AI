@@ -17,25 +17,10 @@ import { join } from 'node:path'
 
 export async function streamRoutes(
   fastify: FastifyInstance,
-  opts: { gate: PermissionGate },
+  opts: { gate: PermissionGate; db: Database.Database; sessionsDb: Database.Database; router: ModelRouter; memory: UnifiedMemory; agentRegistry: any; toolRegistry: ToolRegistry; log: ActionLog; personaMgr: PersonaManager },
 ) {
-  const { gate } = opts
+  const { gate, db, sessionsDb, router, memory, agentRegistry, toolRegistry, log, personaMgr } = opts
   const config = loadConfig()
-  mkdirSync(config.dataDir, { recursive: true })
-  mkdirSync(config.agentWorkdir, { recursive: true })
-
-  const db = new Database(join(config.dataDir, 'coastal-ai.db'))
-  const router = new ModelRouter({ ollamaUrl: config.ollamaUrl, vllmUrl: config.vllmUrl, airllmUrl: config.airllmUrl, defaultModel: config.defaultModel })
-  const memory = new UnifiedMemory({ dataDir: config.dataDir, mem0ApiKey: config.mem0ApiKey, cloudConsentGranted: config.cloudConsentGranted })
-  const agentRegistry = new AgentRegistry(join(config.dataDir, 'agents.db'))
-  const backend = await createBackend(config.agentTrustLevel, [config.agentWorkdir])
-  const toolRegistry = new ToolRegistry({
-    backend,
-    trustLevel: config.agentTrustLevel,
-    workdir: config.agentWorkdir,
-  })
-  const log = new ActionLog(db)
-  const personaMgr = new PersonaManager(join(config.dataDir, 'persona.db'))
 
   // POST /api/chat/stream — SSE streaming chat
   fastify.post<{

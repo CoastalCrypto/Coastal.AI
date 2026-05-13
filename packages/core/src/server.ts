@@ -212,7 +212,36 @@ export async function buildServer() {
 
   await fastify.register(noteRoutes, { memory: sharedSearchMemory })
   await fastify.register(uploadRoutes, { knowledgeStore: sharedKnowledgeStore, router: pipelineRouter })
-  await fastify.register(streamRoutes, { gate })
+
+  // Create sessionsDb with schema initialization
+  const sessionsDb = new Database(join(config.dataDir, 'sessions.db'))
+  sessionsDb.exec(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )
+  `)
+
+  // Shared context for chat and stream routes
+  const chatRouter = new ModelRouter({ ollamaUrl: config.ollamaUrl, vllmUrl: config.vllmUrl, airllmUrl: config.airllmUrl, defaultModel: config.defaultModel })
+  const chatMemory = new UnifiedMemory({ dataDir: config.dataDir, mem0ApiKey: config.mem0ApiKey, cloudConsentGranted: config.cloudConsentGranted })
+  const chatBackend = await createBackend(config.agentTrustLevel, [config.agentWorkdir])
+  const chatBrowserManager = config.agentTrustLevel !== 'sandboxed' ? new BrowserSessionManager() : undefined
+  const chatToolRegistry = new ToolRegistry({
+    backend: chatBackend,
+    browserManager: chatBrowserManager,
+    trustLevel: config.agentTrustLevel,
+    workdir: config.agentWorkdir,
+  })
+  const chatLog = new ActionLog(db)
+  const chatSkillGaps = new SkillGapsLog(config.dataDir)
+  const chatPersonaMgr = new PersonaManager(join(config.dataDir, 'persona.db'))
+  const chatContextStore = new ContextStore(db)
+  const chatUserModelStore = new UserModelStore(db)
+
+  await fastify.register(streamRoutes, { gate, db, sessionsDb, router: chatRouter, memory: chatMemory, agentRegistry, toolRegistry: chatToolRegistry, log: chatLog, personaMgr: chatPersonaMgr })
   const pipelineBackend = await createBackend(config.agentTrustLevel, [config.agentWorkdir])
   const pipelineToolRegistry = new ToolRegistry({
     backend: pipelineBackend,

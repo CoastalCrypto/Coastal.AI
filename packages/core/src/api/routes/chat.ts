@@ -25,35 +25,10 @@ import { eventBus } from '../../events/bus.js'
 
 export async function chatRoutes(
   fastify: FastifyInstance,
-  opts: { mcpStore: McpStore; gate: PermissionGate },
+  opts: { mcpStore: McpStore; gate: PermissionGate; db: Database.Database; sessionsDb: Database.Database; router: ModelRouter; memory: UnifiedMemory; agentRegistry: AgentRegistry; toolRegistry: ToolRegistry; log: ActionLog; skillGaps: SkillGapsLog; personaMgr: PersonaManager; contextStore: ContextStore; userModelStore: UserModelStore },
 ) {
-  const { mcpStore, gate } = opts
+  const { mcpStore, gate, db, sessionsDb, router, memory, agentRegistry, toolRegistry, log, skillGaps, personaMgr, contextStore, userModelStore } = opts
   const config = loadConfig()
-
-  // Ensure data dir and workspace exist
-  mkdirSync(config.dataDir, { recursive: true })
-  mkdirSync(config.agentWorkdir, { recursive: true })
-
-  const db = new Database(pathJoin(config.dataDir, 'coastal-ai.db'))
-  const sessionsDb = new Database(pathJoin(config.dataDir, 'sessions.db'))
-  const router = new ModelRouter({ ollamaUrl: config.ollamaUrl, vllmUrl: config.vllmUrl, airllmUrl: config.airllmUrl, defaultModel: config.defaultModel })
-  const memory = new UnifiedMemory({ dataDir: config.dataDir, mem0ApiKey: config.mem0ApiKey, cloudConsentGranted: config.cloudConsentGranted })
-  const agentRegistry = new AgentRegistry(pathJoin(config.dataDir, 'agents.db'))
-  const backend = await createBackend(config.agentTrustLevel, [config.agentWorkdir])
-  const browserManager = config.agentTrustLevel !== 'sandboxed'
-    ? new BrowserSessionManager()
-    : undefined
-  const toolRegistry = new ToolRegistry({
-    backend,
-    browserManager,
-    trustLevel: config.agentTrustLevel,
-    workdir: config.agentWorkdir,
-  })
-  const log = new ActionLog(db)
-  const skillGaps = new SkillGapsLog(config.dataDir)
-  const personaMgr = new PersonaManager(pathJoin(config.dataDir, 'persona.db'))
-  const contextStore = new ContextStore(db)
-  const userModelStore = new UserModelStore(db)
 
   // Per-session AbortControllers for predictive inference — cancels any in-flight
   // predictive call before spawning the next one, preventing overlapping runs.
@@ -66,7 +41,7 @@ export async function chatRoutes(
   ) as Record<string, string>
 
   const activeAdapters: McpAdapter[] = []
-  
+
   // Only connect MCP servers if NOT running tests
   if (process.env.NODE_ENV !== 'test') {
     const servers = mcpStore.list().filter(s => s.enabled)
@@ -83,15 +58,7 @@ export async function chatRoutes(
   }
 
   fastify.addHook('onClose', async () => {
-    await memory.close()
-    router.close()
-    agentRegistry.close()
-    personaMgr.close()
-    db.close()
-    sessionsDb.close()
-    skillGaps.close()
     for (const a of activeAdapters) await a.close()
-    await browserManager?.closeAll()
   })
 
 

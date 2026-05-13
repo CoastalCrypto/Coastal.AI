@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { coreClient, type SystemStats, type HardwareScan, type ModelRecommendation } from '../api/client'
+import type { NavPage } from '../components/SideNav'
 
 function fmtBytes(b: number): string {
   if (b === 0) return '0 B'
@@ -36,7 +37,7 @@ function fmtUptime(s: number): string {
 
 const LOG_SERVICES = ['coastal-ai-server', 'coastal-ai-daemon', 'coastal-ai-architect', 'ollama']
 
-export function System({ onNav }: { onNav: (page: NavPage) => void }) {
+export function System({ onNav: _onNav }: { onNav: (page: NavPage) => void }) {
   const [stats, setStats]       = useState<SystemStats | null>(null)
   const [logs, setLogs]         = useState<string[]>([])
   const [logService, setLogService] = useState(LOG_SERVICES[0])
