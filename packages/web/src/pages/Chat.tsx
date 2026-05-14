@@ -1,21 +1,19 @@
 import { useState, useRef, useEffect, useCallback, type DragEvent } from 'react'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { guessDomain, type AgentDomain } from '../components/AgentThinkingAnimation'
-import { coreClient, type Session } from '../api/client'
+import { coreClient } from '../api/client'
 import { AgentCharacters } from '../components/AgentCharacters'
 import { ChatPane } from '../components/ChatPane'
 import { speakText as speakTextUtil } from '../utils/speech'
-import { type Message, BG_PRESETS, LS_BG_KEY, PANE_GRID, loadSavedBg, exportMarkdown, isValidBgUrl } from './chat/types'
+import { type Message, BG_PRESETS, LS_BG_KEY, PANE_GRID, loadSavedBg, isValidBgUrl } from './chat/types'
 import { MessageList } from './chat/MessageList'
 import { ShortcutsOverlay } from './chat/ShortcutsOverlay'
 import { BackgroundPicker } from './chat/BackgroundPicker'
-import { ChatSidebar } from './chat/ChatSidebar'
 import { ArchitectToast } from './chat/ArchitectToast'
-import { LayoutIcon } from './chat/LayoutIcon'
 import { useReconnectingWs } from './chat/useReconnectingWs'
 
-export function Chat({ sessionId: initialSessionId, onNav }: { sessionId: string; onNav: (page: string) => void }) {
-  const [currentSessionId, setCurrentSessionId] = useState(initialSessionId)
+export function Chat({ sessionId: initialSessionId, onNav: _onNav }: { sessionId: string; onNav: (page: string) => void }) {
+  const [currentSessionId] = useState(initialSessionId)
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: 'Hello. I\'m your AI executive. How can I help you today?' }
   ])
@@ -26,9 +24,7 @@ export function Chat({ sessionId: initialSessionId, onNav }: { sessionId: string
   const [activeDomain, setActiveDomain] = useState<AgentDomain>('general')
   const [isListening, setIsListening] = useState(false)
   const [teamMode, setTeamMode] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
-  const [sessions, setSessions] = useState<Session[]>([])
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
   const [dragging, setDragging] = useState(false)
   const [fileNotice, setFileNotice] = useState('')
@@ -39,10 +35,9 @@ export function Chat({ sessionId: initialSessionId, onNav }: { sessionId: string
   const [personaAgentId, setPersonaAgentId] = useState<string | null>(null)
   const [agentDrawerOpen, setAgentDrawerOpen] = useState(false)
   const isMobile = useIsMobile()
-  const [paneCount, setPaneCount] = useState(1)
+  const [paneCount] = useState(1)
   const [focusedPane, setFocusedPane] = useState(0)
-  const [layoutOpen, setLayoutOpen] = useState(false)
-  const [voiceMuted, setVoiceMuted] = useState(false)
+  const [voiceMuted] = useState(false)
   const [architectToast, setArchitectToast] = useState<{
     proposalId: string; summary: string; vetoDeadline: number
   } | null>(null)
@@ -91,12 +86,6 @@ export function Chat({ sessionId: initialSessionId, onNav }: { sessionId: string
       .catch(() => {})
   }, [agentList.length])
 
-  const loadSessions = useCallback(() => {
-    coreClient.listSessions(30)
-      .then(({ sessions: s }) => setSessions(s))
-      .catch(() => {})
-  }, [])
-  useEffect(() => { if (sidebarOpen) loadSessions() }, [sidebarOpen, loadSessions])
 
   useEffect(() => {
     const loadAgents = () =>
@@ -187,7 +176,7 @@ export function Chat({ sessionId: initialSessionId, onNav }: { sessionId: string
       if (e.key === '?' && !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
         setShortcutsOpen(o => !o)
       }
-      if (e.key === 'Escape') { setSidebarOpen(false); setShortcutsOpen(false) }
+      if (e.key === 'Escape') { setShortcutsOpen(false) }
       if (e.key === '/' && !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
         e.preventDefault(); inputRef2.current?.focus()
       }
@@ -388,17 +377,6 @@ export function Chat({ sessionId: initialSessionId, onNav }: { sessionId: string
     })
   }, [])
 
-  const resumeSession = (session: Session) => {
-    setCurrentSessionId(session.id)
-    setMessages([{ role: 'assistant', content: `Resumed: "${session.title}"` }])
-    setSuggestions([]); setSidebarOpen(false)
-  }
-
-  const newSession = () => {
-    setCurrentSessionId(`session-${Date.now()}`)
-    setMessages([{ role: 'assistant', content: 'Hello. I\'m your AI executive. How can I help you today?' }])
-    setSuggestions([]); setSidebarOpen(false)
-  }
 
   const handleSuggestion = useCallback((sug: string) => {
     setInput(sug)
@@ -427,9 +405,6 @@ export function Chat({ sessionId: initialSessionId, onNav }: { sessionId: string
     }
   }
 
-  const navBtn = 'text-gray-400 hover:text-white transition-all font-mono text-sm'
-  const activeNav = 'text-cyan-400 font-bold tracking-widest bg-cyan-950/30 px-3 py-1 rounded border border-cyan-800/50 font-mono text-sm'
-
   // ── Render ───────────────────────────────────────────────────────
 
   return (
@@ -451,79 +426,6 @@ export function Chat({ sessionId: initialSessionId, onNav }: { sessionId: string
       )}
 
       {shortcutsOpen && <ShortcutsOverlay onClose={() => setShortcutsOpen(false)} />}
-
-      <header className="glass-panel border-b-0 rounded-none px-6 py-3 flex items-center gap-4 z-10 shadow-md"
-        style={{ borderBottom: '1px solid rgba(0,229,255,0.10)' }}>
-        <button onClick={() => setSidebarOpen(o => !o)} className="transition-colors text-lg" style={{ color: '#94adc4' }} title="Sessions">☰</button>
-        <div className="shrink-0 w-8 h-8 rounded-md flex items-center justify-center"
-          style={{ background: 'rgba(0,229,255,0.12)', border: '1px solid rgba(0,229,255,0.30)' }}>
-          <span style={{ color: '#00e5ff', fontSize: '16px', fontWeight: 700, lineHeight: 1 }}>✳</span>
-        </div>
-        <div>
-          <div className="text-xs font-bold tracking-wider" style={{ color: '#00e5ff', fontFamily: 'Space Grotesk, sans-serif' }}>
-            {teamMode ? 'TEAM MODE' : activeDomain.toUpperCase()}
-          </div>
-          <div className="text-xs font-mono" style={{ color: 'rgba(0,229,255,0.40)' }}>SESSION {currentSessionId.slice(-8).toUpperCase()}</div>
-        </div>
-        <div className="ml-auto flex gap-4 items-center">
-          <div style={{ position: 'relative' }}>
-            <button
-              onClick={() => setLayoutOpen(o => !o)}
-              title="Split panes"
-              style={{
-                display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '6px',
-                background: paneCount > 1 ? 'rgba(0,229,255,0.20)' : 'rgba(0,229,255,0.08)',
-                border: paneCount > 1 ? '1px solid rgba(0,229,255,0.55)' : '1px solid rgba(0,229,255,0.25)',
-                cursor: 'pointer', transition: 'all 0.15s',
-              }}
-            >
-              <LayoutIcon count={paneCount} size={16} />
-              {paneCount > 1 && <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#00e5ff', lineHeight: 1 }}>{paneCount}×</span>}
-            </button>
-            {layoutOpen && (
-              <div
-                style={{
-                  position: 'absolute', top: '28px', right: 0, zIndex: 60,
-                  background: 'rgba(5,10,15,0.97)', border: '1px solid rgba(0,229,255,0.20)',
-                  borderRadius: '10px', padding: '10px', display: 'grid',
-                  gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px',
-                }}
-                onMouseLeave={() => setLayoutOpen(false)}
-              >
-                {([1,2,3,4,6,8,9] as const).map(n => (
-                  <button
-                    key={n}
-                    onClick={() => { setPaneCount(n); setFocusedPane(0); setLayoutOpen(false) }}
-                    title={`${n} pane${n > 1 ? 's' : ''}`}
-                    style={{
-                      width: '36px', height: '36px', borderRadius: '6px',
-                      background: paneCount === n ? 'rgba(0,229,255,0.18)' : 'rgba(255,255,255,0.04)',
-                      border: paneCount === n ? '1px solid rgba(0,229,255,0.45)' : '1px solid rgba(255,255,255,0.06)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                    }}
-                  >
-                    <LayoutIcon count={n} size={20} />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <button onClick={() => exportMarkdown(messages, currentSessionId)} className="text-gray-500 hover:text-gray-300 text-xs font-mono transition-colors" title="Export conversation">export</button>
-          <button onClick={() => { setVoiceMuted(m => !m); window.speechSynthesis?.cancel() }} className={`text-xs font-mono transition-colors ${voiceMuted ? 'text-red-500 hover:text-red-400' : 'text-gray-500 hover:text-gray-300'}`} title={voiceMuted ? 'Voice muted' : 'Mute voice'}>
-            {voiceMuted ? 'muted' : 'voice'}
-          </button>
-          <button onClick={() => setShortcutsOpen(true)} className="text-gray-600 hover:text-gray-400 text-xs font-mono transition-colors" title="Keyboard shortcuts">?</button>
-          <button onClick={() => setBgPickerOpen(o => !o)} className={`text-xs font-mono transition-colors ${bgPickerOpen ? 'text-cyan-400' : 'text-gray-600 hover:text-gray-400'}`} title="Change background">bg</button>
-          <button className={activeNav}>/chat</button>
-          <button onClick={() => onNav('dashboard')} className={navBtn}>/dashboard</button>
-          <button onClick={() => onNav('models')}    className={navBtn}>/models</button>
-          <button onClick={() => onNav('agents')}    className={navBtn}>/agents</button>
-          <button onClick={() => onNav('settings')}  className={navBtn}>/settings</button>
-          <button onClick={() => onNav('system')}    className={navBtn}>/system</button>
-        </div>
-      </header>
-
-      {sidebarOpen && <ChatSidebar sessions={sessions} currentSessionId={currentSessionId} onResume={resumeSession} onNew={newSession} onClose={() => setSidebarOpen(false)} onReload={loadSessions} />}
 
       {architectToast && (
         <ArchitectToast
