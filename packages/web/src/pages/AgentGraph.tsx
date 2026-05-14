@@ -592,7 +592,7 @@ export function AgentGraph({ onNav: _onNav }: { onNav: (page: NavPage) => void }
   return (
     <div className="min-h-screen" style={{ background: '#050a0f' }}>
 
-      <div style={{ position: 'fixed', top: 56, left: 0, right: 0, bottom: 0 }}>
+      <div style={{ position: 'fixed', top: 56, left: window.innerWidth >= 768 ? '240px' : '0', right: 0, bottom: 0 }}>
         {!connected && (
           <div style={{
             position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
