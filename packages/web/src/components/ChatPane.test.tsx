@@ -1,5 +1,5 @@
 // packages/web/src/components/ChatPane.test.tsx
-import { render, screen } from '@testing-library/react'
+import { render } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import Chat from '../pages/Chat'
 
