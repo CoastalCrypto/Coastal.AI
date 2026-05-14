@@ -13,6 +13,7 @@ const NAV_ITEMS: Array<{ id: NavPage; label: string; icon: string }> = [
   { id: 'channels', label: 'Channels', icon: '📡' },
   { id: 'analytics', label: 'Analytics', icon: '📈' },
   { id: 'tools', label: 'Tools', icon: '🔧' },
+  { id: 'agent-graph', label: 'Agent Graph', icon: '🕸️' },
   { id: 'users', label: 'Users', icon: '👥' },
   { id: 'models', label: 'Models', icon: '🧠' },
   { id: 'settings', label: 'Settings', icon: '⚙️' },
