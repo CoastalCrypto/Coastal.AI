@@ -1,0 +1,13 @@
+PRETTY_NAME="Coastal.AI OS 0.0.1 (Phase 0 — BC-250 inference)"
+NAME="Coastal.AI OS"
+VERSION_ID="0.0.1"
+VERSION="0.0.1"
+VERSION_CODENAME=phase0
+ID=coastal-ai
+ID_LIKE="ubuntu debian"
+HOME_URL="https://github.com/CoastalCrypto/Coastal.AI"
+DOCUMENTATION_URL="https://github.com/CoastalCrypto/Coastal.AI/tree/master/coastal-os"
+SUPPORT_URL="https://github.com/CoastalCrypto/Coastal.AI/issues"
+BUG_REPORT_URL="https://github.com/CoastalCrypto/Coastal.AI/issues"
+COASTAL_AI_VARIANT="bc250"
+COASTAL_AI_PHASE="0"

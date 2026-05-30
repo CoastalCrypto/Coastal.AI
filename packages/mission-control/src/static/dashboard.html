@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Coastal.AI Mission Control</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    :root {
+      --bg: #0d1117;
+      --fg: #c9d1d9;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --border: #30363d;
+      --panel: #161b22;
+      --queued: #9d7fff;
+      --claimed: #f7b955;
+      --done: #56d364;
+      --failed: #ff7b72;
+      --blocked: #d29922;
+      --cancelled: #8b949e;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0;
+      background: var(--bg); color: var(--fg);
+      font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      height: 100vh;
+    }
+    header {
+      padding: 12px 20px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: baseline; gap: 16px;
+    }
+    header h1 {
+      font-size: 18px; margin: 0; font-weight: 600;
+    }
+    header .status {
+      font-size: 12px; color: var(--muted);
+    }
+    header .status.live::before {
+      content: "● "; color: var(--done);
+    }
+    header .status.disconnected::before {
+      content: "● "; color: var(--failed);
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 1px;
+      background: var(--border);
+      height: calc(100vh - 49px);
+    }
+    .panel {
+      background: var(--bg);
+      overflow: auto;
+      padding: 16px 20px;
+    }
+    .panel h2 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      margin: 0 0 12px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      text-align: left;
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      font-weight: 500;
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    td.id {
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      font-size: 11px;
+      color: var(--muted);
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .pill.queued    { background: rgba(157,127,255,.15); color: var(--queued); }
+    .pill.claimed   { background: rgba(247,185,85,.15);  color: var(--claimed); }
+    .pill.blocked   { background: rgba(210,153,34,.15);  color: var(--blocked); }
+    .pill.done      { background: rgba(86,211,100,.15);  color: var(--done); }
+    .pill.failed    { background: rgba(255,123,114,.15); color: var(--failed); }
+    .pill.cancelled { background: rgba(139,148,158,.15); color: var(--cancelled); }
+    .pill.kind {
+      background: rgba(88,166,255,.15); color: var(--accent);
+      font-family: ui-monospace, monospace;
+    }
+    .events {
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+    .event {
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .event .ts { color: var(--muted); }
+    .event .kind { color: var(--accent); }
+    .event .from { color: var(--queued); }
+    .empty {
+      color: var(--muted);
+      padding: 12px;
+      text-align: center;
+      font-style: italic;
+    }
+    .stats {
+      display: flex; gap: 16px; font-size: 12px; color: var(--muted);
+    }
+    .stats .stat { display: flex; gap: 4px; align-items: baseline; }
+    .stats .stat .count {
+      color: var(--fg); font-weight: 600; font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Coastal.AI Mission Control</h1>
+    <div class="stats" id="stats"></div>
+    <div style="flex:1"></div>
+    <div class="status" id="status">connecting…</div>
+  </header>
+
+  <div class="layout">
+    <div class="panel">
+      <h2>Tasks</h2>
+      <table id="tasks-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>State</th>
+            <th>Kind</th>
+            <th>Owner</th>
+            <th>Updated</th>
+          </tr>
+        </thead>
+        <tbody id="tasks-body">
+          <tr><td colspan="5" class="empty">loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h2>Live Events</h2>
+      <div class="events" id="events"></div>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    var TASKS_REFRESH_MS = 5000;
+    var EVENTS_MAX = 50;
+
+    var statusEl = document.getElementById('status');
+    var tbodyEl = document.getElementById('tasks-body');
+    var eventsEl = document.getElementById('events');
+    var statsEl = document.getElementById('stats');
+
+    var lastEvents = [];
+    var es = null;
+    var refreshTimer = null;
+
+    function setStatus(label, cls) {
+      statusEl.className = 'status ' + (cls || '');
+      statusEl.textContent = label;
+    }
+
+    function formatRelative(ms) {
+      var diff = Date.now() - ms;
+      if (diff < 1000) return 'just now';
+      if (diff < 60_000) return Math.round(diff / 1000) + 's ago';
+      if (diff < 3_600_000) return Math.round(diff / 60_000) + 'm ago';
+      return Math.round(diff / 3_600_000) + 'h ago';
+    }
+
+    function shortId(id) {
+      if (typeof id !== 'string') return '';
+      return id.length > 12 ? id.slice(0, 6) + '…' + id.slice(-6) : id;
+    }
+
+    function renderTasks(tasks) {
+      if (!tasks || tasks.length === 0) {
+        tbodyEl.innerHTML = '<tr><td colspan="5" class="empty">no tasks yet</td></tr>';
+        return;
+      }
+      var rows = tasks.map(function (t) {
+        return ''
+          + '<tr>'
+          +   '<td class="id" title="' + t.id + '">' + shortId(t.id) + '</td>'
+          +   '<td><span class="pill ' + t.state + '">' + t.state + '</span></td>'
+          +   '<td><span class="pill kind">' + t.kind + '</span></td>'
+          +   '<td>' + (t.ownerAgentId || '<span style="color:var(--muted)">—</span>') + '</td>'
+          +   '<td style="color:var(--muted)">' + formatRelative(t.updatedAt) + '</td>'
+          + '</tr>';
+      });
+      tbodyEl.innerHTML = rows.join('');
+    }
+
+    function renderStats(tasks) {
+      var byState = {};
+      tasks.forEach(function (t) {
+        byState[t.state] = (byState[t.state] || 0) + 1;
+      });
+      var order = ['queued', 'claimed', 'blocked', 'done', 'failed', 'cancelled'];
+      statsEl.innerHTML = order
+        .filter(function (s) { return byState[s]; })
+        .map(function (s) {
+          return '<div class="stat"><span class="count">' + byState[s] + '</span> ' + s + '</div>';
+        })
+        .join('');
+    }
+
+    function renderEvent(ev) {
+      var when = new Date(ev.timestamp).toISOString().slice(11, 19);
+      return ''
+        + '<div class="event">'
+        +   '<span class="ts">' + when + '</span> '
+        +   '<span class="kind">' + ev.kind + '</span> '
+        +   '<span style="color:var(--muted)">from</span> '
+        +   '<span class="from">' + ev.from + '</span>'
+        + '</div>';
+    }
+
+    function appendEvent(ev) {
+      lastEvents.unshift(ev);
+      if (lastEvents.length > EVENTS_MAX) lastEvents.length = EVENTS_MAX;
+      eventsEl.innerHTML = lastEvents.map(renderEvent).join('');
+    }
+
+    function refreshTasks() {
+      fetch('/api/tasks?limit=100')
+        .then(function (r) { return r.json(); })
+        .then(function (body) {
+          renderTasks(body.tasks);
+          renderStats(body.tasks);
+        })
+        .catch(function () { /* swallow — periodic */ });
+    }
+
+    function connectEvents() {
+      setStatus('connecting…');
+      try { if (es) es.close(); } catch (e) {}
+      es = new EventSource('/api/events');
+      es.onopen = function () { setStatus('live', 'live'); };
+      es.addEventListener('a2a', function (msg) {
+        try {
+          var parsed = JSON.parse(msg.data);
+          appendEvent(parsed);
+          // Refresh task list on any state-change event
+          refreshTasks();
+        } catch (e) {}
+      });
+      es.onerror = function () {
+        setStatus('disconnected · retrying…', 'disconnected');
+        // EventSource auto-reconnects; the browser handles backoff
+      };
+    }
+
+    refreshTasks();
+    refreshTimer = setInterval(refreshTasks, TASKS_REFRESH_MS);
+    connectEvents();
+  })();
+  </script>
+</body>
+</html>

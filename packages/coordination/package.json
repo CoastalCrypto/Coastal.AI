@@ -1,0 +1,26 @@
+{
+  "name": "@coastal-ai/coordination",
+  "version": "1.7.0-dev",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc && node -e \"const fs=require('fs');const path=require('path');fs.mkdirSync(path.join('dist','store'),{recursive:true});fs.copyFileSync(path.join('src','store','schema.sql'),path.join('dist','store','schema.sql'))\"",
+    "dev": "node --loader ts-node/esm src/index.ts",
+    "pretest": "pnpm --filter @coastal-ai/core build",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@coastal-ai/core": "workspace:*",
+    "better-sqlite3": "^11.10.0",
+    "bonjour-service": "^1.2.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^22.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "~5.9.3",
+    "vitest": "^1.6.0"
+  }
+}

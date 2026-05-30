@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# coastal-os-first-boot — runs once on first boot of a fresh v0.0.1 image
+#
+# Builds the inference stack pieces that need real BC-250 hardware to
+# verify (the build host doesn't have gfx1013, so we defer):
+#
+#   1. SMU governor (filippor/cyan-skillfish-governor smu branch)
+#   2. llama.cpp-bc250 (TechMakesArt/llama.cpp-bc250)
+#   3. Symlink coastal-os-bench into /usr/local/bin
+#   4. Set hostname based on MAC suffix
+#   5. Mark first-boot complete
+#
+# Idempotent — safe to re-run manually if first-boot was interrupted.
+
+set -euo pipefail
+
+LOG_DIR=/var/lib/coastal/logs
+mkdir -p "$LOG_DIR"
+exec > >(tee -a "$LOG_DIR/first-boot.log") 2>&1
+
+log() { echo "[$(date -Iseconds)] $*"; }
+
+log "===== Coastal.AI OS first-boot starting ====="
+
+# ─── 1. set hostname from MAC suffix ─────────────────────────────────
+
+MAC_SUFFIX=$(cat /sys/class/net/$(ls /sys/class/net | grep -v lo | head -1)/address \
+  | tr -d ':' | tail -c 5)
+HOSTNAME="coastal-${MAC_SUFFIX}"
+log "setting hostname → $HOSTNAME"
+hostnamectl set-hostname "$HOSTNAME"
+
+# ─── 2. build + install SMU governor ─────────────────────────────────
+
+log "cloning + building cyan-skillfish-governor (smu branch)"
+SRC=/var/lib/coastal/src
+mkdir -p "$SRC"
+cd "$SRC"
+if [[ ! -d cyan-skillfish-governor ]]; then
+  git clone --depth=1 -b smu https://github.com/filippor/cyan-skillfish-governor.git
+fi
+cd cyan-skillfish-governor
+# This repo's build is package-manager-flavored (rpm/copr); on Ubuntu we
+# need to build the binary + install the systemd unit manually. The
+# exact steps depend on the upstream layout — leaving the call out
+# explicit so it's easy to iterate when the first BC-250 boots.
+if [[ -f Makefile ]]; then
+  make
+  make install || log "WARN: make install failed; check $LOG_DIR/first-boot.log"
+elif [[ -f setup.py ]]; then
+  python3 setup.py install
+else
+  log "WARN: cyan-skillfish-governor build layout unrecognized — manual install required"
+  log "      See https://github.com/filippor/cyan-skillfish-governor/tree/smu for instructions"
+fi
+systemctl daemon-reload
+systemctl enable --now cyan-skillfish-governor-smu 2>/dev/null \
+  || log "WARN: governor service not enabled — name may differ from cyan-skillfish-governor-smu"
+
+# ─── 3. build llama.cpp-bc250 ────────────────────────────────────────
+
+log "cloning + building llama.cpp-bc250"
+cd "$SRC"
+if [[ ! -d llama.cpp-bc250 ]]; then
+  git clone --depth=1 -b vulkan-fused-gate-up https://github.com/TechMakesArt/llama.cpp-bc250.git
+fi
+cd llama.cpp-bc250
+mkdir -p build
+cd build
+cmake .. \
+  -DGGML_VULKAN=ON \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DLLAMA_BUILD_TESTS=OFF
+cmake --build . --config Release --target llama-cli -j "$(nproc)"
+# Symlink the binary onto PATH
+install -m 0755 ./bin/llama-cli /usr/local/bin/llama-cli
+
+# ─── 4. ensure coastal-os-bench on PATH ──────────────────────────────
+
+if [[ -f /opt/coastal/scripts/coastal-os-bench ]]; then
+  install -m 0755 /opt/coastal/scripts/coastal-os-bench /usr/local/bin/coastal-os-bench
+elif [[ ! -e /usr/local/bin/coastal-os-bench ]]; then
+  log "WARN: coastal-os-bench not found at /opt/coastal/scripts/ — was image staged correctly?"
+fi
+
+# ─── 5. write bench env defaults ─────────────────────────────────────
+
+mkdir -p /etc/coastal
+if [[ ! -f /etc/coastal/bench.env ]]; then
+  cat > /etc/coastal/bench.env <<'EOF'
+# Default model for coastal-os-bench. Drop a model file here and update
+# the path. Recommendation: Qwen 3.5 9B Q4_K_M for direct comparison
+# against TechMakesArt/llama.cpp-bc250 published numbers (~55 tok/s).
+COASTAL_OS_BENCH_MODEL=/var/lib/coastal/models/qwen3.5-9b-instruct-q4_k_m.gguf
+EOF
+fi
+
+# ─── 6. seal first-boot ──────────────────────────────────────────────
+
+touch /var/lib/coastal/.first-boot-complete
+log "===== first-boot complete ====="
+log ""
+log "Drop a model into /var/lib/coastal/models/ then run:"
+log "  coastal-os-bench --quiet | jq ."

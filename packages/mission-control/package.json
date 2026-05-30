@@ -1,0 +1,24 @@
+{
+  "name": "@coastal-ai/mission-control",
+  "version": "1.7.0-dev",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc && node -e \"const fs=require('fs');const path=require('path');fs.mkdirSync(path.join('dist','static'),{recursive:true});fs.copyFileSync(path.join('src','static','dashboard.html'),path.join('dist','static','dashboard.html'))\"",
+    "pretest": "pnpm --filter @coastal-ai/core build && pnpm --filter @coastal-ai/coordination build",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@coastal-ai/core": "workspace:*",
+    "@coastal-ai/coordination": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^22.0.0",
+    "better-sqlite3": "^11.10.0",
+    "typescript": "~5.9.3",
+    "vitest": "^1.6.0"
+  }
+}
