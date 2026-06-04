@@ -1,0 +1,22 @@
+{
+  "name": "@coastal-ai/reviewing-agent",
+  "version": "1.7.0-dev",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "pretest": "pnpm --filter @coastal-ai/core build",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@coastal-ai/core": "workspace:*",
+    "@coastal-ai/llm-client": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "~5.9.3",
+    "vitest": "^1.6.0"
+  }
+}

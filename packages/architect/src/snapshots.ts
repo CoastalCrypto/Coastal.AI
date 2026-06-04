@@ -107,17 +107,20 @@ export class SnapshotManager {
     execFileSync('git', ['checkout', '-b', branchName], { cwd: this.opts.repoRoot })
 
     try {
-      // Export the shadow tree as a tar archive and extract it into the working tree
-      const archive = execFileSync(
+      // Materialize the snapshot's tree into the real working tree.
+      //
+      // We let git write the files directly instead of piping `git archive`
+      // into `tar x --overwrite`. The old approach was not portable: Windows
+      // ships bsdtar, which does not understand GNU tar's `--overwrite` flag,
+      // so the restore failed on Windows. `git checkout <ref> -- .` (run
+      // against the shadow repo, with the real repo as its work tree) has the
+      // same semantics — overwrite/add every tracked path from the snapshot,
+      // leave untracked files alone — without spawning an external archiver.
+      execFileSync(
         'git',
-        ['archive', snap.shadowRef],
+        ['checkout', snap.shadowRef, '--', '.'],
         { cwd: this.opts.repoRoot, env: this.shadowEnv() },
       )
-
-      execFileSync('tar', ['x', '--overwrite'], {
-        cwd: this.opts.repoRoot,
-        input: archive,
-      })
 
       // Stage and commit the restored state
       execFileSync('git', ['add', '-A'], { cwd: this.opts.repoRoot })
@@ -217,7 +220,7 @@ export class SnapshotManager {
     try {
       const ref = execFileSync(
         'git',
-        ['rev-parse', 'HEAD'],
+        ['rev-parse', '--verify', '--quiet', 'HEAD'],
         { env: { ...process.env, GIT_DIR: this.shadowGitDir }, encoding: 'utf8' },
       ).trim()
       return ref || null

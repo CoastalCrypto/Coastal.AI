@@ -1,0 +1,217 @@
+#!/usr/bin/env bash
+# coastal-os-bench — Phase 0 inference benchmark for BC-250 nodes.
+#
+# Single command, single JSON record per run, written to stdout AND
+# appended to /var/lib/coastal/bench-history.jsonl so a Curator or
+# Monitor agent (Phase 4+) can compare runs over time.
+#
+# Measures (against a 7B q4 model by default):
+#   - prompt_processing_ms  — time to ingest the input tokens
+#   - generation_tok_s      — tokens/second during output
+#   - peak_vram_mb          — peak GPU memory observed
+#   - peak_power_w          — peak board power observed (if rocm-smi present)
+#   - total_wall_ms         — wall-clock total
+#
+# Usage:
+#   coastal-os-bench                                # default 7B model, 2k in / 512 out
+#   coastal-os-bench --model /path/to/model.gguf
+#   coastal-os-bench --in 4096 --out 1024
+#   coastal-os-bench --prompt-file ./custom.txt    # override default corpus
+#   coastal-os-bench --output json | jq .
+#
+# Output channels:
+#   stdout : the JSON record (always)
+#   stderr : human-readable progress (only when --quiet not set)
+#   file   : appended to /var/lib/coastal/bench-history.jsonl (best-effort)
+#
+# Exit codes:
+#   0  benchmark completed
+#   1  llama-cli not found on PATH
+#   2  model file missing
+#   3  benchmark timed out or crashed
+
+set -euo pipefail
+
+# ─── defaults ────────────────────────────────────────────────────────
+
+MODEL="${COASTAL_OS_BENCH_MODEL:-/var/lib/coastal/models/qwen2.5-coder-7b-q4.gguf}"
+INPUT_TOKENS=2048
+OUTPUT_TOKENS=512
+PROMPT_FILE=""
+OUTPUT_FORMAT="json"
+QUIET=0
+TIMEOUT_S=600
+HISTORY_PATH="/var/lib/coastal/bench-history.jsonl"
+
+# ─── argparse ────────────────────────────────────────────────────────
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --model)        MODEL="$2"; shift 2;;
+    --in)           INPUT_TOKENS="$2"; shift 2;;
+    --out)          OUTPUT_TOKENS="$2"; shift 2;;
+    --prompt-file)  PROMPT_FILE="$2"; shift 2;;
+    --output)       OUTPUT_FORMAT="$2"; shift 2;;
+    --quiet)        QUIET=1; shift;;
+    --timeout)      TIMEOUT_S="$2"; shift 2;;
+    --no-history)   HISTORY_PATH=""; shift;;
+    -h|--help)
+      sed -n '2,28p' "$0"
+      exit 0;;
+    *) echo "unknown arg: $1" >&2; exit 1;;
+  esac
+done
+
+log() { [[ "$QUIET" -eq 0 ]] && echo "[coastal-os-bench] $*" >&2; }
+
+# ─── preflight ───────────────────────────────────────────────────────
+
+if ! command -v llama-cli >/dev/null 2>&1; then
+  echo "llama-cli not found on PATH. Install llama.cpp-bc250 first." >&2
+  exit 1
+fi
+
+if [[ ! -f "$MODEL" ]]; then
+  echo "Model not found: $MODEL" >&2
+  echo "Set COASTAL_OS_BENCH_MODEL or pass --model /path/to/model.gguf" >&2
+  exit 2
+fi
+
+# Default prompt — long enough to consistently fill 2k tokens. The
+# prompt-file flag overrides this for custom corpora.
+DEFAULT_PROMPT=$(cat <<'EOF'
+You are a senior systems engineer. Explain the following in detail:
+
+1. The role of overlay filesystems in immutable Linux distributions, including how upper, lower, and work directories interact, what happens during a write to a file that exists in the lower directory, and how this enables atomic system updates without requiring a reboot. Walk through what `mount -t overlay` actually does at the syscall level.
+
+2. The Ed25519 signature algorithm: why it's preferred over ECDSA for new systems, how deterministic nonce generation eliminates the catastrophic nonce-reuse attack that plagues ECDSA, and how SUF-CMA security is preserved across malleability transformations of the signature encoding.
+
+3. The trade-offs between CRDT-based replication and master-replica replication for a distributed knowledge graph where every node may write and the network may partition. Specifically address: convergence guarantees, write amplification, the impact of vector clock size growth, and the operational cost of garbage collection. Cite concrete examples.
+
+Provide answers that are technically accurate, deeply detailed, and would satisfy a staff-level systems engineer. Use precise terminology. Do not summarize unless explicitly asked.
+EOF
+)
+
+if [[ -n "$PROMPT_FILE" ]]; then
+  PROMPT=$(cat "$PROMPT_FILE")
+else
+  PROMPT="$DEFAULT_PROMPT"
+fi
+
+# ─── observers ───────────────────────────────────────────────────────
+
+# Best-effort power + vram sampler. Runs in the background and writes
+# samples to a tempfile; main loop reads peak after the benchmark.
+SAMPLE_FILE=$(mktemp)
+trap 'rm -f "$SAMPLE_FILE"' EXIT
+
+sample_loop() {
+  while true; do
+    if command -v rocm-smi >/dev/null 2>&1; then
+      # rocm-smi outputs include vram and power; parse for the first GPU.
+      VRAM=$(rocm-smi --showmeminfo vram --csv 2>/dev/null | awk -F',' 'NR==2 {print $3}' | tr -d ' MiB' || echo 0)
+      POWER=$(rocm-smi --showpower --csv 2>/dev/null | awk -F',' 'NR==2 {print $2}' | tr -d ' W' || echo 0)
+      echo "$VRAM $POWER" >> "$SAMPLE_FILE"
+    fi
+    sleep 0.5
+  done
+}
+
+sample_loop &
+SAMPLE_PID=$!
+trap 'kill $SAMPLE_PID 2>/dev/null || true; rm -f "$SAMPLE_FILE"' EXIT
+
+# ─── run benchmark ───────────────────────────────────────────────────
+
+log "model=$MODEL"
+log "input_tokens=$INPUT_TOKENS output_tokens=$OUTPUT_TOKENS"
+log "running llama-cli (timeout ${TIMEOUT_S}s)..."
+
+START_NS=$(date +%s%N)
+
+# llama-cli's output includes timing lines like:
+#   "llama_perf_context_print: prompt eval time = X ms / Y tokens (...)"
+#   "llama_perf_context_print: eval time = X ms / Y tokens (...)"
+# We capture stderr (where the perf lines go on most builds) and parse.
+LLAMA_LOG=$(mktemp)
+trap 'kill $SAMPLE_PID 2>/dev/null || true; rm -f "$SAMPLE_FILE" "$LLAMA_LOG"' EXIT
+
+set +e
+timeout "${TIMEOUT_S}s" llama-cli \
+  --model "$MODEL" \
+  --prompt "$PROMPT" \
+  --n-predict "$OUTPUT_TOKENS" \
+  --ctx-size $((INPUT_TOKENS + OUTPUT_TOKENS + 128)) \
+  --temp 0.0 \
+  --top-p 1.0 \
+  --no-conversation \
+  --simple-io \
+  >/dev/null 2>"$LLAMA_LOG"
+RC=$?
+set -e
+
+END_NS=$(date +%s%N)
+TOTAL_MS=$(( (END_NS - START_NS) / 1000000 ))
+
+kill $SAMPLE_PID 2>/dev/null || true
+
+if [[ $RC -ne 0 ]]; then
+  echo "llama-cli exited with code $RC (timeout=${TIMEOUT_S}s)" >&2
+  log "llama log tail:"
+  tail -20 "$LLAMA_LOG" >&2 || true
+  exit 3
+fi
+
+# Parse the perf lines. Two patterns we care about:
+PROMPT_MS=$(grep -oP 'prompt eval time =\s*\K[0-9.]+' "$LLAMA_LOG" | head -1 || echo "0")
+GEN_TOK_S=$(grep -oP 'eval time.*\(\s*\K[0-9.]+(?= tokens per second\))' "$LLAMA_LOG" | tail -1 || echo "0")
+
+PEAK_VRAM_MB=0
+PEAK_POWER_W=0
+if [[ -s "$SAMPLE_FILE" ]]; then
+  PEAK_VRAM_MB=$(awk '{ if ($1+0 > max) max = $1+0 } END { print max+0 }' "$SAMPLE_FILE")
+  PEAK_POWER_W=$(awk '{ if ($2+0 > max) max = $2+0 } END { print max+0 }' "$SAMPLE_FILE")
+fi
+
+# ─── emit ────────────────────────────────────────────────────────────
+
+HOST=$(hostname)
+ISO_TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+MODEL_NAME=$(basename "$MODEL")
+
+RECORD=$(cat <<EOF
+{
+  "schema": "coastal-os-bench/v1",
+  "timestamp": "$ISO_TS",
+  "host": "$HOST",
+  "model": "$MODEL_NAME",
+  "input_tokens": $INPUT_TOKENS,
+  "output_tokens": $OUTPUT_TOKENS,
+  "prompt_processing_ms": $PROMPT_MS,
+  "generation_tok_s": $GEN_TOK_S,
+  "peak_vram_mb": $PEAK_VRAM_MB,
+  "peak_power_w": $PEAK_POWER_W,
+  "total_wall_ms": $TOTAL_MS
+}
+EOF
+)
+
+# Append to history (best-effort; ignore failures so the benchmark can
+# run on systems without /var/lib/coastal yet, e.g., during image build).
+if [[ -n "$HISTORY_PATH" ]]; then
+  mkdir -p "$(dirname "$HISTORY_PATH")" 2>/dev/null || true
+  echo "$RECORD" | tr -d '\n' >> "$HISTORY_PATH" 2>/dev/null || true
+  echo "" >> "$HISTORY_PATH" 2>/dev/null || true
+fi
+
+echo "$RECORD"
+
+if [[ "$QUIET" -eq 0 ]]; then
+  echo "" >&2
+  echo "[coastal-os-bench] === RESULT ===" >&2
+  echo "[coastal-os-bench] tokens/sec : $GEN_TOK_S" >&2
+  echo "[coastal-os-bench] prompt ms  : $PROMPT_MS" >&2
+  echo "[coastal-os-bench] peak vram  : ${PEAK_VRAM_MB} MB" >&2
+  echo "[coastal-os-bench] peak power : ${PEAK_POWER_W} W" >&2
+  echo "[coastal-os-bench] total wall : ${TOTAL_MS} ms" >&2
+fi

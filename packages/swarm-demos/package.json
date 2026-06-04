@@ -1,0 +1,26 @@
+{
+  "name": "@coastal-ai/swarm-demos",
+  "version": "1.7.0-dev",
+  "private": true,
+  "type": "module",
+  "description": "Runnable multi-agent swarm demos. Sits at the top of the dependency graph — composes coordination + every role agent + mission control. Nothing depends on it, so it can pull in packages that depend on coordination without creating a build cycle.",
+  "scripts": {
+    "demo": "tsx examples/swarm-demo.ts",
+    "demo:full": "tsx examples/full-stack-demo.ts",
+    "demo:live": "tsx examples/live-demo.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@coastal-ai/coordination": "workspace:*",
+    "@coastal-ai/llm-client": "workspace:*",
+    "@coastal-ai/coding-agent": "workspace:*",
+    "@coastal-ai/reviewing-agent": "workspace:*",
+    "@coastal-ai/planner-agent": "workspace:*",
+    "@coastal-ai/mission-control": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "~5.9.3"
+  }
+}

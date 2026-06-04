@@ -1,0 +1,14 @@
+
+  ╔══════════════════════════════════════════════════════════════╗
+  ║                                                              ║
+  ║      Coastal.AI OS  v0.0.1  ·  Phase 0 (BC-250 inference)    ║
+  ║                                                              ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  Quick start:
+    coastal-os-bench --quiet | jq .generation_tok_s   # bench inference
+    journalctl -u coastal-os-first-boot --no-pager    # first-boot log
+    cat /etc/os-release                               # version + variant
+
+  Docs: https://github.com/CoastalCrypto/Coastal.AI/tree/master/coastal-os
+

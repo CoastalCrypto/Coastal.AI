@@ -1,0 +1,16 @@
+[Unit]
+Description=Coastal.AI OS first-boot — build inference stack against detected hardware
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=!/var/lib/coastal/.first-boot-complete
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/coastal-os-first-boot
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=3600
+
+[Install]
+WantedBy=multi-user.target
