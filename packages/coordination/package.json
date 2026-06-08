@@ -8,7 +8,6 @@
   "scripts": {
     "build": "tsc && node -e \"const fs=require('fs');const path=require('path');fs.mkdirSync(path.join('dist','store'),{recursive:true});fs.copyFileSync(path.join('src','store','schema.sql'),path.join('dist','store','schema.sql'))\"",
     "dev": "node --loader ts-node/esm src/index.ts",
-    "pretest": "pnpm --filter @coastal-ai/core build",
     "test": "vitest run"
   },
   "dependencies": {

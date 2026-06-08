@@ -800,6 +800,62 @@ package that imports from `@coastal-ai/core/memory/*`, calls
 `registerKind(...)` at module load to extend the note schema, and ships
 its own ingester/runner. The kernel never imports a vertical.
 
+**Multi-agent coordination (cluster — optional, delete-safe):**
+
+The layer that turns N single-node installs into one coordinated swarm.
+Each package is a peer that rides the same Agent2Agent (A2A) protocol; a
+single-node install never imports them. Software-complete today — the
+12-node BC-250 cluster deployment is hardware-gated (see the
+[Roadmap](#-roadmap)).
+
+| Package | What it does |
+|---------|--------------|
+| [`packages/coordination`](packages/coordination) | The peer kernel — Ed25519-signed A2A envelopes, TOFU peer registry, a 6-state super-option task board, atomic handoff + zombie reclaim, a dependency resolver, broadcast replication, and pluggable transports (localhost / TCP+mDNS / Telegram) |
+| [`packages/llm-client`](packages/llm-client) | Injectable LLM interface + OpenAI-compatible HTTP adapter (llama.cpp / Ollama / OpenAI), SSE streaming |
+| [`packages/planner-agent`](packages/planner-agent) | Decomposes a `plan_task` goal into `code_task` + `review_task` subtasks with dependency edges (deterministic or LLM-backed) |
+| [`packages/coding-agent`](packages/coding-agent) | Claims `code_task`, drives a model to produce code |
+| [`packages/reviewing-agent`](packages/reviewing-agent) | Claims `review_task`, parses VERDICT / SUMMARY / ISSUES from the model |
+| [`packages/curator-agent`](packages/curator-agent) | Always-on grading + pruning of the notes substrate (dry-run by default) |
+| [`packages/mission-control`](packages/mission-control) | Zero-dependency `node:http` + SSE dashboard for watching the swarm live |
+| [`packages/swarm-demos`](packages/swarm-demos) | Runnable end-to-end demos composing the whole stack in one process (no hardware needed) |
+
+### Multi-Agent Coordination (A2A)
+
+Beyond the single-node process model above, Coastal.AI can run as a
+**swarm of role-specialized nodes** that coordinate over the Agent2Agent
+(A2A) protocol. Each node owns its own SQLite task board; state crosses
+the wire as Ed25519-signed broadcasts that peers apply through a
+logical-clock-guarded replicator — so no single node is the source of
+truth, and a crashed node's claims are reclaimed by a peer.
+
+```
+ main / planner ──┐          ┌── coder      (claims code_task)
+                  ├── A2A bus ┤
+   reviewer ──────┘           └── curator    (grades notes substrate)
+        │                           │
+        └────────────── mission-control (HTTP + SSE dashboard)
+```
+
+- **Transports** — `localhost` (in-process demos), `TCP + mDNS` (LAN
+  auto-discovery, the cluster default), and `Telegram` (off-LAN
+  fallback). The daemon is transport-agnostic: identical code runs on one
+  box or twelve.
+- **Task lifecycle** — a 6-state super-option board (queued → claimed →
+  blocked → done / failed / cancelled) with atomic handoff and zombie
+  reclaim.
+- **First deployment target** — a 12-node ASRock BC-250 chassis (see
+  [CoastalOS](#-coastalos--standalone-os) and the [Roadmap](#-roadmap)).
+  The protocol is identical whether the twelve nodes share a chassis or
+  span the planet.
+
+Run the whole stack in one process — no cluster required:
+
+```bash
+pnpm --filter @coastal-ai/swarm-demos demo        # 3 nodes, basic replication
+pnpm --filter @coastal-ai/swarm-demos demo:full   # planner → coder → reviewer
+pnpm --filter @coastal-ai/swarm-demos demo:live   # + live mission-control dashboard
+```
+
 ### Trust Tiers
 
 | Tier | What agents can do |
@@ -1104,8 +1160,20 @@ Coastal.AI/
 │   │       └── hooks/             # useEventStream, usePipelineRun
 │   ├── daemon/                    # Proactive scheduler + voice
 │   ├── architect/                 # Self-build loop: Planner, Patcher, Validator
-│   └── shell/                     # Electron kiosk (ClawShell)
-├── coastalos/                     # CoastalOS ISO build
+│   ├── shell/                     # Electron kiosk (ClawShell)
+│   ├── coordination/              # A2A peer kernel — task board, identity, transports, replication
+│   ├── llm-client/                # Injectable LLM client (llama.cpp / Ollama / OpenAI)
+│   ├── planner-agent/             # plan_task → code + review decomposition
+│   ├── coding-agent/              # code_task worker
+│   ├── reviewing-agent/           # review_task worker
+│   ├── curator-agent/             # notes-substrate grader / pruner
+│   ├── mission-control/           # swarm dashboard (node:http + SSE)
+│   └── swarm-demos/               # runnable end-to-end multi-agent demos
+├── coastal-os/                    # Coastal.AI OS — BC-250 cluster-node image (Ubuntu 24.04 + inference stack)
+│   ├── image/                     # build-image.sh + first-boot overlay
+│   ├── scripts/                   # coastal-os-bench (inference benchmark)
+│   └── docs/                      # BIOS reflash, build-image, inference-stack
+├── coastalos/                     # CoastalOS — standalone desktop USB ISO (live-build + VibeVoice)
 │   ├── build/                     # live-build config, smoke test
 │   ├── systemd/                   # Service units
 │   └── vibevoice/                 # Python FastAPI TTS/ASR service
@@ -1130,6 +1198,10 @@ Coastal.AI/
 | v1.2.0 | ✅ | Skills library, cron scheduler, agent voice, version update banner, Electron auto-updater |
 | **v1.3.0** | ✅ | Pipeline builder — save/load pipelines, live SSE execution view, live steering, loop-back stages |
 | **v1.4.0** | ✅ | UX polish — pipeline run history & replay, per-pane chat voice, chat retry button, expandable dashboard events, empty states with CTAs, credential eye-toggle, nav-away warning |
+| **v1.5.0** | ✅ | Self-healing architect daemon; kernel + optional-vertical split (delete-safe verticals) |
+| **v1.6.0** | ✅ | Architect preference profile — 7 behavior knobs + mode presets (hands-on / hands-off / autopilot) |
+| **v1.7.0** | 🚧 | Unified knowledge graph (code-graph, design context, eval gate, DOM snapshots) + impact-radius planning |
+| **Multi-Agent OS** | 🚧 | A2A coordination layer, role-agent peers (planner / coder / reviewer / curator), `llm-client`, mission control, swarm demos — **software-complete**; 12-node BC-250 cluster bring-up is hardware-gated |
 
 ---
 

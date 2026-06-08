@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Runnable multi-agent swarm demos. Sits at the top of the dependency graph — composes coordination + every role agent + mission control. Nothing depends on it, so it can pull in packages that depend on coordination without creating a build cycle.",
   "scripts": {
+    "build": "tsc --noEmit",
     "demo": "tsx examples/swarm-demo.ts",
     "demo:full": "tsx examples/full-stack-demo.ts",
     "demo:live": "tsx examples/live-demo.ts",
