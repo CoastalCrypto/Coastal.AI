@@ -26,4 +26,11 @@ const config = loadConfig()
 const server = await buildServer()
 
 await server.listen({ port: config.port, host: config.host })
-console.log(`[coastal-ai] core running on ${config.host}:${config.port}`)
+
+// Resolve the actually-bound port (config.port may be 0 = OS-assigned).
+const addr = server.server.address()
+const boundPort = typeof addr === 'object' && addr ? addr.port : config.port
+// Parseable readiness marker for the Tauri sidecar supervisor — emitted on
+// stdout once Fastify is listening so the shell knows when to load the UI.
+console.log(`CC_SIDECAR_READY ${boundPort}`)
+console.log(`[coastal-ai] core running on ${config.host}:${boundPort}`)

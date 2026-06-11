@@ -41,8 +41,8 @@ export function loadConfig(): Config {
       const raw = process.env.CC_PORT
       if (!raw) return 4747
       const parsed = parseInt(raw, 10)
-      if (isNaN(parsed) || parsed < 1 || parsed > 65535) {
-        throw new Error(`CC_PORT must be a valid port number (1-65535), got: "${raw}"`)
+      if (isNaN(parsed) || parsed < 0 || parsed > 65535) {
+        throw new Error(`CC_PORT must be a valid port number (0-65535; 0 = OS-assigned), got: "${raw}"`)
       }
       return parsed
     })(),
