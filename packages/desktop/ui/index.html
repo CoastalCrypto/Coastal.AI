@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Coastal.AI (spike)</title>
+    <style>
+      body { background: #050d1a; color: #cde3ff; font-family: system-ui, sans-serif; padding: 2rem; }
+      h1 { font-weight: 600; }
+      pre { background: #0b1830; padding: 1rem; border-radius: 8px; white-space: pre-wrap; }
+      .ok { color: #6ee7a8; } .err { color: #ff8a8a; }
+    </style>
+  </head>
+  <body>
+    <h1>Coastal.AI desktop spike</h1>
+    <p>Gate B: Tauri window talking to the folder-bundled Node core sidecar.</p>
+    <pre id="out">contacting core…</pre>
+    <script>
+      const port = new URLSearchParams(location.search).get('corePort')
+      const out = document.getElementById('out')
+      fetch(`http://127.0.0.1:${port}/api/version`)
+        .then((r) => r.json())
+        .then((v) => {
+          out.className = 'ok'
+          out.textContent = `core port ${port} → /api/version → ` + JSON.stringify(v, null, 2)
+        })
+        .catch((e) => {
+          out.className = 'err'
+          out.textContent = `ERROR talking to core on port ${port}: ${e.message}`
+        })
+    </script>
+  </body>
+</html>
