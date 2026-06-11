@@ -25,3 +25,6 @@ data/
 
 # Firecrawl cache
 .firecrawl/
+
+# Tauri sidecar folder-bundle output
+packages/core/sidecar-build/

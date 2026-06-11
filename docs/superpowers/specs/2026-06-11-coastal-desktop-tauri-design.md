@@ -24,7 +24,7 @@ LLM backend (Ollama), guided by the in-app install wizard.
 |---|---|---|
 | Shell framework | **Tauri v2** (replacing Electron) | Cross-platform goal; smaller binaries; aligns with the Rust inference path; `phodal/routa` (MIT) proves the pattern for the same lane-based multi-agent job. |
 | Standalone level | **Fully standalone** | True consumer app. Only Ollama remains external. |
-| Node sidecar bundling | **Node SEA** (Node 22 Single Executable Applications) + esbuild | Official Node feature, no new runtime, matches `engines: node>=22`. |
+| Node sidecar bundling | ~~Node SEA~~ → **Folder-bundle** (REVERSED 2026-06-11, Phase-1 spike) | SEA cannot embed core's native-addon surface (`better-sqlite3`, `onnxruntime-node`, `nodejs-polars`, `bufferutil`/`utf-8-validate`) or puppeteer's Chromium. Ship `node` + `dist/` + production `node_modules` as Tauri resources and spawn `node dist/main.js`. Robust; larger install. |
 | Migration sequencing | **Parallel, then cut over** | New `packages/desktop` alongside the working Electron `shell`; delete `shell` only after parity. Safe, reversible. |
 | Notes-substrate replication | Out of this spec — **syncthing sidecar** (own spec, after this) | Decided in the same session; tracked separately. |
 
@@ -49,10 +49,17 @@ React UI survive essentially untouched. The webview reaches the sidecar over
 
 ### Why a sidecar (not in-process)
 
-`core` is a Node/Fastify server with the **native C++ addon `better-sqlite3`**. Tauri's
-backend is Rust and cannot host Node in-process the way Electron does. The only viable
-path is to ship `core` as an external binary that Tauri spawns. This is the single
-largest engineering risk in the spec and is de-risked first (Phase 1).
+`core` is a Node/Fastify server with **multiple native C++ addons** (`better-sqlite3`,
+`onnxruntime-node`, `nodejs-polars`, `bufferutil`/`utf-8-validate`) and puppeteer
+browser tooling. Tauri's backend is Rust and cannot host Node in-process the way Electron
+does. The only viable path is to ship `core` as an external process that Tauri spawns.
+This is the single largest engineering risk in the spec and was de-risked first (Phase 1).
+
+**Phase 1 outcome (2026-06-11):** the spike rejected single-binary Node SEA bundling
+because the native-addon + puppeteer surface above cannot be embedded. Adopted the
+**folder-bundle** strategy instead: Tauri ships a `node` runtime + the built `dist/` +
+production `node_modules` as bundled resources and spawns `node dist/main.js`. The
+`CC_SIDECAR_READY <port>` startup contract is unchanged.
 
 ## Components (small, single-purpose units)
 
@@ -63,9 +70,10 @@ largest engineering risk in the spec and is de-risked first (Phase 1).
 - `tauri.conf.json` — `externalBin` (the sidecar), `resources` (the prebuilt `.node`), bundle targets, updater config, `frontendDist` pointing at the built `web`.
 
 ### `packages/core/` additions
-- `core:bundle` script: esbuild the backend into a single CJS file → inject into the
-  `node` binary via **Node SEA** → emit `coastal-core-<target-triple>`. Ship
-  `better-sqlite3`'s prebuilt `.node` as a Tauri resource loaded by path at runtime.
+- `bundle:sidecar` script: produce a self-contained `node` + `dist/` + production
+  `node_modules` folder (via `pnpm deploy --prod`), plus a copy of the `node` runtime
+  named `coastal-core-<target-triple>`. Tauri ships the folder as resources and spawns
+  the node runtime against `dist/main.js`. (No esbuild/SEA — see Phase 1 outcome.)
 - Startup contract: accept `--port` / `PORT`; choose `127.0.0.1`; print `READY <port>`
   on stdout once Fastify is listening, so Tauri loads the UI only when the backend is up.
 

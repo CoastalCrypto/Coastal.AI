@@ -108,6 +108,7 @@
     "acp": "node --loader ts-node/esm src/acp/entry.ts",
     "acp:built": "node dist/acp/entry.js",
     "repair": "node --loader ts-node/esm src/cli/repair.ts",
+    "bundle:sidecar": "node scripts/bundle-sidecar.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },
