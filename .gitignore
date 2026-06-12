@@ -34,3 +34,6 @@ packages/desktop/src-tauri/target/
 packages/desktop/src-tauri/binaries/
 packages/desktop/src-tauri/resources/
 packages/desktop/src-tauri/gen/
+
+# Regenerable placeholder icon source (see gen-placeholder-icon.mjs)
+packages/desktop/scripts/placeholder-icon.png
