@@ -1,0 +1,4 @@
+# Coastal.AI apt lane — the origin/apt package channel.
+# See https://github.com/CoastalCrypto/Coastal.AI/tree/apt
+# Uncomment once the lane is published (replace the placeholder host):
+# deb [signed-by=/usr/share/keyrings/coastal-ai-archive-keyring.gpg] https://apt.coastal.ai/ubuntu noble main
