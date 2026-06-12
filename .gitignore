@@ -37,3 +37,6 @@ packages/desktop/src-tauri/gen/
 
 # Regenerable placeholder icon source (see gen-placeholder-icon.mjs)
 packages/desktop/scripts/placeholder-icon.png
+
+# Logo candidate output (uncommitted until one is approved)
+packages/desktop/brand-candidates/
