@@ -102,6 +102,9 @@
   "bin": {
     "coastal-acp": "dist/acp/entry.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc && node -e \"const fs=require('fs');if(fs.existsSync('src/agents/souls'))fs.cpSync('src/agents/souls','dist/agents/souls',{recursive:true});if(fs.existsSync('src/skills/default-skills.json'))fs.copyFileSync('src/skills/default-skills.json','dist/skills/default-skills.json')\"",
     "dev": "node --watch --loader ts-node/esm src/main.ts",

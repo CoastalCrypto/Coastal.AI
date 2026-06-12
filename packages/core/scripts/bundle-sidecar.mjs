@@ -28,7 +28,14 @@ function targetTriple() {
   return `${a}-unknown-linux-gnu`
 }
 
-// 1. Self-contained deploy of core (dist + de-symlinked production node_modules).
+// 1. Self-contained deploy of core. pnpm deploy on Windows uses a `.pnpm`
+// junction layout (node-linker=hoisted is ignored by deploy). That is fine to
+// RUN against, but it contains ONE poisonous junction: `@coastal-ai/core`,
+// pointing at the LIVE workspace package — which itself contains sidecar-build/
+// app, so a naive recursive copy follows it forever and fills the disk. core's
+// own dist never imports itself, so we strip that self-reference here. Every
+// other junction points to a leaf inside the deploy and is harmless; the desktop
+// copy step dereferences those into real files (see sync-sidecar.mjs).
 function deployApp() {
   rmSync(appDir, { recursive: true, force: true })
   mkdirSync(outDir, { recursive: true })
@@ -42,6 +49,13 @@ function deployApp() {
   }
   if (!existsSync(resolve(appDir, 'node_modules', 'better-sqlite3'))) {
     throw new Error('deploy produced no better-sqlite3 in node_modules')
+  }
+  // Strip the workspace self-reference that causes infinite-copy loops.
+  for (const p of [
+    resolve(appDir, 'node_modules', '@coastal-ai'),
+    resolve(appDir, 'node_modules', '.pnpm', 'node_modules', '@coastal-ai'),
+  ]) {
+    rmSync(p, { recursive: true, force: true })
   }
 }
 
