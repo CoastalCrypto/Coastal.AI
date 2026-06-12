@@ -24,7 +24,7 @@ LLM backend (Ollama), guided by the in-app install wizard.
 |---|---|---|
 | Shell framework | **Tauri v2** (replacing Electron) | Cross-platform goal; smaller binaries; aligns with the Rust inference path; `phodal/routa` (MIT) proves the pattern for the same lane-based multi-agent job. |
 | Standalone level | **Fully standalone** | True consumer app. Only Ollama remains external. |
-| Node sidecar bundling | ~~Node SEA~~ → **Folder-bundle** (REVERSED 2026-06-11, Phase-1 spike) | SEA cannot embed core's native-addon surface (`better-sqlite3`, `onnxruntime-node`, `nodejs-polars`, `bufferutil`/`utf-8-validate`) or puppeteer's Chromium. Ship `node` + `dist/` + production `node_modules` as Tauri resources and spawn `node dist/main.js`. Robust; larger install. |
+| Node sidecar bundling | ~~Node SEA~~ → ~~pnpm deploy~~ → **Folder-bundle via flat `npm install`** (Phase-1 spike, 2026-06-11) | SEA can't embed core's native-addon surface (`better-sqlite3`, `onnxruntime-node`, `nodejs-polars`) or Playwright. pnpm deploy's `.pnpm` *junction* tree is non-portable (a workspace self-junction caused an infinite-copy disk blowup; dereferencing it breaks transitive resolution like `zod-to-json-schema`). Final: assemble `dist/` + a trimmed `package.json`, run `npm install --omit=dev --legacy-peer-deps` to get a FLAT junction-free `node_modules`, ship it + a renamed `node` runtime as Tauri resources, spawn `coastal-core <triple> dist/main.js`. Portable; larger install. |
 | Migration sequencing | **Parallel, then cut over** | New `packages/desktop` alongside the working Electron `shell`; delete `shell` only after parity. Safe, reversible. |
 | Notes-substrate replication | Out of this spec — **syncthing sidecar** (own spec, after this) | Decided in the same session; tracked separately. |
 
@@ -55,11 +55,18 @@ browser tooling. Tauri's backend is Rust and cannot host Node in-process the way
 does. The only viable path is to ship `core` as an external process that Tauri spawns.
 This is the single largest engineering risk in the spec and was de-risked first (Phase 1).
 
-**Phase 1 outcome (2026-06-11):** the spike rejected single-binary Node SEA bundling
-because the native-addon + puppeteer surface above cannot be embedded. Adopted the
-**folder-bundle** strategy instead: Tauri ships a `node` runtime + the built `dist/` +
-production `node_modules` as bundled resources and spawns `node dist/main.js`. The
-`CC_SIDECAR_READY <port>` startup contract is unchanged.
+**Phase 1 outcome (2026-06-11):** the spike rejected single-binary Node SEA (native-addon
+surface can't be embedded) AND pnpm-deploy bundling (`.pnpm` junction tree is non-portable
+— a workspace self-junction caused an infinite-copy disk blowup, and dereferencing it
+breaks transitive module resolution). Final strategy: a **flat `npm install --omit=dev
+--legacy-peer-deps`** in a standalone app dir yields a junction-free, portable
+`node_modules`; Tauri ships it + a renamed `node` runtime and spawns
+`coastal-core <triple> dist/main.js`. **Gate A** (sidecar serves `/api/version` + CORS for
+the Tauri origin) and **Gate B** (Tauri window spawns the sidecar via the
+`CC_SIDECAR_READY <port>` contract — confirmed port 63687, core fully bootstraps, and the
+sidecar is killed on graceful window close with no zombie) both PASS on Windows. A node
+entry-path gotcha was fixed: strip Tauri's `\\?\` extended-length prefix before handing the
+path to node (it otherwise mis-resolves to `lstat 'C:'`).
 
 ## Components (small, single-purpose units)
 
@@ -70,10 +77,12 @@ production `node_modules` as bundled resources and spawns `node dist/main.js`. T
 - `tauri.conf.json` — `externalBin` (the sidecar), `resources` (the prebuilt `.node`), bundle targets, updater config, `frontendDist` pointing at the built `web`.
 
 ### `packages/core/` additions
-- `bundle:sidecar` script: produce a self-contained `node` + `dist/` + production
-  `node_modules` folder (via `pnpm deploy --prod`), plus a copy of the `node` runtime
-  named `coastal-core-<target-triple>`. Tauri ships the folder as resources and spawns
-  the node runtime against `dist/main.js`. (No esbuild/SEA — see Phase 1 outcome.)
+- `bundle:sidecar` script (`scripts/bundle-sidecar.mjs`): assemble `dist/` + a trimmed
+  `package.json` in `sidecar-build/app/`, run `npm install --omit=dev --legacy-peer-deps`
+  for a flat junction-free `node_modules`, and copy the `node` runtime to
+  `coastal-core-<target-triple>`. The desktop package's `sync-sidecar.mjs` copies this
+  into `src-tauri/{binaries,resources/app}`; Tauri spawns the runtime against
+  `dist/main.js`. (No esbuild/SEA, no pnpm-deploy — see Phase 1 outcome.)
 - Startup contract: accept `--port` / `PORT`; choose `127.0.0.1`; print `READY <port>`
   on stdout once Fastify is listening, so Tauri loads the UI only when the backend is up.
 
