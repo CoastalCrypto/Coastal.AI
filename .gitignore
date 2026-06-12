@@ -40,3 +40,6 @@ packages/desktop/scripts/placeholder-icon.png
 
 # Logo candidate output (uncommitted until one is approved)
 packages/desktop/brand-candidates/
+
+# Local secrets (Gemini key for logo generation, etc.)
+packages/desktop/.env.local

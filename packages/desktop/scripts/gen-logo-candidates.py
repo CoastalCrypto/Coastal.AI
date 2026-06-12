@@ -17,9 +17,28 @@ try:
 except ImportError:
     sys.exit("google-genai not installed: pip install google-genai")
 
-API_KEY = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+def _load_key() -> str | None:
+    # 1. Environment. 2. A gitignored packages/desktop/.env.local (so the key
+    # never has to be pasted into a chat transcript).
+    key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    if key:
+        return key
+    env_file = Path(__file__).resolve().parents[1] / ".env.local"
+    if env_file.exists():
+        for line in env_file.read_text().splitlines():
+            line = line.strip()
+            if line.startswith("GEMINI_API_KEY=") or line.startswith("GOOGLE_API_KEY="):
+                return line.split("=", 1)[1].strip().strip('"').strip("'")
+    return None
+
+
+API_KEY = _load_key()
 if not API_KEY:
-    sys.exit("Set GEMINI_API_KEY (https://aistudio.google.com/apikey) and re-run.")
+    sys.exit(
+        "No key found. Create packages/desktop/.env.local with a line:\n"
+        "  GEMINI_API_KEY=your-key   (https://aistudio.google.com/apikey)\n"
+        "It is gitignored, so it won't be committed."
+    )
 
 MODEL = os.environ.get("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image")
 OUT = Path(__file__).resolve().parents[1] / "brand-candidates"
