@@ -29,7 +29,10 @@ fn main() {
             .title("Coastal.AI")
             .inner_size(1280.0, 800.0)
             .min_inner_size(800.0, 600.0)
-            .decorations(false)
+            // OS window chrome for now — the web app's custom TitleBar only
+            // renders under Electron, so this gives an operable window with no
+            // double title bar. A Tauri-backed frameless title bar is a follow-up.
+            .decorations(true)
             .build()?;
 
             Ok(())
