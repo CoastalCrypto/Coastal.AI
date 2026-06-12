@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
+import { coreHttpOrigin } from '../platform/coreOrigin'
 
-const BASE_URL = import.meta.env.VITE_CORE_API_URL || 'http://127.0.0.1:4747'
+const BASE_URL = coreHttpOrigin()
 
 type Listener = (event: any) => void
 

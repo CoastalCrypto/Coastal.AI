@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, type DragEvent } from 'react'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { guessDomain, type AgentDomain } from '../components/AgentThinkingAnimation'
 import { coreClient } from '../api/client'
+import { coreWsOrigin } from '../platform/coreOrigin'
 import { AgentCharacters } from '../components/AgentCharacters'
 import { ChatPane } from '../components/ChatPane'
 import { speakText as speakTextUtil } from '../utils/speech'
@@ -216,10 +217,7 @@ export function Chat({ sessionId: initialSessionId, onNav: _onNav }: { sessionId
     }
   }, [currentSessionId])
 
-  const wsUrl = (() => {
-    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    return `${proto}//${window.location.host}/ws/session`
-  })()
+  const wsUrl = `${coreWsOrigin()}/ws/session`
   useReconnectingWs(wsUrl, handleWsMessage)
 
   // ── Actions ──────────────────────────────────────────────────────

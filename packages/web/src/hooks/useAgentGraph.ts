@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { AgentGraphState, AgentGraphEvent, Reaction } from '../types/agent-graph'
+import { coreWsOrigin } from '../platform/coreOrigin'
 
 const INITIAL_STATE: AgentGraphState = { nodes: [], edges: [], lastUpdated: 0 }
 
@@ -91,9 +92,8 @@ export function useAgentGraph() {
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const token = sessionStorage.getItem('cc_admin_session') ?? ''
-    const ws = new WebSocket(`${protocol}//${window.location.host}/ws/agent-events`)
+    const ws = new WebSocket(`${coreWsOrigin()}/ws/agent-events`)
     wsRef.current = ws
 
     ws.onopen = () => {
