@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { coreHttpOrigin } from '../platform/coreOrigin'
 
 export interface AgentEvent {
   type: string
@@ -26,7 +27,7 @@ export function useEventStream(maxEvents = 100) {
 
   const connect = useCallback(() => {
     if (esRef.current) esRef.current.close()
-    const es = new EventSource('/api/events')
+    const es = new EventSource(`${coreHttpOrigin()}/api/events`)
     esRef.current = es
 
     es.onopen = () => setConnected(true)

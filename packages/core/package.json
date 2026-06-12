@@ -102,12 +102,16 @@
   "bin": {
     "coastal-acp": "dist/acp/entry.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc && node -e \"const fs=require('fs');if(fs.existsSync('src/agents/souls'))fs.cpSync('src/agents/souls','dist/agents/souls',{recursive:true});if(fs.existsSync('src/skills/default-skills.json'))fs.copyFileSync('src/skills/default-skills.json','dist/skills/default-skills.json')\"",
     "dev": "node --watch --loader ts-node/esm src/main.ts",
     "acp": "node --loader ts-node/esm src/acp/entry.ts",
     "acp:built": "node dist/acp/entry.js",
     "repair": "node --loader ts-node/esm src/cli/repair.ts",
+    "bundle:sidecar": "node scripts/bundle-sidecar.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

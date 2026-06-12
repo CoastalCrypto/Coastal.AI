@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { coreHttpOrigin } from '../platform/coreOrigin'
 
 export interface LiveToolCall {
   toolName: string
@@ -47,7 +48,7 @@ export function usePipelineRun(runId: string | null, stageCount: number) {
       })),
     })
 
-    const es = new EventSource(`/api/pipeline/run/${runId}/events`)
+    const es = new EventSource(`${coreHttpOrigin()}/api/pipeline/run/${runId}/events`)
     esRef.current = es
 
     es.onmessage = (e) => {

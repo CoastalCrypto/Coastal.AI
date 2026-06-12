@@ -1007,7 +1007,9 @@ export class CoreClient {
   }
 }
 
-// Development: use explicit core API URL. Production: relative URLs work via proxy
-const coreBaseUrl = import.meta.env.VITE_CORE_API_URL || 'http://127.0.0.1:4747'
+// Core origin resolves the Tauri-injected dynamic sidecar port when present,
+// otherwise the legacy dev/prod default. See platform/coreOrigin.ts.
+import { coreHttpOrigin } from '../platform/coreOrigin'
+const coreBaseUrl = coreHttpOrigin()
 export const coreClient = new CoreClient(coreBaseUrl)
 export const adminClient = new CoreClient(coreBaseUrl)

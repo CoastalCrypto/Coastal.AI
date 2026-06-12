@@ -1,4 +1,5 @@
 import { ApolloClient, InMemoryCache, HttpLink, ApolloLink } from '@apollo/client'
+import { coreHttpOrigin } from '../platform/coreOrigin'
 
 /**
  * Apollo Client for GraphQL queries
@@ -16,10 +17,10 @@ const authLink = new ApolloLink((operation, forward) => {
   return forward(operation)
 })
 
-// Development: use explicit core API URL. Production: relative URLs work via proxy
-const coreBaseUrl = import.meta.env.VITE_CORE_API_URL || 'http://127.0.0.1:4747'
+// Core origin resolves the Tauri-injected dynamic port when present. See
+// platform/coreOrigin.ts.
 const httpLink = new HttpLink({
-  uri: `${coreBaseUrl}/graphql`,
+  uri: `${coreHttpOrigin()}/graphql`,
   credentials: 'same-origin',
 })
 

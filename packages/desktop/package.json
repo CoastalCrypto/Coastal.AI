@@ -1,0 +1,13 @@
+{
+  "name": "@coastal-ai/desktop",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "presync": "node scripts/sync-sidecar.mjs",
+    "dev": "pnpm presync && tauri dev",
+    "build": "pnpm presync && tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.2"
+  }
+}

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { adminClient, SESSION_EXPIRED, type OllamaModel } from '../api/client'
+import { coreWsOrigin } from '../platform/coreOrigin'
 
 interface PullProgress {
   status?: string
@@ -85,9 +86,7 @@ export function OllamaSection({ onModelsChanged }: Props) {
     setPullDone(false)
 
     const sessionId = crypto.randomUUID()
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsPort = import.meta.env.VITE_CORE_PORT ?? '4747'
-    const ws = new WebSocket(`${wsProtocol}//${window.location.hostname}:${wsPort}/ws/session`)
+    const ws = new WebSocket(`${coreWsOrigin()}/ws/session`)
 
     ws.onmessage = (ev) => {
       try {

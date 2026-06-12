@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { adminClient, type AgentRecord, type ModelGroup, type RegistryUpdate } from '../api/client'
+import { coreWsOrigin } from '../platform/coreOrigin'
 import { ModelCard } from '../components/ModelCard'
 import { ModelInstaller } from '../components/ModelInstaller'
 import { DomainAssigner } from '../components/DomainAssigner'
@@ -44,10 +45,7 @@ export function Models() {
     setProgress(null)
     const sessionId = crypto.randomUUID()
 
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsHost = window.location.hostname
-    const wsPort = import.meta.env.VITE_CORE_PORT ?? '4747'
-    const ws = new WebSocket(`${wsProtocol}//${wsHost}:${wsPort}/ws/session`)
+    const ws = new WebSocket(`${coreWsOrigin()}/ws/session`)
     ws.onmessage = (e) => {
       try {
         const msg = JSON.parse(e.data)
