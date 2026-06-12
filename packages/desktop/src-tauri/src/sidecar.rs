@@ -11,6 +11,17 @@ use std::sync::mpsc;
 use std::time::Duration;
 use tauri::{AppHandle, Manager};
 
+/// Strip the Windows `\\?\` extended-length prefix. Tauri's resource_dir()
+/// returns canonicalized paths carrying this prefix, but Node.js cannot parse
+/// `\\?\C:\...` as a script entry point (it mis-resolves to `lstat 'C:'`).
+fn clean_path(p: PathBuf) -> PathBuf {
+    let s = p.to_string_lossy();
+    match s.strip_prefix(r"\\?\") {
+        Some(stripped) => PathBuf::from(stripped),
+        None => p,
+    }
+}
+
 /// Ask the OS for a free TCP port by binding :0 and immediately releasing it.
 pub fn free_port() -> u16 {
     TcpListener::bind("127.0.0.1:0")
@@ -68,8 +79,8 @@ fn core_main(app: &AppHandle) -> Result<PathBuf, String> {
 /// Spawn the core sidecar and block until it is ready. Returns the live child
 /// so the caller can kill it on app exit.
 pub fn spawn_core(app: &AppHandle, port: u16) -> Result<Child, String> {
-    let runtime = runtime_path(app)?;
-    let main_js = core_main(app)?;
+    let runtime = clean_path(runtime_path(app)?);
+    let main_js = clean_path(core_main(app)?);
     let mut child = Command::new(&runtime)
         .arg(&main_js)
         .env("CC_PORT", port.to_string())

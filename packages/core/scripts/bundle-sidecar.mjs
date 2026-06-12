@@ -1,22 +1,25 @@
-// Builds the `coastal-core` sidecar for the Tauri desktop shell using the
-// folder-bundle strategy (the Phase-1 spike rejected single-binary Node SEA:
-// core's native-addon surface — better-sqlite3, onnxruntime-node, nodejs-polars,
-// bufferutil/utf-8-validate — plus puppeteer cannot be embedded).
+// Builds the `coastal-core` sidecar for the Tauri desktop shell (folder-bundle).
 //
 //   node scripts/bundle-sidecar.mjs
 //
 // Produces, under packages/core/sidecar-build/:
-//   app/                          self-contained deploy: dist/ + real node_modules
+//   app/                          self-contained: dist/ + package.json + node_modules
 //   coastal-core-<triple>[.exe]   a copy of the node runtime (Tauri externalBin)
 //
-// Tauri ships `app/` as a resource and spawns the runtime against app/dist/main.js.
-import { mkdirSync, rmSync, existsSync, copyFileSync } from 'node:fs'
+// Why npm, not pnpm deploy: core's stack has many native addons (better-sqlite3,
+// onnxruntime-node, nodejs-polars) and the MCP SDK with TRANSITIVE deps. pnpm's
+// deploy output is a `.pnpm` JUNCTION tree — node resolution depends on those
+// junctions, so it is neither flat nor portable: copying/dereferencing it breaks
+// transitive resolution (e.g. zod-to-json-schema) and a naive recursive copy
+// follows a workspace self-junction until the disk fills. `npm install --omit=dev`
+// produces a FLAT, real, junction-free node_modules that node resolves natively
+// and that copies trivially to a user's machine.
+import { mkdirSync, rmSync, existsSync, copyFileSync, cpSync, writeFileSync, readFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const workspaceRoot = resolve(root, '..', '..')
 const outDir = resolve(root, 'sidecar-build')
 const appDir = resolve(outDir, 'app')
 const isWin = process.platform === 'win32'
@@ -28,34 +31,41 @@ function targetTriple() {
   return `${a}-unknown-linux-gnu`
 }
 
-// 1. Self-contained deploy of core. pnpm deploy on Windows uses a `.pnpm`
-// junction layout (node-linker=hoisted is ignored by deploy). That is fine to
-// RUN against, but it contains ONE poisonous junction: `@coastal-ai/core`,
-// pointing at the LIVE workspace package — which itself contains sidecar-build/
-// app, so a naive recursive copy follows it forever and fills the disk. core's
-// own dist never imports itself, so we strip that self-reference here. Every
-// other junction points to a leaf inside the deploy and is harmless; the desktop
-// copy step dereferences those into real files (see sync-sidecar.mjs).
-function deployApp() {
+// 1. Assemble a standalone app dir (dist + package.json) and install prod deps
+// flat with npm.
+function buildApp() {
+  if (!existsSync(resolve(root, 'dist', 'main.js'))) {
+    throw new Error('dist/main.js missing — run `pnpm --filter @coastal-ai/core build` first')
+  }
   rmSync(appDir, { recursive: true, force: true })
-  mkdirSync(outDir, { recursive: true })
-  execFileSync(
-    'pnpm',
-    ['--filter=@coastal-ai/core', 'deploy', '--prod', '--legacy', appDir],
-    { stdio: 'inherit', cwd: workspaceRoot, shell: isWin },
-  )
-  if (!existsSync(resolve(appDir, 'dist', 'main.js'))) {
-    throw new Error('deploy produced no dist/main.js — run `pnpm --filter @coastal-ai/core build` first')
+  mkdirSync(appDir, { recursive: true })
+  cpSync(resolve(root, 'dist'), resolve(appDir, 'dist'), { recursive: true })
+
+  // Strip workspace/dev fields from package.json so npm installs cleanly.
+  const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'))
+  const appPkg = {
+    name: pkg.name,
+    version: pkg.version,
+    private: true,
+    type: pkg.type,
+    main: 'dist/main.js',
+    dependencies: pkg.dependencies ?? {},
   }
-  if (!existsSync(resolve(appDir, 'node_modules', 'better-sqlite3'))) {
-    throw new Error('deploy produced no better-sqlite3 in node_modules')
-  }
-  // Strip the workspace self-reference that causes infinite-copy loops.
-  for (const p of [
-    resolve(appDir, 'node_modules', '@coastal-ai'),
-    resolve(appDir, 'node_modules', '.pnpm', 'node_modules', '@coastal-ai'),
-  ]) {
-    rmSync(p, { recursive: true, force: true })
+  writeFileSync(resolve(appDir, 'package.json'), JSON.stringify(appPkg, null, 2))
+
+  // --legacy-peer-deps: core resolves a known peer conflict (mem0ai wants
+  // better-sqlite3@^12, core pins @11) the same way pnpm does — tolerate it.
+  // The app runs fine on @11 (Gate A). Strict npm peer resolution would reject it.
+  execFileSync('npm', ['install', '--omit=dev', '--no-audit', '--no-fund', '--no-package-lock', '--legacy-peer-deps'], {
+    stdio: 'inherit',
+    cwd: appDir,
+    shell: isWin,
+  })
+
+  for (const f of ['dist/main.js', 'node_modules/better-sqlite3/package.json', 'node_modules/zod-to-json-schema/package.json']) {
+    if (!existsSync(resolve(appDir, f))) {
+      throw new Error(`flat install incomplete — missing ${f}`)
+    }
   }
 }
 
@@ -67,6 +77,6 @@ function copyRuntime() {
   console.log('[bundle] runtime ->', binPath)
 }
 
-deployApp()
+buildApp()
 copyRuntime()
-console.log('[bundle] folder-bundle ready in', outDir)
+console.log('[bundle] flat folder-bundle ready in', outDir)
