@@ -153,6 +153,7 @@ export {
   CoordinationDaemon,
   runCoordinationDaemon,
   type DaemonConfig,
+  type WorkerContext,
 } from './daemon.js'
 
 // ─── Replication ─────────────────────────────────────────────────────

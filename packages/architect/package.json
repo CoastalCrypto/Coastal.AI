@@ -8,7 +8,6 @@
   "scripts": {
     "build": "tsc",
     "dev": "node --loader ts-node/esm src/index.ts",
-    "pretest": "pnpm --filter @coastal-ai/core build",
     "test": "vitest run"
   },
   "dependencies": {

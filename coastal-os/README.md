@@ -6,6 +6,12 @@ infrastructure preconfigured.
 
 > Design rationale + phase plan: [`docs/handoff/2026-05-26-multi-agent-os-plan.md`](../docs/handoff/2026-05-26-multi-agent-os-plan.md)
 
+> **Not the desktop ISO.** This is the BC-250 **cluster-node** image
+> (headless, Ubuntu 24.04, inference stack). The standalone *desktop* USB
+> ISO — live-build + VibeVoice, built by `.github/workflows/iso-build.yml`
+> — lives in [`../coastalos/`](../coastalos/) (no hyphen). Different
+> hardware target, different build pipeline; don't confuse the two.
+
 ## Version progression
 
 Per the **OS version progression rule** (agreed 2026-05-26): every image
@@ -14,7 +20,7 @@ scripts" as a separate product.
 
 | Version | Lands in | What's added |
 |---|---|---|
-| **v0.0.1** | Phase 0 (current) | Debian 12 base + Coastal branding + `llama.cpp-bc250` + `coastal-os-bench` + apt source pre-pointed at `origin/apt` |
+| **v0.0.1** | Phase 0 (current) | Ubuntu 24.04 (noble) base + Coastal branding + `llama.cpp-bc250` + `coastal-os-bench` + apt source pre-pointed at `origin/apt` |
 | **v0.1** | Phase 3 | Bootstrap wizard, Ed25519 keypair gen, role picker, hardware-scan-driven model download, read-only root + overlayfs |
 | **v1.0** | Phase 4 | Full 12-node cluster awareness, mission control UI integration, all role peer packages preinstalled by role |
 
@@ -29,8 +35,10 @@ coastal-os/
   docs/
     bios-reflash.md         BC-250 BIOS reflash for gfx1013 / PCIe bridge
     build-image.md          How to build a v0.0.1 NVMe image
+    inference-stack.md      5-layer gfx1013 inference stack (BIOS → Mesa → llama.cpp)
   image/
-    (Phase 0 prep #7 — Debian image build scaffolding lands here)
+    build-image.sh          mmdebstrap Ubuntu 24.04 → flashable BC-250 .img
+    files/                  First-boot overlay (systemd unit, motd, os-release, ttm tuning)
 ```
 
 ## Hardware target

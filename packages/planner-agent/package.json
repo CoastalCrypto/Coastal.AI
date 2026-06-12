@@ -7,7 +7,6 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "pretest": "pnpm --filter @coastal-ai/core build && pnpm --filter @coastal-ai/coordination build",
     "test": "vitest run"
   },
   "dependencies": {

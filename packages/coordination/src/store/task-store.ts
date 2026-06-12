@@ -165,6 +165,20 @@ export class TaskStore {
   }
 
   /**
+   * Every task in the board regardless of state — including terminal
+   * (done / failed / cancelled) rows. Oldest-first. Intended for
+   * observability surfaces (mission control, demo summaries) that want a
+   * full snapshot; callers that only care about live work should prefer
+   * the state-scoped list* methods above.
+   */
+  listAll(limit = 1000): Task[] {
+    const rows = this.db.prepare(`
+      SELECT * FROM tasks ORDER BY created_at ASC LIMIT ?
+    `).all(limit) as TaskRow[]
+    return rows.map(rowToTask)
+  }
+
+  /**
    * Hard delete. Use sparingly — the audit value of keeping done/failed
    * rows is high. ON DELETE CASCADE cleans up claims and dependencies.
    */

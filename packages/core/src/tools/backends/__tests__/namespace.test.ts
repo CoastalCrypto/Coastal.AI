@@ -47,7 +47,14 @@ describe('NamespaceBackend', () => {
   })
 
   it('execute times out', async () => {
-    const result = await backend.execute('sleep 10', process.cwd(), 'test-session', 200)
+    // Pick a command that reliably blocks well past the 200ms timeout on
+    // the host shell. cmd.exe has no `sleep` builtin — relying on an
+    // ambient sleep.exe (Git coreutils) on PATH is non-deterministic — so
+    // use `ping -n` (always present) on Windows and `sleep` on POSIX.
+    const blocking = process.platform === 'win32'
+      ? 'ping -n 11 127.0.0.1'
+      : 'sleep 10'
+    const result = await backend.execute(blocking, process.cwd(), 'test-session', 200)
     expect(result.timedOut).toBe(true)
     expect(result.exitCode).toBe(124)
   }, 5_000)
