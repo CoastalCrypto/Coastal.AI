@@ -68,6 +68,16 @@ sidecar is killed on graceful window close with no zombie) both PASS on Windows.
 entry-path gotcha was fixed: strip Tauri's `\\?\` extended-length prefix before handing the
 path to node (it otherwise mis-resolves to `lstat 'C:'`).
 
+**Task 7 — standalone installer (2026-06-11):** `pnpm --filter @coastal-ai/desktop build`
+produces `CoastalAI_0.1.0_x64-setup.exe` (~122 MB NSIS, bundling the node runtime + flat
+`node_modules` + shell). The **release/bundled** exe was verified to spawn the sidecar from
+the *bundled* `resources/app` (resource_dir path, not the dev fallback), run, and kill the
+sidecar on graceful close with no zombie — the strongest automated proxy for an installed
+copy. Remaining manual gate: install the `.exe` on a machine with NO Node/pnpm and confirm
+it launches showing live `/api/version`. Follow-ups: replace the placeholder app icon with
+real brand art; code-signing (mac notarization / Windows Authenticode) for warning-free
+distribution; Phases 2-5 (PlatformBridge, installer-wizard rework, CI matrix, updater).
+
 ## Components (small, single-purpose units)
 
 ### `packages/desktop/src-tauri/` (Rust)
