@@ -22,4 +22,5 @@ export {
   createPlannerWorker,
   plannerShouldClaim,
   type PlannerWorkerConfig,
+  type PlannerContext,
 } from './worker.js'

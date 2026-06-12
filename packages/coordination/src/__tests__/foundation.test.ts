@@ -106,6 +106,21 @@ describe('coordination foundation', () => {
       expect(tasks.listByOwner('agent-A').map(t => t.id)).toEqual([a.id])
       expect(tasks.listByOwner('agent-B').map(t => t.id)).toEqual([b.id])
     })
+
+    it('listAll returns every task FIFO, including terminal states', () => {
+      const a = tasks.create({ kind: 'x', payload: 1 })
+      const b = tasks.create({ kind: 'x', payload: 2 })
+      const c = tasks.create({ kind: 'x', payload: 3 })
+      // Drive one task all the way to a terminal state — state-scoped
+      // lists would drop it, listAll must keep it.
+      tasks.update(a.id, { state: 'claimed', ownerAgentId: 'agent-A' })
+      tasks.update(a.id, { state: 'done', result: { ok: true }, ownerAgentId: null })
+
+      const all = tasks.listAll()
+      expect(all.map(t => t.id)).toEqual([a.id, b.id, c.id])
+      expect(all.find(t => t.id === a.id)?.state).toBe('done')
+      expect(tasks.listQueued().map(t => t.id)).toEqual([b.id, c.id]) // a is gone from queued
+    })
   })
 
   describe('ClaimStore', () => {

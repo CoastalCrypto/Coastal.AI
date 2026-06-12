@@ -24,7 +24,6 @@ import {
   CoordinationDaemon,
   createReplicator,
   resolveDependencies,
-  type Task,
 } from '@coastal-ai/coordination'
 
 import type { LlmClient, ChatRequest, ChatResponse, ChatStreamChunk } from '@coastal-ai/llm-client'
@@ -125,27 +124,20 @@ async function main(): Promise<void> {
     heartbeatIntervalMs: 0,
   })
 
-  // Late-bound submit: the planner's subtasks need to go through
-  // daemon.submit() so they BROADCAST (not just create locally).
-  // We assemble the worker with a forwarder that resolves once the
-  // daemon exists.
-  let plannerDaemon: CoordinationDaemon | null = null
+  // The planner submits its subtasks through the daemon's WorkerContext:
+  // ctx.submit() broadcasts them (so peers can auto-claim), and
+  // ctx.addDependency() writes dep edges (which needs the deps store
+  // wired below). That lets it run as an ordinary worker — no
+  // forward-reference back to its own daemon.
   const planner = new CoordinationDaemon({
     identity: plannerId,
     transport: tPlanner,
     db: plannerNode.db, tasks: plannerNode.tasks, claims: plannerNode.claims,
-    worker: createPlannerWorker({
-      decompose: deterministicDecompose,
-      submit: async (input) => {
-        if (!plannerDaemon) throw new Error('planner daemon not yet bound')
-        return plannerDaemon.submit(input)
-      },
-      addDependency: (dep) => { plannerNode.deps.add(dep) },
-    }),
+    deps: plannerNode.deps,
+    worker: createPlannerWorker({ decompose: deterministicDecompose }),
     shouldClaim: plannerShouldClaim,
     heartbeatIntervalMs: 0,
   })
-  plannerDaemon = planner
 
   const coder = new CoordinationDaemon({
     identity: coderId,
@@ -210,7 +202,7 @@ async function main(): Promise<void> {
 
   for (const node of nodes) {
     header(`Final state — ${node.name} DB`)
-    const allTasks = listAllTasks(node.db)
+    const allTasks = node.tasks.listAll()
     if (allTasks.length === 0) {
       console.log('  (empty)')
       continue
@@ -246,26 +238,6 @@ async function main(): Promise<void> {
   await reviewer.stop()
 
   process.exit(allDone ? 0 : 1)
-}
-
-/** Full-table scan for the demo summary — includes done/failed/cancelled. */
-function listAllTasks(db: import('better-sqlite3').Database): Task[] {
-  const rows = db.prepare(`SELECT * FROM tasks ORDER BY created_at ASC`).all() as Array<{
-    id: string; state: string; kind: string; payload: string;
-    result: string | null; failure_reason: string | null;
-    owner_agent_id: string | null; retry_count: number; max_retries: number;
-    created_at: number; updated_at: number; parent_task_id: string | null;
-  }>
-  return rows.map(r => ({
-    id: r.id, state: r.state as Task['state'], kind: r.kind,
-    payload: JSON.parse(r.payload),
-    result: r.result === null ? null : JSON.parse(r.result),
-    failureReason: r.failure_reason,
-    ownerAgentId: r.owner_agent_id,
-    retryCount: r.retry_count, maxRetries: r.max_retries,
-    createdAt: r.created_at, updatedAt: r.updated_at,
-    parentTaskId: r.parent_task_id,
-  }))
 }
 
 main().catch((err) => {

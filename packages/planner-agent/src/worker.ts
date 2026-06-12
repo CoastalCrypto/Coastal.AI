@@ -4,15 +4,23 @@
 // this function:
 //
 //   1. Calls the decomposer (deterministic or LLM-backed) to produce a Plan
-//   2. Submits each step as a new task via the injected submit() function
-//   3. Wires up the dependency graph via task_dependencies edges
+//   2. Submits each step as a new task via ctx.submit() (broadcasts so
+//      peers can auto-claim)
+//   3. Wires up the dependency graph via ctx.addDependency() edges
 //   4. Returns a PlanTaskResult describing what was submitted
 //
 // The planner does NOT wait for the subtasks to finish. It returns
 // once they're queued. Downstream observers (mission control,
 // curator) track aggregate progress.
+//
+// submit/addDependency arrive at call time through the daemon's
+// WorkerContext — NOT at construction. This is what lets the planner
+// run as an ordinary `(task, ctx) => result` worker with no
+// forward-reference to its own daemon. The daemon must be built with a
+// `deps` store for ctx.addDependency to function (it throws loudly
+// otherwise).
 
-import type { Task, TaskInput, TaskDependencyInput } from '@coastal-ai/coordination'
+import type { WorkerContext } from '@coastal-ai/coordination'
 import type { Plan, PlanTaskPayload, PlanTaskResult } from './types.js'
 
 export interface PlannerWorkerConfig {
@@ -23,28 +31,26 @@ export interface PlannerWorkerConfig {
    */
   decompose: (input: PlanTaskPayload) => Plan | Promise<Plan>
   /**
-   * Submit a task to the daemon's local board. Returns the created
-   * Task (with the assigned id).
-   */
-  submit: (input: TaskInput) => Promise<Task>
-  /**
-   * Add a dependency edge. Wired to coordination's DependencyStore.
-   */
-  addDependency: (dep: TaskDependencyInput) => void
-  /**
    * Strategy tag for the result; mostly for observability. Set to 'llm'
    * when wiring the LLM decomposer; default 'deterministic'.
    */
   strategy?: 'deterministic' | 'llm'
 }
 
-export function createPlannerWorker(config: PlannerWorkerConfig) {
-  const {
-    decompose, submit, addDependency,
-    strategy = 'deterministic',
-  } = config
+/**
+ * The slice of the daemon's WorkerContext the planner actually uses.
+ * Declaring the narrow shape keeps the worker honest about its
+ * capabilities while staying assignable to the daemon's worker slot.
+ */
+export type PlannerContext = Pick<WorkerContext, 'submit' | 'addDependency'>
 
-  return async function plannerWorker(task: { id: string; payload: unknown }): Promise<PlanTaskResult> {
+export function createPlannerWorker(config: PlannerWorkerConfig) {
+  const { decompose, strategy = 'deterministic' } = config
+
+  return async function plannerWorker(
+    task: { id: string; payload: unknown },
+    ctx: PlannerContext,
+  ): Promise<PlanTaskResult> {
     const payload = task.payload as PlanTaskPayload
     if (!payload || typeof payload.goal !== 'string') {
       throw new Error('planner worker: task.payload.goal must be a string')
@@ -55,7 +61,7 @@ export function createPlannerWorker(config: PlannerWorkerConfig) {
     // the plan_task itself, capturing the ref → id mapping.
     const refToId = new Map<string, string>()
     for (const step of plan.steps) {
-      const submitted = await submit({
+      const submitted = await ctx.submit({
         kind: step.kind,
         payload: step.payload,
         parentTaskId: task.id,
@@ -70,7 +76,7 @@ export function createPlannerWorker(config: PlannerWorkerConfig) {
         for (const depRef of step.dependsOn) {
           const toId = refToId.get(depRef)
           if (!toId) continue // dangling — should be unreachable after decomposer validation
-          addDependency({
+          ctx.addDependency({
             taskId: fromId,
             dependsOnTaskId: toId,
             kind: 'must_complete',
@@ -81,7 +87,7 @@ export function createPlannerWorker(config: PlannerWorkerConfig) {
         for (const depRef of step.cascadesFrom) {
           const toId = refToId.get(depRef)
           if (!toId) continue
-          addDependency({
+          ctx.addDependency({
             taskId: fromId,
             dependsOnTaskId: toId,
             kind: 'must_not_fail',
