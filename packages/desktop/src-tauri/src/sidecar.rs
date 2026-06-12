@@ -31,13 +31,15 @@ pub fn free_port() -> u16 {
         .port()
 }
 
-/// Triple used by packages/core/scripts/bundle-sidecar.mjs. Spike: Windows only.
+/// Build target triple, emitted by build.rs. Matches the name bundle-sidecar.mjs
+/// gives the runtime on this OS (e.g. x86_64-pc-windows-msvc, aarch64-apple-darwin).
 fn target_triple() -> &'static str {
-    "x86_64-pc-windows-msvc"
+    env!("COASTAL_TARGET_TRIPLE")
 }
 
 fn runtime_path(app: &AppHandle) -> Result<PathBuf, String> {
-    let name = format!("coastal-core-{}.exe", target_triple());
+    let ext = if cfg!(windows) { ".exe" } else { "" };
+    let name = format!("coastal-core-{}{ext}", target_triple());
     if let Ok(res) = app.path().resource_dir() {
         let p = res.join("binaries").join(&name);
         if p.exists() {
