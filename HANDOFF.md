@@ -17,7 +17,7 @@ secrets, cost, manual test); everything else the agent can do._
 
 ## 1. Ship the desktop app (release loop)  ← in progress
 
-- [ ] Re-tag `desktop-v0.1.0` at current `master` (old tag predates icon + CI fixes) → CI publishes a draft release with installers.
+- [x] Re-tag `desktop-v0.1.0` at current `master` → release run building (creates a draft release with installers).
 - [ ] [operator] Download the installer and **install-test on a machine with NO Node/pnpm** — confirm it launches, the UI loads, and (with Ollama) chat works.
 - [ ] Publish the draft release once the install-test passes.
 
@@ -29,7 +29,8 @@ secrets, cost, manual test); everything else the agent can do._
 
 ## 3. Hardening
 
-- [ ] Security pass on the new desktop surface (sidecar local HTTP server, CORS-to-webview, bundled auth flow, data-URL error page) via the `cso`/security-review skill.
+- [x] Security pass on the new desktop surface — findings: sidecar is localhost-only/random-port ✅, no Tauri-API capabilities (least-privilege) ✅, error page is HTML-escaped ✅. **Fixed:** tightened CORS to only the real webview origins (dropped broad `http://localhost`).
+- [ ] Tighten the webview **CSP** — currently `csp: null` in `tauri.conf.json`. Set a real policy (needs careful UI testing so it doesn't break the React/three.js/worker bundles).
 - [ ] [operator] Rotate the Gemini API key shared in chat.
 - [ ] [operator] Move the `@21st-dev/magic` MCP key out of the plaintext command-line arg into an env var.
 

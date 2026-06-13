@@ -120,11 +120,11 @@ pub fn spawn_core(app: &AppHandle, port: u16) -> Result<Child, String> {
         .env("CC_PORT", port.to_string())
         .env("CC_HOST", "127.0.0.1")
         // The Tauri webview is a cross-origin caller to the sidecar's HTTP API.
-        // Allow the platform webview origins so CORS preflight succeeds.
-        .env(
-            "CC_CORS_ORIGINS",
-            "http://tauri.localhost,https://tauri.localhost,tauri://localhost,http://localhost",
-        )
+        // Allow ONLY the actual platform webview origins (Windows uses
+        // http://tauri.localhost; macOS/Linux use tauri://localhost). Do NOT
+        // include a broad http://localhost — it would needlessly let any local
+        // browser page reach the API if it discovered the random port.
+        .env("CC_CORS_ORIGINS", "http://tauri.localhost,tauri://localhost")
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())
         .spawn()
@@ -143,7 +143,14 @@ pub fn spawn_core(app: &AppHandle, port: u16) -> Result<Child, String> {
         }
     });
 
-    rx.recv_timeout(Duration::from_secs(40))
-        .map_err(|_| "core did not signal CC_SIDECAR_READY within 40s".to_string())?;
-    Ok(child)
+    // Cold start does a lot (Ollama scan, model registry, MCP probes), so allow
+    // generous time — but on timeout KILL the child, or it leaks as an orphan
+    // (std::process::Child does not kill on drop).
+    match rx.recv_timeout(Duration::from_secs(90)) {
+        Ok(_) => Ok(child),
+        Err(_) => {
+            let _ = child.kill();
+            Err("core did not signal CC_SIDECAR_READY within 90s".to_string())
+        }
+    }
 }
