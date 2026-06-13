@@ -5,7 +5,8 @@
   "scripts": {
     "presync": "node scripts/sync-sidecar.mjs",
     "dev": "pnpm presync && tauri dev",
-    "build": "pnpm presync && tauri build"
+    "build": "pnpm presync && tauri build",
+    "tauri": "tauri"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.11.2"
