@@ -8,6 +8,7 @@
 
 <p align="center">
   <a href="#-choose-your-path">Choose Your Path</a> ·
+  <a href="#-desktop-app">Desktop App</a> ·
   <a href="#-quick-start">Quick Start</a> ·
   <a href="#-first-boot-walkthrough">Walkthrough</a> ·
   <a href="#-features">Features</a> ·
@@ -35,21 +36,31 @@ It gives you a private command center for AI: chat with intelligent agents that 
 
 ## 🗺 Choose Your Path
 
-Coastal.AI runs three different ways. Pick the one that fits your situation:
+Coastal.AI runs several ways. Pick the one that fits your situation:
 
 ---
 
-### Path 1 — Install on your existing computer *(recommended for most people)*
+### Path 1 — Desktop app *(recommended for most people)*
 
-Runs alongside your current OS (Mac, Linux, or Windows). Nothing is erased. You can stop and start it whenever you want.
+Download a native installer, double-click, done. Everything is bundled — **no Node, no Python, no terminal, no setup scripts.** Runs on Windows, macOS (Intel + Apple Silicon), and Linux.
 
-**Best for:** personal use, development, trying it out
+**Best for:** anyone who just wants to run the app
+
+→ **[Jump to Desktop App](#-desktop-app)**
+
+---
+
+### Path 2 — Install from source on your existing computer
+
+Runs the backend + web UI from the repo via the install script, accessed in your browser. Gives you the full development environment and source.
+
+**Best for:** development, customization, contributing
 
 → **[Jump to Quick Start](#-quick-start)**
 
 ---
 
-### Path 2 — Install as a system service on a Linux server
+### Path 3 — Install as a system service on a Linux server
 
 Installs as a `systemd` service that starts automatically on boot. Ideal for a dedicated machine, home server, or VPS.
 
@@ -59,7 +70,7 @@ Installs as a `systemd` service that starts automatically on boot. Ideal for a d
 
 ---
 
-### Path 3 — Boot from USB as a standalone OS (CoastalOS)
+### Path 4 — Boot from USB as a standalone OS (CoastalOS)
 
 Flash a bootable USB drive. Plug it into any UEFI machine and boot — no installation, nothing written to the host disk. CoastalOS is a minimal Linux environment built entirely around Coastal.AI.
 
@@ -68,6 +79,43 @@ Flash a bootable USB drive. Plug it into any UEFI machine and boot — no instal
 → **[Jump to CoastalOS](#-coastalos--standalone-os)**
 
 ---
+
+## 🖥 Desktop App
+
+The standalone desktop edition — a native window running the full Coastal.AI stack, with the backend **bundled inside the app**. Nothing else to install or configure.
+
+### Install
+
+1. Open the [**Releases**](https://github.com/CoastalCrypto/Coastal.AI/releases) page.
+2. Download the installer for your OS:
+
+   | OS | File |
+   |----|------|
+   | **Windows** | `CoastalAI_<version>_x64-setup.exe` |
+   | **macOS (Apple Silicon)** | `CoastalAI_<version>_aarch64.dmg` |
+   | **macOS (Intel)** | `CoastalAI_<version>_x64.dmg` |
+   | **Linux** | `CoastalAI_<version>_amd64.AppImage` or `.deb` |
+
+3. Run it. On first launch the app starts its **own backend on a private local port** — no ports to pick, no services to start.
+
+> **Unsigned for now:** your OS may warn on first run (Windows SmartScreen → *More info → Run anyway*; macOS → right-click → *Open*). Code-signing is on the roadmap.
+
+### Requirements
+
+- For **local** model inference, install [**Ollama**](https://ollama.com) — the in-app setup wizard checks for it and helps you pull a model. Prefer the cloud? Claude / Gemini / OpenAI work with an API key instead.
+
+### Build it yourself
+
+Cross-platform installers are produced by CI on a `desktop-v*` tag (`.github/workflows/desktop-release.yml`). To build locally:
+
+```bash
+pnpm install
+pnpm --filter @coastal-ai/core build
+pnpm --filter @coastal-ai/core bundle:sidecar   # bundles the Node backend + native deps
+pnpm --filter @coastal-ai/desktop build         # → src-tauri/target/release/bundle/
+```
+
+For the architecture and the dev workflow (`pnpm --filter @coastal-ai/desktop dev`), see **[`packages/desktop/README.md`](packages/desktop/README.md)**.
 
 ---
 
@@ -528,7 +576,7 @@ Click **Abort** at any time to cancel the run, or **← Back** when it completes
 
 ## 💿 CoastalOS — Standalone OS
 
-> **This is Path 3.** CoastalOS boots from a USB drive as a complete, self-contained operating system — no existing OS required on the host machine.
+> **This is Path 4.** CoastalOS boots from a USB drive as a complete, self-contained operating system — no existing OS required on the host machine.
 
 CoastalOS is a dedicated Linux image that runs Coastal.AI as a complete operating system. Boot from a USB drive — no installation required, nothing written to your machine's disk.
 
