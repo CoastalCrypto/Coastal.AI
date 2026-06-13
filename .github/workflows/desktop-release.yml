@@ -61,7 +61,10 @@ jobs:
           key: ${{ matrix.os }}-cargo-${{ hashFiles('packages/desktop/src-tauri/Cargo.lock') }}
 
       - name: Install workspace deps
-        run: pnpm install --frozen-lockfile
+        # Not --frozen-lockfile: packages/daemon has an optional native dep
+        # (node-portaudio) that doesn't resolve into the lockfile, which would
+        # otherwise hard-fail the frozen check. The desktop build doesn't use it.
+        run: pnpm install --no-frozen-lockfile
 
       - name: Build core
         run: pnpm --filter @coastal-ai/core build
