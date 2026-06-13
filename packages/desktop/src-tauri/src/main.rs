@@ -18,22 +18,35 @@ fn main() {
         .setup(|app| {
             let handle = app.handle().clone();
             let port = sidecar::free_port();
-            let child = sidecar::spawn_core(&handle, port)?;
-            app.state::<CoreChild>().0.lock().unwrap().replace(child);
 
-            WebviewWindowBuilder::new(
-                app,
-                "main",
-                WebviewUrl::App(format!("index.html?corePort={port}").into()),
-            )
-            .title("Coastal.AI")
-            .inner_size(1280.0, 800.0)
-            .min_inner_size(800.0, 600.0)
             // OS window chrome for now — the web app's custom TitleBar only
             // renders under Electron, so this gives an operable window with no
             // double title bar. A Tauri-backed frameless title bar is a follow-up.
-            .decorations(true)
-            .build()?;
+            match sidecar::spawn_core(&handle, port) {
+                Ok(child) => {
+                    app.state::<CoreChild>().0.lock().unwrap().replace(child);
+                    WebviewWindowBuilder::new(
+                        app,
+                        "main",
+                        WebviewUrl::App(format!("index.html?corePort={port}").into()),
+                    )
+                    .title("Coastal.AI")
+                    .inner_size(1280.0, 800.0)
+                    .min_inner_size(800.0, 600.0)
+                    .decorations(true)
+                    .build()?;
+                }
+                Err(e) => {
+                    // Don't panic — show a branded error window instead.
+                    eprintln!("[supervisor] core failed to start: {e}");
+                    let url = sidecar::error_window_url(&e);
+                    WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url.parse()?))
+                        .title("Coastal.AI")
+                        .inner_size(760.0, 520.0)
+                        .decorations(true)
+                        .build()?;
+                }
+            }
 
             Ok(())
         })

@@ -8,7 +8,7 @@ description = "Coastal.AI desktop shell"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["webview-data-url"] }
 
 [profile.release]
 opt-level = "s"

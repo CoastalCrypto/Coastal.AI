@@ -11,6 +11,38 @@ use std::sync::mpsc;
 use std::time::Duration;
 use tauri::{AppHandle, Manager};
 
+/// Build a `data:text/html` URL for a branded error screen shown when the core
+/// sidecar fails to start — far better UX than a silent panic-to-nothing.
+pub fn error_window_url(msg: &str) -> String {
+    let html = format!(
+        "<!doctype html><html><head><meta charset=utf-8><style>\
+         body{{background:#050d1a;color:#cde3ff;font-family:system-ui;margin:0;\
+         display:flex;align-items:center;justify-content:center;height:100vh}}\
+         .card{{max-width:560px;padding:36px;text-align:center}}\
+         h1{{color:#ff8a8a;font-weight:600;margin:0 0 12px}}\
+         p{{color:#9fb6d6;line-height:1.55}}\
+         code{{display:block;background:#0f1830;padding:10px 12px;border-radius:8px;\
+         color:#6ee7a8;margin:14px 0;word-break:break-word}}</style></head>\
+         <body><div class=card><h1>Coastal.AI couldn't start its engine</h1>\
+         <p>The local backend did not start.</p><code>{msg}</code>\
+         <p>Make sure any required services (e.g. Ollama) are available, then relaunch. \
+         Logs are in the app data directory.</p></div></body></html>",
+        msg = html_escape(msg),
+    );
+    let mut url = String::from("data:text/html,");
+    for b in html.bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => url.push(b as char),
+            _ => url.push_str(&format!("%{b:02X}")),
+        }
+    }
+    url
+}
+
+fn html_escape(s: &str) -> String {
+    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
+}
+
 /// Strip the Windows `\\?\` extended-length prefix. Tauri's resource_dir()
 /// returns canonicalized paths carrying this prefix, but Node.js cannot parse
 /// `\\?\C:\...` as a script entry point (it mis-resolves to `lstat 'C:'`).
