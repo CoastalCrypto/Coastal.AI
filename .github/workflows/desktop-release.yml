@@ -12,6 +12,11 @@ on:
       - 'desktop-v*'
   workflow_dispatch:
 
+# tauri-action creates a GitHub Release on tag builds; the default GITHUB_TOKEN
+# is read-only, so grant write access or release creation fails.
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
