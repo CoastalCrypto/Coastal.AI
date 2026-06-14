@@ -17,7 +17,8 @@ secrets, cost, manual test); everything else the agent can do._
 
 ## 1. Ship the desktop app (release loop)  ← in progress
 
-- [x] Re-tag `desktop-v0.1.0` at current `master` → release run building (creates a draft release with installers).
+- [x] Re-tag `desktop-v0.1.0` → release run builds + publishes installers. CI release machinery debugged through 4 issues: (1) missing `tauri` npm script, (2) `GITHUB_TOKEN` needed `contents: write`, (3) matrix runners raced to create the release → **decoupled** to build-artifacts + a single `publish` job, (4) macOS-Intel (`macos-13`) runners chronically unavailable → **dropped** (ship Windows + Linux + macOS Apple-Silicon; Intel-mac on demand later).
+- [x] App icon updated to the **Coastal AI / Digital Depths** badge (operator art).
 - [ ] [operator] Download the installer and **install-test on a machine with NO Node/pnpm** — confirm it launches, the UI loads, and (with Ollama) chat works.
 - [ ] Publish the draft release once the install-test passes.
 
