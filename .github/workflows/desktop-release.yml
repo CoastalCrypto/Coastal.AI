@@ -36,6 +36,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
 
+    # linuxdeploy (used for AppImage) is itself an AppImage and needs FUSE,
+    # which GitHub runners lack → "failed to run linuxdeploy". This makes the
+    # AppImage tools extract-and-run instead of FUSE-mounting. (No-op on Win/mac.)
+    env:
+      APPIMAGE_EXTRACT_AND_RUN: 1
+
     steps:
       - uses: actions/checkout@v4
 
