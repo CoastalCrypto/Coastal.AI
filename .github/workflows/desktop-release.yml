@@ -4,7 +4,7 @@ name: Desktop Release
 # (better-sqlite3, onnxruntime-node, nodejs-polars) cannot be cross-compiled,
 # so every platform builds its own sidecar via `npm install` on that runner.
 #
-# Trigger: push a tag like `desktop-v0.1.0`, or run manually.
+# Trigger: push a tag like `desktop-v0.1.0`, or run manually (build-only).
 
 on:
   push:
@@ -12,13 +12,39 @@ on:
       - 'desktop-v*'
   workflow_dispatch:
 
-# tauri-action creates a GitHub Release on tag builds; the default GITHUB_TOKEN
-# is read-only, so grant write access or release creation fails.
 permissions:
   contents: write
 
 jobs:
+  # One job creates the draft release first, so the matrix below uploads to it
+  # instead of all four runners racing to create the same release (422 errors).
+  create-release:
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.mk.outputs.id }}
+    steps:
+      - uses: actions/github-script@v7
+        id: mk
+        with:
+          script: |
+            const tag = context.ref.replace('refs/tags/', '')
+            const list = await github.rest.repos.listReleases({ owner: context.repo.owner, repo: context.repo.repo, per_page: 100 })
+            let rel = list.data.find(r => r.tag_name === tag)
+            if (!rel) {
+              const c = await github.rest.repos.createRelease({
+                owner: context.repo.owner, repo: context.repo.repo,
+                tag_name: tag, name: `Coastal.AI Desktop ${tag}`,
+                draft: true, prerelease: false,
+              })
+              rel = c.data
+            }
+            core.setOutput('id', String(rel.id))
+
   build:
+    needs: create-release
+    # Run even when create-release is skipped (workflow_dispatch = build-only).
+    if: ${{ always() && needs.create-release.result != 'failure' }}
     strategy:
       fail-fast: false
       matrix:
@@ -87,10 +113,9 @@ jobs:
           # Signing is a follow-up — add TAURI_SIGNING_PRIVATE_KEY etc. here later.
         with:
           projectPath: packages/desktop
-          tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
-          releaseName: 'Coastal.AI Desktop ${{ github.ref_name }}'
-          releaseDraft: true
-          prerelease: false
+          # Upload to the release created above (empty on workflow_dispatch →
+          # tauri-action just builds, no release upload).
+          releaseId: ${{ needs.create-release.outputs.release_id }}
 
       - name: Upload installers as workflow artifacts
         uses: actions/upload-artifact@v4
