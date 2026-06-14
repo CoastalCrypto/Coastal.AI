@@ -51,3 +51,8 @@ secrets, cost, manual test); everything else the agent can do._
 
 - [ ] Replace placeholder branding elsewhere if any; keep `icon-source-1024.png` as the canonical icon source.
 - [ ] Consider `tesseract`/`sharp` adoption when the Designer(vision)/`video` pipeline is built.
+
+## CI follow-ups
+
+- [ ] Re-enable AppImage Linux target: `linuxdeploy` fails in CI ("failed to run linuxdeploy") even with `APPIMAGE_EXTRACT_AND_RUN=1`. Try `apt-get install -y libfuse2` on the ubuntu runner. Dropped from `targets` for now; `.deb` ships.
+- [ ] Re-add macOS-Intel (`macos-13`) when runner availability allows (currently dropped — chronic queue).
