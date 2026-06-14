@@ -4,6 +4,12 @@ name: Desktop Release
 # (better-sqlite3, onnxruntime-node, nodejs-polars) cannot be cross-compiled,
 # so every platform builds its own sidecar via `npm install` on that runner.
 #
+# Architecture: matrix jobs BUILD and upload installers as workflow artifacts
+# only — they never write to the GitHub Release (concurrent release writes from
+# multiple runners race and 422). A single `publish` job then attaches all
+# artifacts to the draft release. macOS-Intel is omitted: that runner class is
+# chronically unavailable on this tier and just hangs the run.
+#
 # Trigger: push a tag like `desktop-v0.1.0`, or run manually (build-only).
 
 on:
@@ -16,43 +22,13 @@ permissions:
   contents: write
 
 jobs:
-  # One job creates the draft release first, so the matrix below uploads to it
-  # instead of all four runners racing to create the same release (422 errors).
-  create-release:
-    if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
-    outputs:
-      release_id: ${{ steps.mk.outputs.id }}
-    steps:
-      - uses: actions/github-script@v7
-        id: mk
-        with:
-          script: |
-            const tag = context.ref.replace('refs/tags/', '')
-            const list = await github.rest.repos.listReleases({ owner: context.repo.owner, repo: context.repo.repo, per_page: 100 })
-            let rel = list.data.find(r => r.tag_name === tag)
-            if (!rel) {
-              const c = await github.rest.repos.createRelease({
-                owner: context.repo.owner, repo: context.repo.repo,
-                tag_name: tag, name: `Coastal.AI Desktop ${tag}`,
-                draft: true, prerelease: false,
-              })
-              rel = c.data
-            }
-            core.setOutput('id', String(rel.id))
-
   build:
-    needs: create-release
-    # Run even when create-release is skipped (workflow_dispatch = build-only).
-    if: ${{ always() && needs.create-release.result != 'failure' }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: windows-latest
             triple: x86_64-pc-windows-msvc
-          - os: macos-13
-            triple: x86_64-apple-darwin
           - os: macos-14
             triple: aarch64-apple-darwin
           - os: ubuntu-22.04
@@ -106,16 +82,9 @@ jobs:
       - name: Stage sidecar into the desktop package
         run: pnpm --filter @coastal-ai/desktop presync
 
+      # Build only — no release args, so no concurrent release writes.
       - name: Build desktop app (Tauri)
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Signing is a follow-up — add TAURI_SIGNING_PRIVATE_KEY etc. here later.
-        with:
-          projectPath: packages/desktop
-          # Upload to the release created above (empty on workflow_dispatch →
-          # tauri-action just builds, no release upload).
-          releaseId: ${{ needs.create-release.outputs.release_id }}
+        run: pnpm --filter @coastal-ai/desktop build
 
       - name: Upload installers as workflow artifacts
         uses: actions/upload-artifact@v4
@@ -127,3 +96,24 @@ jobs:
             packages/desktop/src-tauri/target/release/bundle/appimage/*.AppImage
             packages/desktop/src-tauri/target/release/bundle/deb/*.deb
           if-no-files-found: ignore
+
+  # Single job attaches every platform's installers to the draft release.
+  publish:
+    needs: build
+    if: ${{ always() && startsWith(github.ref, 'refs/tags/') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create or reuse the draft release, attach installers
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$tag" --repo "$GITHUB_REPOSITORY" --draft --title "Coastal.AI Desktop $tag" --notes "Automated build."
+          files=$(find artifacts -type f \( -name '*.exe' -o -name '*.dmg' -o -name '*.AppImage' -o -name '*.deb' \))
+          echo "Attaching:"; echo "$files"
+          [ -n "$files" ] && gh release upload "$tag" $files --repo "$GITHUB_REPOSITORY" --clobber
