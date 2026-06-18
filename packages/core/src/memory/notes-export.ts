@@ -10,8 +10,14 @@ export type NoteSelector = (note: Note) => boolean
  * Reconcile a folder of <id>.md files to exactly the notes matching `select`.
  * Writes/overwrites selected notes; removes .md for ids no longer selected.
  * Idempotent: re-running with the same state is a no-op (write count = 0).
+ *
+ * `nodeId` stamps the authoring node onto locally-authored notes (those with a
+ * null `origin`) as they enter replication. This makes `origin` non-null for any
+ * replicated note — required for the ingester's tie-break AND its delete-safety
+ * (it only deletes notes whose local `origin` is non-null). The local DB row is
+ * not mutated; the stamp lives only in the exported `.md`.
  */
-export function exportNotes(store: NoteStore, dir: string, select: NoteSelector): ExportResult {
+export function exportNotes(store: NoteStore, dir: string, select: NoteSelector, nodeId: string): ExportResult {
   mkdirSync(dir, { recursive: true })
   const selected = store.list({ limit: 1_000_000 }).filter(select)
   const selectedIds = new Set(selected.map(n => n.id))
@@ -20,7 +26,7 @@ export function exportNotes(store: NoteStore, dir: string, select: NoteSelector)
   for (const n of selected) {
     const text = serializeNote({
       id: n.id, title: n.title, body: n.body, kind: n.kind,
-      sourceType: n.sourceType, sourceId: n.sourceId, rev: n.rev, origin: n.origin,
+      sourceType: n.sourceType, sourceId: n.sourceId, rev: n.rev, origin: n.origin ?? nodeId,
     })
     const path = join(dir, `${n.id}.md`)
     const prev = safeRead(path)
