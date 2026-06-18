@@ -3,15 +3,21 @@
 _Living checklist. Tackled top-to-bottom. `[operator]` = needs you (hardware,
 secrets, cost, manual test); everything else the agent can do._
 
-## State (2026-06-13)
+## State (2026-06-18)
 
-- **Desktop app** (Tauri shell + Node `core` sidecar) is **on `master`**, fully working:
-  flat-npm sidecar bundle, dynamic port, kill-on-exit, real C-current icon,
-  graceful error screen.
-- **CI matrix** (`.github/workflows/release-desktop-app.yml`) builds Win/Linux/macOS;
-  validated 3/4 green (macOS-x64 only waiting on a runner).
+- **Two products, one engine** — the repo is now organized as two products over the
+  shared `packages/` engine (see [`PRODUCTS.md`](PRODUCTS.md)):
+  - **`apps/desktop`** — the Tauri desktop app (flat-npm sidecar bundle, dynamic port,
+    kill-on-exit, Coastal AI / Digital Depths icon, graceful error screen, hardened CSP).
+  - **`os/{base,kiosk,node}`** — the Coastal.AI OS (shared base + desktop ISO + BC-250 node).
+- **CI is fully green** for the first time since 2026-06-14 (the engine `turbo build` had
+  been building the desktop product; fixed by excluding `@coastal-ai/desktop` from `ci.yml`
+  + `Dockerfile.smoke`, and skipping the sidecar-smoke gate when unbundled).
+- **Pipelines:** `ci.yml` (engine), `release-desktop-app.yml` (tag `desktop-v*`),
+  `release-os.yml` (tag `os-v*`), `release.yml` (engine `.deb`/apt).
+- Electron `packages/shell` retired (Tauri at parity). AppImage closed out (`.deb` ships).
 - Repo is clean: `master` only, no open PRs.
-- Docs: root `README.md` (desktop path) + `apps/desktop/README.md` (architecture).
+- Docs: `README.md`, `PRODUCTS.md`, `apps/desktop/README.md`, `os/README.md`.
 
 ---
 
