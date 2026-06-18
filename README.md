@@ -834,7 +834,7 @@ You can delete any optional vertical and the kernel keeps working.
 | [`packages/architect`](packages/architect) | Self-improvement daemon (planning → building → PR → review), gates, learnings (code-graph, design, evals) |
 | [`packages/web`](packages/web) | React 19 dashboard — chat, agent graph, settings |
 | [`packages/daemon`](packages/daemon) | Scheduled-agent runner (NL-cron) |
-| [`packages/shell`](packages/shell) | Tauri desktop shell |
+| [`packages/desktop`](packages/desktop) | Tauri desktop shell (Win/macOS/Linux) — spawns the core sidecar |
 
 **Optional verticals (delete-safe):**
 
@@ -1208,7 +1208,7 @@ Coastal.AI/
 │   │       └── hooks/             # useEventStream, usePipelineRun
 │   ├── daemon/                    # Proactive scheduler + voice
 │   ├── architect/                 # Self-build loop: Planner, Patcher, Validator
-│   ├── shell/                     # Electron kiosk (ClawShell)
+│   ├── desktop/                   # Tauri desktop shell (Win/macOS/Linux)
 │   ├── coordination/              # A2A peer kernel — task board, identity, transports, replication
 │   ├── llm-client/                # Injectable LLM client (llama.cpp / Ollama / OpenAI)
 │   ├── planner-agent/             # plan_task → code + review decomposition
@@ -1250,6 +1250,7 @@ Coastal.AI/
 | **v1.6.0** | ✅ | Architect preference profile — 7 behavior knobs + mode presets (hands-on / hands-off / autopilot) |
 | **v1.7.0** | 🚧 | Unified knowledge graph (code-graph, design context, eval gate, DOM snapshots) + impact-radius planning |
 | **Multi-Agent OS** | 🚧 | A2A coordination layer, role-agent peers (planner / coder / reviewer / curator), `llm-client`, mission control, swarm demos — **software-complete**; 12-node BC-250 cluster bring-up is hardware-gated |
+| **Desktop App** | ✅ | Standalone Tauri shell (`packages/desktop`) for Windows / macOS / Linux — bundles the core sidecar, no Node/pnpm needed; cross-platform CI release (NSIS / DMG / `.deb`). Supersedes the retired Electron kiosk. |
 
 ---
 
