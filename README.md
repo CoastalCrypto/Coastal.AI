@@ -20,6 +20,20 @@
 
 ---
 
+## Two products, one engine
+
+This repo builds **two products** over one shared engine — see [`PRODUCTS.md`](PRODUCTS.md).
+
+| | Desktop App | Coastal.AI OS |
+|---|---|---|
+| Path | `apps/desktop/` | `os/` (`kiosk/` ISO + `node/` BC-250 image) |
+| Engine | embedded as a local sidecar | installed via the apt lane |
+| Release | tag `desktop-v*` | tag `os-v*` |
+
+The **engine** is the `packages/` pnpm/turbo workspace (`core`, `web`, `daemon`, `architect`, the A2A multi-agent layer, optional verticals). Both products are surfaces over it.
+
+---
+
 ## What is Coastal.AI?
 
 Coastal.AI is an open-source **AI Agent Operating System** that runs entirely on your own hardware. No cloud subscription, no API keys, no data leaving your machine.
