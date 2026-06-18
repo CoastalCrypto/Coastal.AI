@@ -854,19 +854,22 @@ export const workerSelector = (n: Note): boolean => n.origin === null
 export interface WorkerDirs { inbox: string; sharedVault: string }
 export interface CuratorDirs { inboxes: string[]; sharedVault: string }
 
-/** One worker tick: push local notes up, pull shared vault down. */
-export function runWorkerTick(store: NoteStore, dirs: WorkerDirs): void {
-  exportNotes(store, dirs.inbox, workerSelector)
+/** One worker tick: push local notes up (stamped with nodeId), pull vault down. */
+export function runWorkerTick(store: NoteStore, dirs: WorkerDirs, nodeId: string): void {
+  exportNotes(store, dirs.inbox, workerSelector, nodeId)
   ingestDir(store, dirs.sharedVault)
 }
 
 /**
  * One curator tick: ingest each worker inbox, then export the keep set.
  * `keep` is the Curator's grading predicate (default: keep all).
+ * Note: `exportNotes` gained a `nodeId` param during T6 — it stamps the
+ * authoring node onto locally-authored notes so replicated notes are
+ * deletable + tie-breakable.
  */
-export function runCuratorTick(store: NoteStore, dirs: CuratorDirs, keep: (n: Note) => boolean = () => true): void {
+export function runCuratorTick(store: NoteStore, dirs: CuratorDirs, nodeId: string, keep: (n: Note) => boolean = () => true): void {
   for (const inbox of dirs.inboxes) ingestDir(store, inbox)
-  exportNotes(store, dirs.sharedVault, keep)
+  exportNotes(store, dirs.sharedVault, keep, nodeId)
 }
 ```
 

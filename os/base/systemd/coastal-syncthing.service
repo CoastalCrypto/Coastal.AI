@@ -1,0 +1,16 @@
+[Unit]
+Description=Coastal.AI Syncthing (notes-substrate replication)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=coastal
+Environment=HOME=/home/coastal
+Environment=STNODEFAULTFOLDER=1
+ExecStart=/usr/bin/syncthing serve --no-browser --gui-address=127.0.0.1:8384 --home=/var/lib/coastal/replication/syncthing
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
