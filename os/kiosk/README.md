@@ -5,20 +5,21 @@ boots from USB into a kiosk session running the full Coastal.AI stack, with
 nothing written to the host disk. This is **Path 3** in the
 [root README](../README.md#-coastalos--standalone-os).
 
-> **Not the cluster-node image.** The headless BC-250 **cluster-node**
-> image — Ubuntu 24.04 + inference stack, for the 12-node chassis — lives
-> in [`../coastal-os/`](../coastal-os/) (with a hyphen). Different hardware
-> target, different build pipeline. Don't confuse the two.
+> **Not the cluster-node image.** The headless BC-250 **cluster-node** image —
+> Ubuntu 24.04 + inference stack, for the 12-node chassis — is the sibling
+> [`node/`](../node/) edition. Shared infra lives in [`base/`](../base/).
+> Different hardware target, different build pipeline. Don't confuse the two.
 
 ## Layout
 
 ```
-coastalos/
+os/kiosk/
   build/        live-build config, image hooks, and smoke test
-  systemd/      service units (Coastal.AI server, VibeVoice)
+  systemd/      desktop-only service units (web, vibevoice, vllm, airllm, infinity)
   vibevoice/    Python FastAPI TTS/ASR sidecar
   labwc/        Wayland kiosk autostart (desktop session)
 ```
+Shared units (server/daemon/architect) come from [`../base/systemd/`](../base/systemd/).
 
 ## Build
 

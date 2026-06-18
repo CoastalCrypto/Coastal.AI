@@ -23,18 +23,18 @@ cd Coastal.AI
 
 ## Step 2 — copy `coastal-os-bench` into the image staging tree
 
-The build script's `files/` overlay tree doesn't include the bench script (the script lives at `coastal-os/scripts/coastal-os-bench`). Copy it in before building:
+The build script's `files/` overlay tree doesn't include the bench script (the script lives at `os/node/scripts/coastal-os-bench`). Copy it in before building:
 
 ```bash
-mkdir -p coastal-os/image/files/opt/coastal/scripts
-cp coastal-os/scripts/coastal-os-bench coastal-os/image/files/opt/coastal/scripts/
-chmod +x coastal-os/image/files/opt/coastal/scripts/coastal-os-bench
+mkdir -p os/node/files/opt/coastal/scripts
+cp os/node/scripts/coastal-os-bench os/node/files/opt/coastal/scripts/
+chmod +x os/node/files/opt/coastal/scripts/coastal-os-bench
 ```
 
 ## Step 3 — run the build
 
 ```bash
-sudo coastal-os/image/build-image.sh --output ./coastal-os-v0.0.1-bc250.img
+sudo os/node/build-image.sh --output ./coastal-os-v0.0.1-bc250.img
 ```
 
 This:
@@ -43,7 +43,7 @@ This:
 2. Partitions GPT — 512 MB ESP + remainder ext4 rootfs
 3. Bootstraps Ubuntu 24.04 LTS (noble) into the rootfs via `mmdebstrap`
 4. Installs base packages: kernel 6.8+, GRUB EFI, SSH, build toolchain, Vulkan
-5. Overlays Coastal branding from `coastal-os/image/files/`
+5. Overlays Coastal branding from `os/node/files/`
 6. Adds the **kisak PPA** for Mesa 26.x (required for gfx1013)
 7. Configures GRUB cmdline (removes deprecated `amdgpu.gttsize`)
 8. Installs and enables the `coastal-os-first-boot` systemd unit

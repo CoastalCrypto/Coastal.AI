@@ -31,7 +31,7 @@ rsync -a \
   --exclude='.git' \
   --exclude='dist-deb' \
   --exclude='*.iso' \
-  --exclude='coastalos' \
+  --exclude='os' \
   --exclude='docs' \
   --exclude='assets' \
   "${REPO_ROOT}/" "${INSTALL_DIR}/"
@@ -39,13 +39,13 @@ rsync -a \
 # ── Systemd units ─────────────────────────────────────────────
 SYSTEMD_DIR="${STAGING}/lib/systemd/system"
 mkdir -p "${SYSTEMD_DIR}"
-# Shared units (server/daemon/architect + timer) live in coastal-os/base/systemd/
-# since the OS light de-dup; coastal-web is desktop-edition-only in coastalos/.
-cp "${REPO_ROOT}/coastal-os/base/systemd/coastal-server.service"    "${SYSTEMD_DIR}/coastal-ai-server.service"
-cp "${REPO_ROOT}/coastal-os/base/systemd/coastal-daemon.service"    "${SYSTEMD_DIR}/coastal-ai-daemon.service"
-cp "${REPO_ROOT}/coastalos/systemd/coastal-web.service"             "${SYSTEMD_DIR}/coastal-ai-web.service"
-cp "${REPO_ROOT}/coastal-os/base/systemd/coastal-architect.service" "${SYSTEMD_DIR}/coastal-ai-architect.service"
-cp "${REPO_ROOT}/coastal-os/base/systemd/coastal-architect.timer"   "${SYSTEMD_DIR}/coastal-ai-architect.timer"
+# Shared units (server/daemon/architect + timer) live in os/base/systemd/;
+# coastal-web is kiosk-edition-only in os/kiosk/systemd/.
+cp "${REPO_ROOT}/os/base/systemd/coastal-server.service"    "${SYSTEMD_DIR}/coastal-ai-server.service"
+cp "${REPO_ROOT}/os/base/systemd/coastal-daemon.service"    "${SYSTEMD_DIR}/coastal-ai-daemon.service"
+cp "${REPO_ROOT}/os/kiosk/systemd/coastal-web.service"      "${SYSTEMD_DIR}/coastal-ai-web.service"
+cp "${REPO_ROOT}/os/base/systemd/coastal-architect.service" "${SYSTEMD_DIR}/coastal-ai-architect.service"
+cp "${REPO_ROOT}/os/base/systemd/coastal-architect.timer"   "${SYSTEMD_DIR}/coastal-ai-architect.timer"
 
 # Fix ExecStart paths in the copied units
 sed -i 's|/usr/bin/node packages/core/dist/main.js|/usr/bin/node /opt/coastal-ai/packages/core/dist/main.js|g' \

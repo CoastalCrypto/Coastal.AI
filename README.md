@@ -1231,14 +1231,10 @@ Coastal.AI/
 │   ├── curator-agent/             # notes-substrate grader / pruner
 │   ├── mission-control/           # swarm dashboard (node:http + SSE)
 │   └── swarm-demos/               # runnable end-to-end multi-agent demos
-├── coastal-os/                    # Coastal.AI OS — BC-250 cluster-node image (Ubuntu 24.04 + inference stack)
-│   ├── image/                     # build-image.sh + first-boot overlay
-│   ├── scripts/                   # coastal-os-bench (inference benchmark)
-│   └── docs/                      # BIOS reflash, build-image, inference-stack
-├── coastalos/                     # CoastalOS — standalone desktop USB ISO (live-build + VibeVoice)
-│   ├── build/                     # live-build config, smoke test
-│   ├── systemd/                   # Service units
-│   └── vibevoice/                 # Python FastAPI TTS/ASR service
+├── os/                            # Coastal.AI OS product (two editions + shared base)
+│   ├── base/                      # shared: VERSION, apt lane, systemd units
+│   ├── kiosk/                     # desktop USB ISO edition (live-build + VibeVoice)
+│   └── node/                      # BC-250 cluster-node image (Ubuntu 24.04 + inference stack)
 ├── packaging/                     # .deb build + APT repo publish scripts
 ├── agents/                        # Per-agent runtime config (cfo / coo / cto / general)
 └── .github/workflows/             # CI: test suite, .deb build, ISO build, APT publish

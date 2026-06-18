@@ -38,7 +38,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FILES_DIR="$SCRIPT_DIR/files"
 BASE_DIR="$(cd "$SCRIPT_DIR/../base" && pwd)"
 
-# Single source of truth shared with the desktop edition (coastal-os/base/VERSION).
+# Single source of truth shared with the kiosk edition (os/base/VERSION).
 COASTAL_OS_VERSION="$(cat "$BASE_DIR/VERSION" 2>/dev/null || echo 0.0.1)"
 
 # ─── argparse ────────────────────────────────────────────────────────
@@ -72,7 +72,7 @@ done
 
 if [[ ! -d "$FILES_DIR" ]]; then
   echo "Missing files directory: $FILES_DIR" >&2
-  echo "This script expects coastal-os/image/files/ to exist alongside it." >&2
+  echo "This script expects os/node/files/ to exist alongside it." >&2
   exit 1
 fi
 
@@ -163,7 +163,7 @@ apt upgrade -y mesa-vulkan-drivers libvulkan1 vulkan-tools
 systemctl enable ssh
 systemctl enable coastal-os-first-boot.service
 
-# Shared services (unit files staged from coastal-os/base/ on the host above).
+# Shared services (unit files staged from os/base/ on the host above).
 # Enable the architect *timer* (the service is timer-activated, no [Install]).
 systemctl enable coastal-server.service
 systemctl enable coastal-daemon.service
@@ -192,7 +192,7 @@ passwd -l coastal
 mkdir -p /var/lib/coastal/models /var/lib/coastal/logs
 chown -R coastal:coastal /var/lib/coastal
 
-# Apt lane is staged from coastal-os/base/apt/coastal-ai.list on the host (shared
+# Apt lane is staged from os/base/apt/coastal-ai.list on the host (shared
 # with the desktop edition) in the overlay step above — no inline copy needed.
 
 # Clean up apt caches to shrink the image

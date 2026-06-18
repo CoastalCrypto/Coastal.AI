@@ -27,10 +27,12 @@ RUN useradd -m -s /bin/bash coastal || true \
   && mkdir -p /var/lib/coastal-ai/data /var/lib/coastal-ai/workspace \
   && chown -R coastal:coastal /var/lib/coastal-ai
 
-# Copy repo and build (build context = repo root)
+# Copy repo and build (build context = repo root). Exclude the desktop product
+# (@coastal-ai/desktop) — it's a Tauri shell needing the bundled sidecar + Rust,
+# has its own pipeline, and the smoke server only runs the engine (core/main.js).
 WORKDIR /opt/coastal-ai
 COPY . .
-RUN pnpm install --no-frozen-lockfile && pnpm build
+RUN pnpm install --no-frozen-lockfile && pnpm exec turbo build --filter='!@coastal-ai/desktop'
 
 RUN chown -R coastal:coastal /opt/coastal-ai
 

@@ -10,7 +10,7 @@ DEVICE="${2:-}"
 # Find latest ISO if not specified
 if [ -z "$ISO" ]; then
   ISO=$(ls coastalos-*.iso 2>/dev/null | sort -V | tail -1 || true)
-  [ -n "$ISO" ] || { echo "Error: no coastalos-*.iso found. Build one first with: bash coastalos/build/build.sh"; exit 1; }
+  [ -n "$ISO" ] || { echo "Error: no coastalos-*.iso found. Build one first with: bash os/kiosk/build/build.sh"; exit 1; }
   echo "Auto-selected ISO: $ISO"
 fi
 

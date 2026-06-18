@@ -6,11 +6,14 @@ infrastructure preconfigured.
 
 > Design rationale + phase plan: [`docs/handoff/2026-05-26-multi-agent-os-plan.md`](../docs/handoff/2026-05-26-multi-agent-os-plan.md)
 
-> **Not the desktop ISO.** This is the BC-250 **cluster-node** image
-> (headless, Ubuntu 24.04, inference stack). The standalone *desktop* USB
-> ISO — live-build + VibeVoice, built by `.github/workflows/iso-build.yml`
-> — lives in [`../coastalos/`](../coastalos/) (no hyphen). Different
-> hardware target, different build pipeline; don't confuse the two.
+> **Two editions, one shared base.**
+> - **node** ([`node/`](node/)) — the BC-250 cluster-node image (headless,
+>   Ubuntu 24.04, inference stack), built by `node/build-image.sh` (mmdebstrap).
+> - **kiosk** ([`kiosk/`](kiosk/)) — the standalone desktop USB ISO (live-build
+>   + VibeVoice), built by `kiosk/build/build.sh` and CI (`iso-build.yml`).
+>
+> Both consume shared infra (systemd units, apt lane, `VERSION`) from
+> [`base/`](base/). Different hardware targets and build pipelines — same OS.
 
 ## Version progression
 
@@ -27,18 +30,15 @@ scripts" as a separate product.
 ## Directory layout
 
 ```
-coastal-os/
-  README.md                 This file
-  scripts/
-    coastal-os-bench        Phase 0 inference benchmark (bash)
-    coastal-os-bench.json   Prompt corpus used by the benchmark
-  docs/
-    bios-reflash.md         BC-250 BIOS reflash for gfx1013 / PCIe bridge
-    build-image.md          How to build a v0.0.1 NVMe image
-    inference-stack.md      5-layer gfx1013 inference stack (BIOS → Mesa → llama.cpp)
-  image/
+os/
+  README.md                 This file (OS product overview)
+  base/                     Shared: VERSION, apt lane, systemd units (server/daemon/architect)
+  kiosk/                    Desktop USB ISO edition (live-build + labwc kiosk + VibeVoice)
+  node/                     BC-250 cluster-node edition
     build-image.sh          mmdebstrap Ubuntu 24.04 → flashable BC-250 .img
     files/                  First-boot overlay (systemd unit, motd, os-release, ttm tuning)
+    scripts/coastal-os-bench  Phase 0 inference benchmark (bash)
+    docs/                   bios-reflash.md, build-image.md, inference-stack.md
 ```
 
 ## Hardware target

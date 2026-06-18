@@ -45,7 +45,7 @@ secrets, cost, manual test); everything else the agent can do._
 
 - [ ] **Syncthing** notes-substrate replication (own spec) — unblocks the multi-agent OS replication decision.
 - [ ] **openobserve** as the Monitor/Watchdog agent backend.
-- [ ] **OS light de-dup**: execute `docs/superpowers/plans/2026-06-12-os-lineage-dedup.md` on Linux/CI (move shared systemd units to `coastal-os/base`, rewire build scripts, verify via `iso-build`).
+- [x] **OS light de-dup**: shared systemd units, apt lane, and VERSION now live in `os/base/` and both build scripts consume from there; verified green by `iso-build`. (Superseded by the two-product split, which moved the editions to `os/{base,kiosk,node}` — see `docs/superpowers/plans/2026-06-18-two-product-split.md`.)
 
 ## 6. Housekeeping
 

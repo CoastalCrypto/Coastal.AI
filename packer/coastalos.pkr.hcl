@@ -86,12 +86,19 @@ build {
 
   # Upload provisioning scripts
   provisioner "file" {
-    source      = "${path.root}/../coastalos/build/hooks/post-install.sh"
+    source      = "${path.root}/../os/kiosk/build/hooks/post-install.sh"
     destination = "/tmp/post-install.sh"
   }
 
+  # Desktop-edition-only units from os/kiosk/, plus the shared server/daemon/
+  # architect units from os/base/ (the OS light de-dup moved them there).
   provisioner "file" {
-    source      = "${path.root}/../coastalos/systemd/"
+    source      = "${path.root}/../os/kiosk/systemd/"
+    destination = "/tmp/systemd/"
+  }
+
+  provisioner "file" {
+    source      = "${path.root}/../os/base/systemd/"
     destination = "/tmp/systemd/"
   }
 

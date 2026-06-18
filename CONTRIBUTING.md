@@ -34,7 +34,7 @@ bash scripts/smoke-test-docker.sh      # end-to-end Docker smoke test
 | `packages/architect` | MetaAgent self-improvement scheduler |
 | `packages/desktop` | Tauri desktop shell (Win/macOS/Linux) wrapping the core sidecar |
 | `packages/web` | React + Vite admin UI |
-| `coastalos/` | ISO build (live-build) and systemd units |
+| `os/` | Coastal.AI OS product — `base/` (shared), `kiosk/` (desktop ISO), `node/` (BC-250 image) |
 | `packer/` | AWS AMI (Packer HCL) |
 | `packaging/` | .deb packaging scripts |
 

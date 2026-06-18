@@ -16,7 +16,7 @@ trap cleanup EXIT
 
 echo "[smoke] Building image from $REPO_ROOT..."
 docker build \
-  -f "$REPO_ROOT/coastalos/build/test/Dockerfile.smoke" \
+  -f "$REPO_ROOT/os/kiosk/build/test/Dockerfile.smoke" \
   -t "$IMAGE" \
   "$REPO_ROOT"
 
