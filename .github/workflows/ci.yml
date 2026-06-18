@@ -33,8 +33,13 @@ jobs:
       # so we must scope the install to that package.
       - run: pnpm --filter @coastal-ai/core exec playwright install chromium --with-deps
 
-      - run: pnpm build
-      - run: pnpm test
+      # Engine CI builds/tests the shared workspace only. The desktop *product*
+      # (@coastal-ai/desktop) is a Tauri shell that needs the bundled sidecar +
+      # the Rust toolchain and has its own pipeline (release-desktop-app.yml), so
+      # it is excluded here — otherwise its presync step fails CI with
+      # "packages/core/sidecar-build missing".
+      - run: pnpm exec turbo build --filter='!@coastal-ai/desktop'
+      - run: pnpm exec turbo test --filter='!@coastal-ai/desktop'
 
   smoke:
     name: Docker smoke test
