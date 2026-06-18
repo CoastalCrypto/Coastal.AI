@@ -129,7 +129,7 @@ pnpm --filter @coastal-ai/core bundle:sidecar   # bundles the Node backend + nat
 pnpm --filter @coastal-ai/desktop build         # → src-tauri/target/release/bundle/
 ```
 
-For the architecture and the dev workflow (`pnpm --filter @coastal-ai/desktop dev`), see **[`packages/desktop/README.md`](packages/desktop/README.md)**.
+For the architecture and the dev workflow (`pnpm --filter @coastal-ai/desktop dev`), see **[`apps/desktop/README.md`](apps/desktop/README.md)**.
 
 ---
 
@@ -848,7 +848,7 @@ You can delete any optional vertical and the kernel keeps working.
 | [`packages/architect`](packages/architect) | Self-improvement daemon (planning → building → PR → review), gates, learnings (code-graph, design, evals) |
 | [`packages/web`](packages/web) | React 19 dashboard — chat, agent graph, settings |
 | [`packages/daemon`](packages/daemon) | Scheduled-agent runner (NL-cron) |
-| [`packages/desktop`](packages/desktop) | Tauri desktop shell (Win/macOS/Linux) — spawns the core sidecar |
+| [`apps/desktop`](apps/desktop) | Tauri desktop shell (Win/macOS/Linux) — spawns the core sidecar |
 
 **Optional verticals (delete-safe):**
 
@@ -1260,7 +1260,7 @@ Coastal.AI/
 | **v1.6.0** | ✅ | Architect preference profile — 7 behavior knobs + mode presets (hands-on / hands-off / autopilot) |
 | **v1.7.0** | 🚧 | Unified knowledge graph (code-graph, design context, eval gate, DOM snapshots) + impact-radius planning |
 | **Multi-Agent OS** | 🚧 | A2A coordination layer, role-agent peers (planner / coder / reviewer / curator), `llm-client`, mission control, swarm demos — **software-complete**; 12-node BC-250 cluster bring-up is hardware-gated |
-| **Desktop App** | ✅ | Standalone Tauri shell (`packages/desktop`) for Windows / macOS / Linux — bundles the core sidecar, no Node/pnpm needed; cross-platform CI release (NSIS / DMG / `.deb`). Supersedes the retired Electron kiosk. |
+| **Desktop App** | ✅ | Standalone Tauri shell (`apps/desktop`) for Windows / macOS / Linux — bundles the core sidecar, no Node/pnpm needed; cross-platform CI release (NSIS / DMG / `.deb`). Supersedes the retired Electron kiosk. |
 
 ---
 

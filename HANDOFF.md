@@ -11,7 +11,7 @@ secrets, cost, manual test); everything else the agent can do._
 - **CI matrix** (`.github/workflows/desktop-release.yml`) builds Win/Linux/macOS;
   validated 3/4 green (macOS-x64 only waiting on a runner).
 - Repo is clean: `master` only, no open PRs.
-- Docs: root `README.md` (desktop path) + `packages/desktop/README.md` (architecture).
+- Docs: root `README.md` (desktop path) + `apps/desktop/README.md` (architecture).
 
 ---
 

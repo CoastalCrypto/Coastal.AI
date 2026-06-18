@@ -9,7 +9,7 @@ import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const srcBuild = resolve(here, '..', '..', 'core', 'sidecar-build')
+const srcBuild = resolve(here, '..', '..', '..', 'packages', 'core', 'sidecar-build')
 const binDir = resolve(here, '..', 'src-tauri', 'binaries')
 const resDir = resolve(here, '..', 'src-tauri', 'resources')
 

@@ -30,16 +30,16 @@ data/
 packages/core/sidecar-build/
 
 # Tauri desktop build artifacts
-packages/desktop/src-tauri/target/
-packages/desktop/src-tauri/binaries/
-packages/desktop/src-tauri/resources/
-packages/desktop/src-tauri/gen/
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/binaries/
+apps/desktop/src-tauri/resources/
+apps/desktop/src-tauri/gen/
 
 # Regenerable placeholder icon source (see gen-placeholder-icon.mjs)
-packages/desktop/scripts/placeholder-icon.png
+apps/desktop/scripts/placeholder-icon.png
 
 # Logo candidate output (uncommitted until one is approved)
-packages/desktop/brand-candidates/
+apps/desktop/brand-candidates/
 
 # Local secrets (Gemini key for logo generation, etc.)
-packages/desktop/.env.local
+apps/desktop/.env.local

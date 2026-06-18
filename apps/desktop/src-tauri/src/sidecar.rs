@@ -99,6 +99,8 @@ fn core_main(app: &AppHandle) -> Result<PathBuf, String> {
     let dev = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join("..")
+        .join("..")
+        .join("packages")
         .join("core")
         .join("sidecar-build")
         .join("app")

@@ -32,7 +32,7 @@ bash scripts/smoke-test-docker.sh      # end-to-end Docker smoke test
 | `packages/core` | Fastify API server, agent loop, LLM router, persona |
 | `packages/daemon` | Background service: wake-word, voice pipeline, agent probes |
 | `packages/architect` | MetaAgent self-improvement scheduler |
-| `packages/desktop` | Tauri desktop shell (Win/macOS/Linux) wrapping the core sidecar |
+| `apps/desktop` | Tauri desktop shell (Win/macOS/Linux) wrapping the core sidecar |
 | `packages/web` | React + Vite admin UI |
 | `os/` | Coastal.AI OS product — `base/` (shared), `kiosk/` (desktop ISO), `node/` (BC-250 image) |
 | `packer/` | AWS AMI (Packer HCL) |

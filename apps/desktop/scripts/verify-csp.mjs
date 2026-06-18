@@ -14,11 +14,11 @@ import { createServer } from 'node:http'
 import { readFile, stat } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, join, extname, normalize } from 'node:path'
-import playwright from '../../core/node_modules/playwright/index.js'
+import playwright from '../../../packages/core/node_modules/playwright/index.js'
 const { chromium } = playwright
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const DIST = join(__dirname, '..', '..', 'web', 'dist')
+const DIST = join(__dirname, '..', '..', '..', 'packages', 'web', 'dist')
 const CONF = join(__dirname, '..', 'src-tauri', 'tauri.conf.json')
 
 // The policy to verify when tauri.conf.json has no csp set yet.
