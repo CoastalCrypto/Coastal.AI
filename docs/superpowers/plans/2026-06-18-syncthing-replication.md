@@ -41,14 +41,14 @@ function freshStore() {
 describe('NoteStore rev + origin', () => {
   it('starts rev at 1 on create and leaves origin null', () => {
     const s = freshStore()
-    const n = s.create({ title: 'a', body: 'b', kind: 'note' })
+    const n = s.create({ title: 'a', body: 'b', kind: 'learning' })
     expect(n.rev).toBe(1)
     expect(n.origin).toBeNull()
   })
 
   it('bumps rev on update', () => {
     const s = freshStore()
-    const n = s.create({ title: 'a', body: 'b', kind: 'note' })
+    const n = s.create({ title: 'a', body: 'b', kind: 'learning' })
     const u = s.update(n.id, { body: 'c' })
     expect(u?.rev).toBe(2)
   })
@@ -157,7 +157,7 @@ function freshStore() {
   return new NoteStore({ dataDir: mkdtempSync(join(tmpdir(), 'notes-repl-')) })
 }
 const base: ReplicatedNote = {
-  id: 'n1', title: 't', body: 'v1', kind: 'note',
+  id: 'n1', title: 't', body: 'v1', kind: 'learning',
   sourceType: null, sourceId: null, rev: 5, origin: 'node-2',
 }
 
@@ -415,7 +415,7 @@ function setup() {
 describe('exportNotes', () => {
   it('writes one <id>.md per selected note', () => {
     const { store, outDir } = setup()
-    const n = store.create({ title: 'a', body: 'b', kind: 'note' })
+    const n = store.create({ title: 'a', body: 'b', kind: 'learning' })
     const r = exportNotes(store, outDir, () => true)
     expect(r.written).toBe(1)
     expect(existsSync(join(outDir, `${n.id}.md`))).toBe(true)
@@ -423,8 +423,8 @@ describe('exportNotes', () => {
 
   it('removes files for notes no longer selected', () => {
     const { store, outDir } = setup()
-    const keep = store.create({ title: 'k', body: 'b', kind: 'note' })
-    const drop = store.create({ title: 'd', body: 'b', kind: 'note' })
+    const keep = store.create({ title: 'k', body: 'b', kind: 'learning' })
+    const drop = store.create({ title: 'd', body: 'b', kind: 'learning' })
     exportNotes(store, outDir, () => true)
     const r = exportNotes(store, outDir, n => n.id === keep.id)
     expect(r.removed).toBe(1)
@@ -529,7 +529,7 @@ function writeNote(dir: string, n: Parameters<typeof serializeNote>[0]) {
   writeFileSync(join(dir, `${n.id}.md`), serializeNote(n))
 }
 const peer = {
-  id: 'p1', title: 't', body: 'v1', kind: 'note' as const,
+  id: 'p1', title: 't', body: 'v1', kind: 'learning' as const,
   sourceType: 'replicated', sourceId: 'node-2', rev: 3, origin: 'node-2',
 }
 
@@ -656,7 +656,7 @@ describe('replication bridge end-to-end', () => {
     const w2Vault = mkdtempSync(join(tmpdir(), 'w2vault-'))
 
     // w1 authors a note, exports local-origin notes to its inbox
-    const n = w1.create({ title: 'finding', body: 'v1', kind: 'note' })
+    const n = w1.create({ title: 'finding', body: 'v1', kind: 'learning' })
     exportNotes(w1, w1Inbox, note => note.origin === null)
     sync(w1Inbox, curInboxView)                 // Syncthing: w1 inbox -> curator
 

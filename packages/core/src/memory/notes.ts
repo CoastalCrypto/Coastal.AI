@@ -40,6 +40,10 @@ export interface Note {
   sourceId: string | null
   createdAt: number
   updatedAt: number
+  /** Lamport clock for cross-node replication LWW. Local mutations bump it. */
+  rev: number
+  /** Node id this revision was replicated from; null for locally authored notes. */
+  origin: string | null
 }
 
 export interface NoteInput {
@@ -49,6 +53,19 @@ export interface NoteInput {
   sourceType?: string | null
   sourceId?: string | null
   id?: string
+  origin?: string | null
+}
+
+/** A note received from a peer, carrying its Lamport rev + origin. */
+export interface ReplicatedNote {
+  id: string
+  title: string
+  body: string
+  kind: NoteKind
+  sourceType: string | null
+  sourceId: string | null
+  rev: number
+  origin: string | null
 }
 
 export interface NotePatch {
@@ -82,6 +99,8 @@ interface NoteRow {
   source_id: string | null
   created_at: number
   updated_at: number
+  rev: number
+  origin: string | null
 }
 
 interface LinkRow {
@@ -127,7 +146,9 @@ export class NoteStore {
         source_type TEXT,
         source_id   TEXT,
         created_at  INTEGER NOT NULL,
-        updated_at  INTEGER NOT NULL
+        updated_at  INTEGER NOT NULL,
+        rev         INTEGER NOT NULL DEFAULT 1,
+        origin      TEXT
       );
       CREATE INDEX IF NOT EXISTS idx_notes_kind        ON notes(kind);
       CREATE INDEX IF NOT EXISTS idx_notes_source      ON notes(source_type, source_id);
@@ -160,6 +181,12 @@ export class NoteStore {
         last_rejected_at  INTEGER
       );
     `)
+
+    // Additive migration for DBs created before the replication columns existed.
+    const cols = this.db.prepare(`PRAGMA table_info(notes)`).all() as { name: string }[]
+    const has = (c: string) => cols.some(x => x.name === c)
+    if (!has('rev')) this.db.exec(`ALTER TABLE notes ADD COLUMN rev INTEGER NOT NULL DEFAULT 1`)
+    if (!has('origin')) this.db.exec(`ALTER TABLE notes ADD COLUMN origin TEXT`)
   }
 
   create(input: NoteInput): Note {
@@ -175,13 +202,15 @@ export class NoteStore {
       sourceId: input.sourceId ?? null,
       createdAt: now,
       updatedAt: now,
+      rev: 1,
+      origin: input.origin ?? null,
     }
     this.db
       .prepare(`
-        INSERT INTO notes (id, title, body, kind, source_type, source_id, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO notes (id, title, body, kind, source_type, source_id, created_at, updated_at, rev, origin)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
-      .run(note.id, note.title, note.body, note.kind, note.sourceType, note.sourceId, note.createdAt, note.updatedAt)
+      .run(note.id, note.title, note.body, note.kind, note.sourceType, note.sourceId, note.createdAt, note.updatedAt, note.rev, note.origin)
     this.db
       .prepare(`INSERT INTO notes_fts (id, title, body) VALUES (?, ?, ?)`)
       .run(note.id, note.title, note.body)
@@ -228,14 +257,15 @@ export class NoteStore {
       ...(patch.sourceType !== undefined && { sourceType: patch.sourceType }),
       ...(patch.sourceId !== undefined && { sourceId: patch.sourceId }),
       updatedAt: Date.now(),
+      rev: existing.rev + 1,
     }
     this.db
       .prepare(`
         UPDATE notes
-        SET title = ?, body = ?, kind = ?, source_type = ?, source_id = ?, updated_at = ?
+        SET title = ?, body = ?, kind = ?, source_type = ?, source_id = ?, updated_at = ?, rev = ?
         WHERE id = ?
       `)
-      .run(next.title, next.body, next.kind, next.sourceType, next.sourceId, next.updatedAt, next.id)
+      .run(next.title, next.body, next.kind, next.sourceType, next.sourceId, next.updatedAt, next.rev, next.id)
     // FTS5 doesn't support UPDATE WHERE id; delete + reinsert is the idiom.
     this.db.prepare(`DELETE FROM notes_fts WHERE id = ?`).run(next.id)
     this.db.prepare(`INSERT INTO notes_fts (id, title, body) VALUES (?, ?, ?)`).run(next.id, next.title, next.body)
@@ -476,6 +506,8 @@ function rowToNote(row: NoteRow): Note {
     sourceId: row.source_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    rev: row.rev,
+    origin: row.origin,
   }
 }
 
