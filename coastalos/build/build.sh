@@ -1,8 +1,7 @@
 #!/bin/bash
 set -e
 
-VERSION="${1:-dev}"
-echo "[build] Building CoastalOS ${VERSION}..."
+VERSION_ARG="${1:-}"
 
 # Ensure live-build is installed
 if ! command -v lb &> /dev/null; then
@@ -14,6 +13,12 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 COASTALOS_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+BASE_DIR="${REPO_ROOT}/coastal-os/base"
+
+# Default the version from the shared base/VERSION when no arg is given,
+# so the node and desktop editions stamp the same version.
+VERSION="${VERSION_ARG:-$(cat "${BASE_DIR}/VERSION" 2>/dev/null || echo dev)}"
+echo "[build] Building CoastalOS ${VERSION}..."
 
 WORKDIR="$(mktemp -d)"
 cd "$WORKDIR"
@@ -51,10 +56,17 @@ mkdir -p config/includes.chroot/opt/coastal-ai/coastalos/waybar
 cp "${COASTALOS_DIR}/waybar/config.jsonc" config/includes.chroot/opt/coastal-ai/coastalos/waybar/
 cp "${COASTALOS_DIR}/waybar/style.css"    config/includes.chroot/opt/coastal-ai/coastalos/waybar/
 
-# Add systemd units
+# Add systemd units: shared units (daemon/server/architect + timer) come from
+# the shared base/, desktop-only units (shell/web/voice/vllm/airllm/infinity)
+# from coastalos/. The only timer lives in base/, so there is no coastalos timer copy.
 mkdir -p config/includes.chroot/etc/systemd/system
+cp "${BASE_DIR}/systemd/"*.service      config/includes.chroot/etc/systemd/system/
+cp "${BASE_DIR}/systemd/"*.timer        config/includes.chroot/etc/systemd/system/
 cp "${COASTALOS_DIR}/systemd/"*.service config/includes.chroot/etc/systemd/system/
-cp "${COASTALOS_DIR}/systemd/"*.timer   config/includes.chroot/etc/systemd/system/
+
+# Apt lane (shared with the node edition) so coastal-ai package updates resolve.
+mkdir -p config/includes.chroot/etc/apt/sources.list.d
+cp "${BASE_DIR}/apt/coastal-ai.list" config/includes.chroot/etc/apt/sources.list.d/
 
 # Build
 lb build

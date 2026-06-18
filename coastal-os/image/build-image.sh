@@ -32,11 +32,14 @@ SIZE_GB=16
 DISTRO="ubuntu"
 SUITE="noble"  # Ubuntu 24.04 LTS
 MIRROR="http://archive.ubuntu.com/ubuntu"
-COASTAL_OS_VERSION="0.0.1"
 HOSTNAME_PATTERN="coastal-XXXX"  # XXXX replaced with mac-suffix at first boot
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FILES_DIR="$SCRIPT_DIR/files"
+BASE_DIR="$(cd "$SCRIPT_DIR/../base" && pwd)"
+
+# Single source of truth shared with the desktop edition (coastal-os/base/VERSION).
+COASTAL_OS_VERSION="$(cat "$BASE_DIR/VERSION" 2>/dev/null || echo 0.0.1)"
 
 # ─── argparse ────────────────────────────────────────────────────────
 
@@ -124,6 +127,16 @@ mmdebstrap \
 log "overlaying Coastal branding + config files from $FILES_DIR"
 cp -av "$FILES_DIR/." "$MNT/"
 
+# Shared OS infra from base/ (single source of truth across editions): the
+# daemon/server/architect units + timer, the apt lane, and the version marker.
+# Staged from the host before the chroot so `systemctl enable` below can see them.
+log "staging shared base/ infra (systemd units, apt lane, version) into the rootfs"
+mkdir -p "$MNT/etc/systemd/system" "$MNT/etc/apt/sources.list.d"
+cp "$BASE_DIR/systemd/"*.service   "$MNT/etc/systemd/system/"
+cp "$BASE_DIR/systemd/"*.timer     "$MNT/etc/systemd/system/"
+cp "$BASE_DIR/apt/coastal-ai.list" "$MNT/etc/apt/sources.list.d/"
+echo "$COASTAL_OS_VERSION" > "$MNT/etc/coastal-os-version"
+
 # ─── 4. configure inside the chroot ──────────────────────────────────
 
 log "configuring inside chroot"
@@ -150,6 +163,12 @@ apt upgrade -y mesa-vulkan-drivers libvulkan1 vulkan-tools
 systemctl enable ssh
 systemctl enable coastal-os-first-boot.service
 
+# Shared services (unit files staged from coastal-os/base/ on the host above).
+# Enable the architect *timer* (the service is timer-activated, no [Install]).
+systemctl enable coastal-server.service
+systemctl enable coastal-daemon.service
+systemctl enable coastal-architect.timer
+
 # Set GRUB cmdline (REMOVE deprecated amdgpu.gttsize, ensure iommu=pt)
 sed -i 's|amdgpu\.gttsize=[0-9]*||g' /etc/default/grub
 if ! grep -q 'iommu=pt' /etc/default/grub; then
@@ -173,11 +192,8 @@ passwd -l coastal
 mkdir -p /var/lib/coastal/models /var/lib/coastal/logs
 chown -R coastal:coastal /var/lib/coastal
 
-# Apt source for the origin/apt lane (placeholder URL — replace when published)
-cat > /etc/apt/sources.list.d/coastal-ai.list <<'APT_EOF'
-# Coastal.AI apt lane — see https://github.com/CoastalCrypto/Coastal.AI/tree/apt
-# deb [signed-by=/usr/share/keyrings/coastal-ai-archive-keyring.gpg] https://apt.coastal.ai/ubuntu noble main
-APT_EOF
+# Apt lane is staged from coastal-os/base/apt/coastal-ai.list on the host (shared
+# with the desktop edition) in the overlay step above — no inline copy needed.
 
 # Clean up apt caches to shrink the image
 apt clean

@@ -31,8 +31,6 @@ rsync -a \
   --exclude='.git' \
   --exclude='dist-deb' \
   --exclude='*.iso' \
-  --exclude='dist-electron' \
-  --exclude='packages/shell' \
   --exclude='coastalos' \
   --exclude='docs' \
   --exclude='assets' \
