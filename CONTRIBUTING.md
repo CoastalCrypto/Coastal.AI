@@ -32,7 +32,7 @@ bash scripts/smoke-test-docker.sh      # end-to-end Docker smoke test
 | `packages/core` | Fastify API server, agent loop, LLM router, persona |
 | `packages/daemon` | Background service: wake-word, voice pipeline, agent probes |
 | `packages/architect` | MetaAgent self-improvement scheduler |
-| `packages/shell` | Electron kiosk shell |
+| `packages/desktop` | Tauri desktop shell (Win/macOS/Linux) wrapping the core sidecar |
 | `packages/web` | React + Vite admin UI |
 | `coastalos/` | ISO build (live-build) and systemd units |
 | `packer/` | AWS AMI (Packer HCL) |

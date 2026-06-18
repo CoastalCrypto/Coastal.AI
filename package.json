@@ -6,7 +6,7 @@
   "packageManager": "pnpm@10.32.1",
   "scripts": {
     "start": "concurrently --kill-others-on-fail --prefix-colors \"cyan,magenta\" --names \"core,web\" \"node packages/core/dist/main.js\" \"pnpm --filter web dev\"",
-    "desktop": "concurrently --kill-others-on-fail --prefix-colors \"cyan,magenta,yellow\" --names \"core,web,shell\" \"pnpm --filter core dev\" \"pnpm --filter web dev\" \"npx wait-on http://127.0.0.1:4747/api/version && pnpm --filter shell dev\"",
+    "desktop": "pnpm --filter @coastal-ai/desktop dev",
     "start:fresh": "pnpm build && pnpm start",
     "stop": "node -e \"const f=require('fs'),p=require('path');const pid=f.existsSync(p.join('data','.server.pid'))&&f.readFileSync(p.join('data','.server.pid'),'utf8').trim();if(pid)try{process.kill(Number(pid))}catch(e){console.log('No running process found')}else console.log('No PID file found — use Ctrl+C')\"",
     "dev": "turbo dev",
@@ -38,7 +38,6 @@
     "onlyBuiltDependencies": [
       "better-sqlite3",
       "esbuild",
-      "electron",
       "onnxruntime-node",
       "protobufjs"
     ],
