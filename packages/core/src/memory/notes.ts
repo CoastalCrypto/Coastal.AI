@@ -245,6 +245,41 @@ export class NoteStore {
     return this.create(input)
   }
 
+  /**
+   * Apply a note received from a peer. Lamport LWW: write only if the incoming
+   * rev is strictly higher, or equal-rev with a higher origin id (deterministic
+   * tie-break so all nodes converge). Stores rev = max(local, incoming).
+   */
+  applyReplicated(note: ReplicatedNote): 'applied' | 'skipped' {
+    assertRegisteredKind(note.kind)
+    const existing = this.get(note.id)
+    if (existing) {
+      const wins =
+        note.rev > existing.rev ||
+        (note.rev === existing.rev && (note.origin ?? '') > (existing.origin ?? ''))
+      if (!wins) return 'skipped'
+    }
+    const now = Date.now()
+    const mergedRev = existing ? Math.max(existing.rev, note.rev) : note.rev
+    this.db
+      .prepare(`
+        INSERT INTO notes (id, title, body, kind, source_type, source_id, created_at, updated_at, rev, origin)
+        VALUES (@id, @title, @body, @kind, @sourceType, @sourceId, @createdAt, @updatedAt, @rev, @origin)
+        ON CONFLICT(id) DO UPDATE SET
+          title=@title, body=@body, kind=@kind, source_type=@sourceType,
+          source_id=@sourceId, updated_at=@updatedAt, rev=@rev, origin=@origin
+      `)
+      .run({
+        id: note.id, title: note.title, body: note.body, kind: note.kind,
+        sourceType: note.sourceType, sourceId: note.sourceId,
+        createdAt: existing?.createdAt ?? now, updatedAt: now,
+        rev: mergedRev, origin: note.origin,
+      })
+    this.db.prepare(`DELETE FROM notes_fts WHERE id = ?`).run(note.id)
+    this.db.prepare(`INSERT INTO notes_fts (id, title, body) VALUES (?, ?, ?)`).run(note.id, note.title, note.body)
+    return 'applied'
+  }
+
   update(id: string, patch: NotePatch): Note | null {
     const existing = this.get(id)
     if (!existing) return null
