@@ -54,5 +54,5 @@ secrets, cost, manual test); everything else the agent can do._
 
 ## CI follow-ups
 
-- [ ] Re-enable AppImage Linux target: `linuxdeploy` fails in CI ("failed to run linuxdeploy") even with `APPIMAGE_EXTRACT_AND_RUN=1`. Try `apt-get install -y libfuse2` on the ubuntu runner. Dropped from `targets` for now; `.deb` ships.
+- [ ] Re-enable AppImage Linux target: `linuxdeploy` fails in CI with a swallowed `failed to run linuxdeploy`. **Confirmed (run 27762985002, 2026-06-18): neither `APPIMAGE_EXTRACT_AND_RUN=1` NOR `libfuse2` (both applied together) fixes it** — Tauri discards linuxdeploy's stderr so the root cause is opaque. Note: `appimage` must NOT sit before `deb` in `targets`, since its failure aborts the whole `tauri build` and the `.deb` never gets produced. Dropped from `targets`; `.deb` ships and covers the same distros. Next things to try: pin a specific `linuxdeploy`/`linuxdeploy-plugin-gtk` version, set `NO_STRIP=true`, or switch the Linux job to the `tauri-apps/tauri-action` which handles AppImage tooling. Low priority — `.deb` is sufficient.
 - [ ] Re-add macOS-Intel (`macos-13`) when runner availability allows (currently dropped — chronic queue).

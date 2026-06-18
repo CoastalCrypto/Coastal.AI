@@ -36,9 +36,13 @@ jobs:
 
     runs-on: ${{ matrix.os }}
 
-    # linuxdeploy (used for AppImage) is itself an AppImage and needs FUSE,
-    # which GitHub runners lack → "failed to run linuxdeploy". This makes the
-    # AppImage tools extract-and-run instead of FUSE-mounting. (No-op on Win/mac.)
+    # AppImage is currently NOT a bundle target (see tauri.conf.json): linuxdeploy
+    # fails on the runner with a swallowed "failed to run linuxdeploy" even with
+    # both known fixes applied (APPIMAGE_EXTRACT_AND_RUN=1 AND libfuse2 installed
+    # — verified failing in run 27762985002). Linux ships `.deb` instead, which
+    # covers the same distros. This env is kept so that if AppImage is re-enabled
+    # later the extract-and-run path is already wired. (No-op on Win/mac, and a
+    # no-op now since nothing builds an AppImage.)
     env:
       APPIMAGE_EXTRACT_AND_RUN: 1
 
@@ -49,7 +53,7 @@ jobs:
         if: matrix.os == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libfuse2
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       # No `version:` — pnpm/action-setup@v4 reads it from the root
       # package.json "packageManager" field (specifying both is an error).
