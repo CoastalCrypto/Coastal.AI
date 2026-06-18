@@ -31,7 +31,7 @@ secrets, cost, manual test); everything else the agent can do._
 ## 3. Hardening
 
 - [x] Security pass on the new desktop surface — findings: sidecar is localhost-only/random-port ✅, no Tauri-API capabilities (least-privilege) ✅, error page is HTML-escaped ✅. **Fixed:** tightened CORS to only the real webview origins (dropped broad `http://localhost`).
-- [ ] Tighten the webview **CSP** — currently `csp: null` in `tauri.conf.json`. Set a real policy (needs careful UI testing so it doesn't break the React/three.js/worker bundles).
+- [x] Tighten the webview **CSP** — replaced `csp: null` with a least-privilege policy (`default-src 'self'`; scripts self-only; styles + Google Fonts; `connect-src` limited to the sidecar's `127.0.0.1:*` http/ws; `object-src 'none'`). Verified against the real built bundle (three.js, fonts, blob media) with `pnpm --filter @coastal-ai/desktop verify:csp` (Playwright harness, `scripts/verify-csp.mjs`) — zero violations. [operator] Re-run `verify:csp` after any new external dependency, and sanity-check the live app during install-test.
 - [ ] [operator] Rotate the Gemini API key shared in chat.
 - [ ] [operator] Move the `@21st-dev/magic` MCP key out of the plaintext command-line arg into an env var.
 

@@ -6,6 +6,7 @@
     "presync": "node scripts/sync-sidecar.mjs",
     "dev": "pnpm presync && tauri dev",
     "build": "pnpm presync && tauri build",
+    "verify:csp": "node scripts/verify-csp.mjs",
     "tauri": "tauri"
   },
   "devDependencies": {
