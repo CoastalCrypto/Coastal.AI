@@ -42,7 +42,20 @@ pnpm --filter @coastal-ai/desktop dev         # presync + tauri dev
 
 `dev` runs `presync` (stages the sidecar runtime + flat `app/` into
 `src-tauri/{binaries,resources}`) then `tauri dev`. In dev the supervisor falls
-back to `../../core/sidecar-build/app` if bundled resources aren't present.
+back to `../../../packages/core/sidecar-build/app` if bundled resources aren't present.
+
+## Verify the webview CSP
+
+```bash
+pnpm --filter @coastal-ai/desktop verify:csp
+```
+
+Serves the built `web` bundle with the configured Content-Security-Policy
+(`src-tauri/tauri.conf.json` → `app.security.csp`) in headless Chromium and fails
+on any violation. Re-run after adding any external dependency (fonts, CDNs, etc.).
+
+**Version** lives in `src-tauri/tauri.conf.json` (`version`) — the single source
+of truth Tauri builds from. Cut a release by tagging `desktop-v<version>`.
 
 ## Build an installer
 
@@ -52,7 +65,7 @@ pnpm --filter @coastal-ai/core bundle:sidecar
 pnpm --filter @coastal-ai/desktop build       # presync + tauri build (NSIS/dmg/AppImage)
 ```
 
-Cross-platform installers are produced by `.github/workflows/desktop-release.yml`
+Cross-platform installers are produced by `.github/workflows/release-desktop-app.yml`
 on a `desktop-v*` tag — a `{windows, macos-x64, macos-arm64, ubuntu}` matrix that
 builds the sidecar on each OS (native addons can't be cross-compiled).
 

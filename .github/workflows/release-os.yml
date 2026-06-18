@@ -1,4 +1,4 @@
-name: CoastalOS ISO Build
+name: Release — Coastal.AI OS
 
 on:
   push:
@@ -6,7 +6,9 @@ on:
     paths:
       - 'os/kiosk/**'
       - 'os/base/**'
-      - '.github/workflows/iso-build.yml'
+      - '.github/workflows/release-os.yml'
+    tags:
+      - 'os-v*'
   workflow_dispatch:
     inputs:
       version:

@@ -8,7 +8,7 @@ secrets, cost, manual test); everything else the agent can do._
 - **Desktop app** (Tauri shell + Node `core` sidecar) is **on `master`**, fully working:
   flat-npm sidecar bundle, dynamic port, kill-on-exit, real C-current icon,
   graceful error screen.
-- **CI matrix** (`.github/workflows/desktop-release.yml`) builds Win/Linux/macOS;
+- **CI matrix** (`.github/workflows/release-desktop-app.yml`) builds Win/Linux/macOS;
   validated 3/4 green (macOS-x64 only waiting on a runner).
 - Repo is clean: `master` only, no open PRs.
 - Docs: root `README.md` (desktop path) + `apps/desktop/README.md` (architecture).
@@ -25,7 +25,7 @@ secrets, cost, manual test); everything else the agent can do._
 ## 2. Distribution quality
 
 - [ ] [operator] Acquire signing certs — **Windows Authenticode** + **Apple Developer ID** (cost/procurement).
-- [ ] Wire signing into `desktop-release.yml` (env secrets) so installers are signed + macOS-notarized (no scary first-run warnings).
+- [ ] Wire signing into `release-desktop-app.yml` (env secrets) so installers are signed + macOS-notarized (no scary first-run warnings).
 - [ ] Add the **Tauri auto-updater**: generate the minisign keypair (private key → CI secret), enable the updater plugin, publish `latest.json` from CI.
 
 ## 3. Hardening
@@ -56,3 +56,4 @@ secrets, cost, manual test); everything else the agent can do._
 
 - [ ] Re-enable AppImage Linux target: `linuxdeploy` fails in CI with a swallowed `failed to run linuxdeploy`. **Confirmed (run 27762985002, 2026-06-18): neither `APPIMAGE_EXTRACT_AND_RUN=1` NOR `libfuse2` (both applied together) fixes it** — Tauri discards linuxdeploy's stderr so the root cause is opaque. Note: `appimage` must NOT sit before `deb` in `targets`, since its failure aborts the whole `tauri build` and the `.deb` never gets produced. Dropped from `targets`; `.deb` ships and covers the same distros. Next things to try: pin a specific `linuxdeploy`/`linuxdeploy-plugin-gtk` version, set `NO_STRIP=true`, or switch the Linux job to the `tauri-apps/tauri-action` which handles AppImage tooling. Low priority — `.deb` is sufficient.
 - [ ] Re-add macOS-Intel (`macos-13`) when runner availability allows (currently dropped — chronic queue).
+- [ ] Reconcile the apt-lane branding: `release.yml` and the published `apt` branch (`setup.sh`) still install via the **old** `CoastalCrypto/CoastalClaw_IO` lane + `coastalclaw-release.asc` key, while `packaging/publish-apt.sh` uses the new `Coastal.AI_IO` lane + `coastal-ai-release.asc`. Pick one lane/key and update the other. (The orphan local `coastalclaw-release.asc` was removed in the two-product split — it was unreferenced; the keys above are fetched from external github-pages URLs.)

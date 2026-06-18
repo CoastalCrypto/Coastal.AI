@@ -120,7 +120,7 @@ The standalone desktop edition — a native window running the full Coastal.AI s
 
 ### Build it yourself
 
-Cross-platform installers are produced by CI on a `desktop-v*` tag (`.github/workflows/desktop-release.yml`). To build locally:
+Cross-platform installers are produced by CI on a `desktop-v*` tag (`.github/workflows/release-desktop-app.yml`). To build locally:
 
 ```bash
 pnpm install

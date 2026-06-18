@@ -15,6 +15,5 @@ This monorepo builds **two products over one shared engine**.
 products are surfaces over this one engine. The `packer/` + `packaging/`
 AMI/`.deb` path is a deployment of the engine, not a separate product.
 
-> Migration in progress (see `docs/superpowers/plans/2026-06-18-two-product-split.md`).
-> Until each phase lands, some paths above (`apps/desktop`, `os/…`) may still be at
-> their pre-split locations (`packages/desktop`, `coastalos/`, `coastal-os/…`).
+> The two-product split is complete — see
+> `docs/superpowers/plans/2026-06-18-two-product-split.md` for the migration record.

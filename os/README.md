@@ -10,10 +10,13 @@ infrastructure preconfigured.
 > - **node** ([`node/`](node/)) — the BC-250 cluster-node image (headless,
 >   Ubuntu 24.04, inference stack), built by `node/build-image.sh` (mmdebstrap).
 > - **kiosk** ([`kiosk/`](kiosk/)) — the standalone desktop USB ISO (live-build
->   + VibeVoice), built by `kiosk/build/build.sh` and CI (`iso-build.yml`).
+>   + VibeVoice), built by `kiosk/build/build.sh` and CI (`release-os.yml`).
 >
 > Both consume shared infra (systemd units, apt lane, `VERSION`) from
 > [`base/`](base/). Different hardware targets and build pipelines — same OS.
+
+**Version SSOT:** [`base/VERSION`](base/VERSION) (consumed by both build scripts).
+**Release:** tag `os-v<version>` → the OS release workflow (`release-os.yml`).
 
 ## Version progression
 

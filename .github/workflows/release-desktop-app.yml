@@ -1,4 +1,4 @@
-name: Desktop Release
+name: Release — Desktop App
 
 # Builds the standalone Tauri desktop app on each OS. Native addons
 # (better-sqlite3, onnxruntime-node, nodejs-polars) cannot be cross-compiled,
