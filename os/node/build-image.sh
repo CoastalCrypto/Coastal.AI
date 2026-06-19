@@ -115,7 +115,7 @@ mount "$ESP_PART" "$MNT/boot/efi"
 log "bootstrapping $DISTRO $SUITE via mmdebstrap (this is the slow step)"
 mmdebstrap \
   --variant=standard \
-  --include="linux-image-generic,grub-efi-amd64,openssh-server,vim,curl,wget,ca-certificates,gnupg,lsb-release,git,build-essential,cmake,pkg-config,libvulkan-dev,vulkan-tools,mesa-vulkan-drivers,libcurl4-openssl-dev,dkms,jq" \
+  --include="linux-image-generic,grub-efi-amd64,openssh-server,vim,curl,wget,ca-certificates,gnupg,lsb-release,git,build-essential,cmake,pkg-config,libvulkan-dev,vulkan-tools,mesa-vulkan-drivers,libcurl4-openssl-dev,dkms,jq,syncthing" \
   --components=main,universe,multiverse,restricted \
   --architecture=amd64 \
   "$SUITE" \

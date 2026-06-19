@@ -44,3 +44,6 @@ network-manager-gnome
 
 # Status bar
 waybar
+
+# Notes-substrate replication (coastal-syncthing.service)
+syncthing

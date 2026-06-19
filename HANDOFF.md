@@ -49,7 +49,7 @@ secrets, cost, manual test); everything else the agent can do._
 
 ## 5. Feature threads (from the repo evaluation)
 
-- [ ] **Syncthing** notes-substrate replication (own spec) — unblocks the multi-agent OS replication decision.
+- [~] **Syncthing** notes-substrate replication — **library complete + verified** (spec `docs/superpowers/specs/2026-06-18-syncthing-replication-design.md`, plan `…/plans/2026-06-18-syncthing-replication.md`): Lamport-rev `NoteStore`, frontmatter codec, exporter/ingester, e2e bridge test, Ed25519-gated Syncthing REST provisioning, per-role bridge driver, `os/base/systemd/coastal-syncthing.service`, `syncthing` in both OS package lists. **Cluster-gated remainder** (needs first-boot cluster-join config + role detection, which don't exist yet): add `syncthingDeviceId` to the peer-registry, schedule `runWorkerTick`/`runCuratorTick` in the daemon by role, wire the Curator `keep` hook to `createCuratorDaemon`, manual 2-container E2E.
 - [ ] **openobserve** as the Monitor/Watchdog agent backend.
 - [x] **OS light de-dup**: shared systemd units, apt lane, and VERSION now live in `os/base/` and both build scripts consume from there; verified green by `iso-build`. (Superseded by the two-product split, which moved the editions to `os/{base,kiosk,node}` — see `docs/superpowers/plans/2026-06-18-two-product-split.md`.)
 
