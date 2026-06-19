@@ -1,0 +1,16 @@
+[Unit]
+Description=Coastal.AI openobserve (Monitor telemetry backend)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=coastal
+Environment=ZO_DATA_DIR=/var/lib/coastal/openobserve
+Environment=ZO_HTTP_PORT=5080
+ExecStart=/usr/local/bin/openobserve
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
