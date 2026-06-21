@@ -39,11 +39,23 @@ export interface PeerRegistry {
   /** Read the locked public key for an agent, if any. */
   get(agentId: string): string | undefined
 
-  /** Remove a peer (e.g., received a signed agent.goodbye). */
+  /** Remove a peer (e.g., received a signed agent.goodbye). Also drops its device id. */
   forget(agentId: string): void
 
   /** All currently-known peer agentIds. */
   list(): string[]
+
+  /**
+   * Bind a Syncthing device id to an (Ed25519-verified) peer. Used by the
+   * replication layer so folder membership can be allowlisted to known peers.
+   */
+  setDeviceId(agentId: string, deviceId: string): void
+
+  /** Read the Syncthing device id bound to a peer, if any. */
+  getDeviceId(agentId: string): string | undefined
+
+  /** The set of all bound Syncthing device ids (allowlist for reconcileSyncthing). */
+  knownDeviceIds(): Set<string>
 
   /**
    * Persist to disk if a persistencePath was configured. No-op for
@@ -55,6 +67,8 @@ export interface PeerRegistry {
 interface RegistryFile {
   schema: 'coastal-peer-registry/v1'
   peers: Record<string, string>
+  /** agentId → Syncthing device id. Optional + additive (old files lack it). */
+  deviceIds?: Record<string, string>
   updatedAt: number
 }
 
@@ -69,6 +83,7 @@ export interface PeerRegistryConfig {
 
 export function createPeerRegistry(config: PeerRegistryConfig = {}): PeerRegistry {
   const peers = new Map<string, string>()
+  const deviceIds = new Map<string, string>()
   const { persistencePath } = config
 
   if (persistencePath && existsSync(persistencePath)) {
@@ -79,6 +94,7 @@ export function createPeerRegistry(config: PeerRegistryConfig = {}): PeerRegistr
         throw new Error(`unknown schema: ${parsed.schema}`)
       }
       for (const [k, v] of Object.entries(parsed.peers ?? {})) peers.set(k, v)
+      for (const [k, v] of Object.entries(parsed.deviceIds ?? {})) deviceIds.set(k, v)
     } catch (e) {
       // Corrupt or unreadable — start fresh rather than refuse to boot.
       // The daemon will re-TOFU peers on first contact.
@@ -95,6 +111,7 @@ export function createPeerRegistry(config: PeerRegistryConfig = {}): PeerRegistr
     const data: RegistryFile = {
       schema: 'coastal-peer-registry/v1',
       peers: Object.fromEntries(peers.entries()),
+      deviceIds: Object.fromEntries(deviceIds.entries()),
       updatedAt: Date.now(),
     }
     mkdirSync(dirname(persistencePath), { recursive: true })
@@ -127,13 +144,27 @@ export function createPeerRegistry(config: PeerRegistryConfig = {}): PeerRegistr
       return peers.get(agentId)
     },
     forget(agentId) {
-      if (peers.delete(agentId)) {
+      const had = peers.delete(agentId)
+      const hadDevice = deviceIds.delete(agentId)
+      if (had || hadDevice) {
         dirty = true
         void writeFlushFile().catch(() => { /* swallowed */ })
       }
     },
     list() {
       return Array.from(peers.keys()).sort()
+    },
+    setDeviceId(agentId, deviceId) {
+      if (deviceIds.get(agentId) === deviceId) return
+      deviceIds.set(agentId, deviceId)
+      dirty = true
+      void writeFlushFile().catch(() => { /* swallowed */ })
+    },
+    getDeviceId(agentId) {
+      return deviceIds.get(agentId)
+    },
+    knownDeviceIds() {
+      return new Set(deviceIds.values())
     },
     flush: writeFlushFile,
   }
