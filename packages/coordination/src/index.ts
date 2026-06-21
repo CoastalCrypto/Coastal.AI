@@ -163,3 +163,25 @@ export {
   type Replicator,
   type ReplicatorConfig,
 } from './replication/replicator.js'
+
+export {
+  reconcileSyncthing,
+  type SyncthingHttp,
+  type DesiredFolder,
+  type ReconcileInput,
+} from './replication/syncthing-config.js'
+
+// ─── Observability (Monitor backend) ─────────────────────────────────
+
+export {
+  createOpenObserveClient,
+  type OpenObserveClient,
+  type OpenObserveConfig,
+  type FetchLike,
+} from './observability/openobserve-client.js'
+
+export {
+  evaluateHealth,
+  type Heartbeat,
+  type Alert,
+} from './observability/health-eval.js'

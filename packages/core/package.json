@@ -70,6 +70,22 @@
       "types": "./dist/memory/markdown-sync.d.ts",
       "default": "./dist/memory/markdown-sync.js"
     },
+    "./memory/replication-frontmatter": {
+      "types": "./dist/memory/replication-frontmatter.d.ts",
+      "default": "./dist/memory/replication-frontmatter.js"
+    },
+    "./memory/notes-export": {
+      "types": "./dist/memory/notes-export.d.ts",
+      "default": "./dist/memory/notes-export.js"
+    },
+    "./memory/notes-ingest": {
+      "types": "./dist/memory/notes-ingest.d.ts",
+      "default": "./dist/memory/notes-ingest.js"
+    },
+    "./memory/replication-bridge": {
+      "types": "./dist/memory/replication-bridge.d.ts",
+      "default": "./dist/memory/replication-bridge.js"
+    },
     "./memory/design-context": {
       "types": "./dist/memory/design-context.d.ts",
       "default": "./dist/memory/design-context.js"
