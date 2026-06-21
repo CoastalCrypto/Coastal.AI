@@ -171,6 +171,12 @@ export {
   type ReconcileInput,
 } from './replication/syncthing-config.js'
 
+export {
+  buildWorkerFolders,
+  buildCuratorFolders,
+  type PeerDevice,
+} from './replication/syncthing-folders.js'
+
 // ─── Observability (Monitor backend) ─────────────────────────────────
 
 export {
