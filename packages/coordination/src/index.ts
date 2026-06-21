@@ -191,3 +191,8 @@ export {
   type Heartbeat,
   type Alert,
 } from './observability/health-eval.js'
+
+export {
+  checkClusterHealth,
+  latestHeartbeatSql,
+} from './observability/monitor.js'
