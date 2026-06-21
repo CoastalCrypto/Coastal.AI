@@ -32,10 +32,11 @@ export const RosterEntry = z.object({
 })
 export type RosterEntry = z.infer<typeof RosterEntry>
 export const PublicTuple = RosterEntry
+export type PublicTuple = z.infer<typeof PublicTuple>
 
 export const Roster = z.object({
   schema: z.literal('coastal-roster/v1'),
-  generatedAt: z.number(),
+  generatedAt: z.number().int().nonnegative(),
   nodes: z.array(RosterEntry).min(1),
 })
   .refine(r => new Set(r.nodes.map(n => n.nodeId)).size === r.nodes.length, {
