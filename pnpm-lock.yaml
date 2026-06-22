@@ -309,6 +309,22 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@22.19.15)(jsdom@29.0.1)(lightningcss@1.32.0)(terser@5.46.1)
 
+  packages/node-runtime:
+    dependencies:
+      '@coastal-ai/coordination':
+        specifier: workspace:*
+        version: link:../coordination
+      '@coastal-ai/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@24.12.0)(jsdom@29.0.1)(lightningcss@1.32.0)(terser@5.46.1)
+
   packages/planner-agent:
     dependencies:
       '@coastal-ai/coordination':
