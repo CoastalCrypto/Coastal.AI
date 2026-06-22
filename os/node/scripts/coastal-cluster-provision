@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# coastal-cluster-provision — operator-driven two-pass cluster join.
+#
+# Usage: coastal-cluster-provision <hosts-file>   (one ssh target per line)
+#
+# Pass 1: collect each node's public tuple (nodeId/role/pubkey/deviceId/address)
+#         — public material only, no secrets transit.
+# Assemble: fold the tuples into a validated roster (coastal-cluster assemble).
+# Pass 2: distribute roster.json to every node + restart coastal-cluster so each
+#         node re-reconciles its peer set and Syncthing topology.
+#
+# Re-runnable: this IS the add/replace-a-node update path.
+set -euo pipefail
+[[ $# -eq 1 ]] || { echo "usage: $0 <hosts-file>"; exit 1; }
+STAGE=$(mktemp -d)
+trap 'rm -rf "$STAGE"' EXIT
+
+echo "== pass 1: collect public tuples =="
+while read -r host; do
+  [[ -z "$host" ]] && continue
+  until scp "$host:/var/lib/coastal/identity-public.json" "$STAGE/$host.json" 2>/dev/null; do
+    echo "  waiting for $host to emit its tuple…"; sleep 5
+  done
+  echo "  collected $host"
+done < "$1"
+
+echo "== assemble roster =="
+coastal-cluster assemble "$STAGE" --out "$STAGE/roster.json"
+
+echo "== pass 2: distribute + bring online =="
+while read -r host; do
+  [[ -z "$host" ]] && continue
+  scp "$STAGE/roster.json" "$host:/etc/coastal/roster.json"
+  ssh "$host" systemctl restart coastal-cluster
+  echo "  brought $host online"
+done < "$1"
+echo "done."

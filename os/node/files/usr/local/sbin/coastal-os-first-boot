@@ -30,6 +30,24 @@ HOSTNAME="coastal-${MAC_SUFFIX}"
 log "setting hostname → $HOSTNAME"
 hostnamectl set-hostname "$HOSTNAME"
 
+# ─── 1b. emit cluster identity early (before the long inference build) ─
+# Generate the Ed25519 identity (private key born + 0600 here) + the
+# Syncthing device cert (private key also born here), then write this
+# node's PUBLIC tuple. The operator's provisioning script collects these
+# tuples, assembles the roster, and pushes it back to /etc/coastal/. Run
+# early so collection never has to wait on the hour-long inference build.
+if [[ -f /etc/coastal/node.json ]]; then
+  log "generating cluster identity + syncthing device, emitting public tuple"
+  install -d -m 0700 /var/lib/coastal/syncthing
+  syncthing generate --home /var/lib/coastal/syncthing
+  DEVICE_ID=$(syncthing --home /var/lib/coastal/syncthing --device-id)
+  coastal-cluster emit-public --device-id "$DEVICE_ID" \
+    --out /var/lib/coastal/identity-public.json \
+    || log "WARN: emit-public failed — check coastal-cluster + /etc/coastal/node.json"
+else
+  log "WARN: /etc/coastal/node.json missing — skipping cluster identity emit"
+fi
+
 # ─── 2. build + install SMU governor ─────────────────────────────────
 
 log "cloning + building cyan-skillfish-governor (smu branch)"
