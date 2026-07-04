@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "bin": { "coastal-cluster": "./dist/cli.js" },
+  "bin": {
+    "coastal-cluster": "./dist/cli.js"
+  },
   "scripts": {
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
@@ -11,7 +13,8 @@
   },
   "dependencies": {
     "@coastal-ai/coordination": "workspace:*",
-    "@coastal-ai/core": "workspace:*"
+    "@coastal-ai/core": "workspace:*",
+    "@coastal-ai/llm-client": "workspace:*"
   },
   "devDependencies": {
     "typescript": "~5.9.3",

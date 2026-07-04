@@ -321,6 +321,9 @@ importers:
       '@coastal-ai/core':
         specifier: workspace:*
         version: link:../core
+      '@coastal-ai/llm-client':
+        specifier: workspace:*
+        version: link:../llm-client
     devDependencies:
       typescript:
         specifier: ~5.9.3
