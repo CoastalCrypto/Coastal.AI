@@ -1,0 +1,17 @@
+[Unit]
+Description=Coastal.AI cluster node runtime (bringNodeOnline)
+After=network-online.target coastal-os-first-boot.service coastal-syncthing.service coastal-openobserve.service
+Wants=network-online.target
+Requires=coastal-syncthing.service
+ConditionPathExists=/etc/coastal/roster.json
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/coastal-cluster run
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

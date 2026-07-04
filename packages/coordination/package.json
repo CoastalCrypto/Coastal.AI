@@ -13,7 +13,8 @@
   "dependencies": {
     "@coastal-ai/core": "workspace:*",
     "better-sqlite3": "^11.10.0",
-    "bonjour-service": "^1.2.1"
+    "bonjour-service": "^1.2.1",
+    "zod": "^4.4.1"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.0",

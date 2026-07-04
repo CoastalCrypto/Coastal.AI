@@ -1,0 +1,23 @@
+# Two-node cluster-join convergence E2E: a curator + a worker, with real
+# Syncthing + openobserve. Hardware/runtime-gated — runs on a Docker host,
+# NOT the default CI runner. See README.md for the runbook + the operator
+# steps still required to stand this up (image Dockerfile, per-role node.json).
+services:
+  openobserve:
+    image: public.ecr.aws/zinclabs/openobserve:latest
+    environment:
+      ZO_ROOT_USER_EMAIL: root@example.com
+      ZO_ROOT_USER_PASSWORD: Complexpass#123
+    ports: ["5080:5080"]
+  curator:
+    build: { context: ../../.., dockerfile: packages/node-runtime/e2e/Dockerfile }
+    environment:
+      COASTAL_ROLE: curator
+      COASTAL_OO_URL: http://openobserve:5080
+    depends_on: [openobserve]
+  worker:
+    build: { context: ../../.., dockerfile: packages/node-runtime/e2e/Dockerfile }
+    environment:
+      COASTAL_ROLE: coder
+      COASTAL_OO_URL: http://openobserve:5080
+    depends_on: [openobserve, curator]

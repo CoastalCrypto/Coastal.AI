@@ -196,3 +196,22 @@ export {
   checkClusterHealth,
   latestHeartbeatSql,
 } from './observability/monitor.js'
+
+// ─── Cluster join / first-boot ───────────────────────────────────────
+
+export {
+  NodeRole, NodeConfig, RosterEntry, Roster, PublicTuple,
+  loadNodeConfig, loadRoster,
+} from './cluster/config.js'
+
+export { assembleRoster } from './cluster/roster.js'
+export { buildPublicTuple } from './cluster/identity-public.js'
+export { ROLE_SPECS, shouldClaimFor, type RoleSpec } from './cluster/roles.js'
+export {
+  foldersForRole, bringNodeOnline,
+  TICK_MS, HEARTBEAT_MS, MONITOR_MS, STALENESS_MS,
+  type BringUpDeps, type NodeHandle,
+} from './cluster/bring-up.js'
+
+export { emitHeartbeat, startHeartbeat, HEARTBEAT_STREAM } from './observability/heartbeat.js'
+export { runMonitorOnce, startMonitorLoop } from './observability/monitor-loop.js'
