@@ -11,21 +11,27 @@ agents themselves.
 
 ## Why
 
-`headroom-ai` (Apache‑2.0) does deterministic, local, no‑extra‑LLM‑call compression of
-structured bulk (JSON tool outputs, code, logs) with accuracy preserved on benchmarks.
-Its npm TS SDK (v0.22.4) has **zero runtime dependencies** (only optional peer‑adapters
-for openai/anthropic/ai‑sdk) — it compresses locally, in‑process, pure JS, no ONNX/native
-bindings. That makes it a drop‑in token/cost lever for every agent that talks to a model,
-riding entirely on infrastructure that already exists (the injectable `LlmClient`, the
-node‑runtime composition root, the openobserve client). See
-`project_repo_eval_2026_07` for the adoption rationale.
+`headroom-ai` (Apache‑2.0) does deterministic, no‑extra‑LLM‑call compression of structured
+bulk (JSON tool outputs, code, logs) with accuracy preserved on benchmarks.
+
+**Corrected 2026‑07‑04 (verified against the installed package):** the npm TS SDK
+(`headroom-ai` v0.22.4) is a **thin client to the headroom service**, not a local
+compressor. `compress(messages, options)` POSTs to a headroom proxy (`baseUrl`, default
+`http://127.0.0.1:8787`) or cloud (`apiKey`); the "zero dependencies" simply means it uses
+global `fetch`. The actual SmartCrusher/ML compression runs in the proxy. Therefore the
+in‑process decorator is the **integration point**, but real compression requires a
+**per‑node headroom proxy sidecar** (systemd, provisioned into the image — same pattern as
+syncthing/openobserve; local‑only, no cloud, no context leaves the node). `fallback: true`
+makes `compress` degrade to a passthrough when the proxy is unreachable, so the decorator is
+a safe no‑op until the proxy is deployed. Telemetry comes from `CompressResult`
+(`tokensBefore/After/Saved`). See `project_repo_eval_2026_07`.
 
 ## Locked decisions
 
 | Decision | Choice | Rationale |
 |---|---|---|
-| Integration point | **In‑process TS decorator on `LlmClient`** | Fits the existing dependency‑injection; no per‑node Python proxy; unit‑testable; agents stay unaware |
-| Compressor | **headroom‑ai deterministic (TS, local)** | Zero‑dep, no ONNX; the ML text‑compressor is Python‑only → deferred |
+| Integration point | **In‑process TS decorator on `LlmClient`** | Fits the existing dependency‑injection; unit‑testable; agents stay unaware |
+| Compression backend | **Per‑node headroom proxy sidecar** (decorator is the client) | `headroom-ai` TS SDK is a client, not local compute; the proxy runs on‑node (local‑only, no cloud); same systemd pattern as syncthing/openobserve |
 | Reversibility | **One‑way (no CCR)** | Small local models (phi3.5, qwen‑7b) can't reliably drive a retrieve tool; one‑way can't wedge |
 | Rollout | **Default‑on for all roles, per‑role disable** | Broadest immediate benefit; off‑switch if a role regresses |
 | Failure posture | **Fail‑open, never regress** | A bad/failed compression is silently a no‑op on the original |
@@ -39,17 +45,26 @@ cluster‑join). Agents are unaware; the OS decides who gets wrapped.
 ### New unit — `packages/llm-client/src/compressing-client.ts`
 
 ```ts
-export type CompressFn = (messages: ChatMessage[], opts: { model: string }) => Promise<ChatMessage[]> | ChatMessage[]
+export interface CompressOutcome {
+  messages: ChatMessage[]      // compressed (same shape/order/count as input)
+  tokensBefore: number
+  tokensAfter: number
+  tokensSaved: number
+  compressed: boolean
+}
+export type CompressFn = (messages: ChatMessage[], opts: { model: string }) => Promise<CompressOutcome>
+// default: wraps headroom-ai `compress` (POST 127.0.0.1:8787, fallback:true) → maps CompressResult
 
 export interface CompressionStat {
   model: string
   messagesCompressed: number
-  beforeChars: number
-  afterChars: number
+  tokensBefore: number   // summed from CompressResult
+  tokensAfter: number
+  tokensSaved: number
 }
 
 export interface CompressOpts {
-  compress?: CompressFn                    // default: headroom-ai `compress`
+  compress?: CompressFn                    // default: headroom-ai `compress` (baseUrl 127.0.0.1:8787, fallback:true)
   minChars?: number                        // default 500 — below this, pass through
   onStats?: (s: CompressionStat) => void   // default no-op
 }
@@ -132,7 +147,9 @@ faithful — proves the dep works in‑process with zero infra.
 ## Scope
 
 **In:** the decorator unit + `headroom-ai` dep + the node‑runtime wiring (wrap‑by‑role +
-`onStats`→openobserve) + the `compression` config block.
+`onStats`→openobserve) + the `compression` config block + the **per‑node headroom proxy
+systemd unit** (`os/base/systemd/coastal-headroom.service`, provisioned into the image —
+hardware/operator‑gated, like coastal‑syncthing/coastal‑openobserve).
 
 **Out (v1):** the ML text‑compressor (Python‑only), CCR/reversible retrieval, output‑token
 compression, a per‑node proxy, output‑side A/B holdout measurement.
