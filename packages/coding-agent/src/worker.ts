@@ -6,6 +6,8 @@
 
 import type { LlmClient, ChatMessage } from '@coastal-ai/llm-client'
 import { LlmClientError } from '@coastal-ai/llm-client'
+import { recallContextMessage } from '@coastal-ai/core/memory/recall'
+import type { NoteStore } from '@coastal-ai/core/memory/notes'
 import type { CodeTaskPayload, CodeTaskResult } from './types.js'
 
 export interface CoderWorkerConfig {
@@ -21,6 +23,17 @@ export interface CoderWorkerConfig {
   temperature?: number
   /** Max tokens to generate. Default 2048. */
   maxTokens?: number
+  /**
+   * Optional note recall. When set, the coder pulls the most relevant notes
+   * for the request from the NoteStore (FTS5) and injects them as a `user`
+   * context message ahead of the instruction. Fail-safe: any recall error, or
+   * no relevant notes, leaves the request unchanged.
+   */
+  recall?: {
+    store: NoteStore
+    limit?: number
+    maxChars?: number
+  }
 }
 
 const DEFAULT_SYSTEM_PROMPT = `You are a senior software engineer. Generate code that is correct, readable, and idiomatic for the requested language. Use clear identifiers; prefer composition over inheritance; handle errors at boundaries. Output ONLY the requested code — no commentary, no markdown fences, unless the user explicitly asks otherwise.`
@@ -52,6 +65,18 @@ export function createCoderWorker(config: CoderWorkerConfig) {
       )
     }
     const messages = buildMessages(systemPrompt, payload)
+    if (config.recall) {
+      let recallMsg: ChatMessage | null = null
+      try {
+        recallMsg = recallContextMessage(config.recall.store, payload.request, {
+          limit: config.recall.limit,
+          maxChars: config.recall.maxChars,
+        })
+      } catch {
+        recallMsg = null // fail-safe: recall must never break the coder
+      }
+      if (recallMsg) messages.splice(1, 0, recallMsg) // after system, before the request
+    }
     const model = payload.model ?? defaultModel
     const res = await client.chat({
       model,
