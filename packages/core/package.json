@@ -113,6 +113,10 @@
     "./memory/kinds-registry": {
       "types": "./dist/memory/kinds-registry.d.ts",
       "default": "./dist/memory/kinds-registry.js"
+    },
+    "./memory/recall": {
+      "types": "./dist/memory/recall.d.ts",
+      "default": "./dist/memory/recall.js"
     }
   },
   "bin": {

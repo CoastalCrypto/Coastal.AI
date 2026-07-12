@@ -9,6 +9,20 @@ import {
   createCoderWorker, coderShouldClaim, CODE_TASK_KIND,
 } from '../index.js'
 import type { CodeTaskPayload } from '../types.js'
+import type { NoteStore, Note } from '@coastal-ai/core/memory/notes'
+
+function note(title: string, body: string): Note {
+  return {
+    id: title, title, body, kind: 'learning',
+    sourceType: null, sourceId: null, createdAt: 0, updatedAt: 0, rev: 1, origin: null,
+  }
+}
+function storeReturning(fn: () => Note[]): NoteStore {
+  return { search: fn } as unknown as NoteStore
+}
+function okStub(): StubClient {
+  return new StubClient(() => ({ message: { role: 'assistant', content: 'ok' }, finishReason: 'stop' }))
+}
 
 class StubClient implements LlmClient {
   public lastReq: ChatRequest | null = null
@@ -148,5 +162,35 @@ describe('createCoderWorker', () => {
     await expect(worker({
       payload: { request: 'a' } satisfies CodeTaskPayload,
     })).rejects.toMatchObject({ kind: 'rate_limit', status: 429 })
+  })
+})
+
+describe('createCoderWorker — note recall', () => {
+  it('injects a recall user message ahead of the request when notes match', async () => {
+    const stub = okStub()
+    const store = storeReturning(() => [note('Fibonacci memoization', 'cache results in a map keyed by n')])
+    const worker = createCoderWorker({ client: stub, defaultModel: 'x', recall: { store } })
+    await worker({ payload: { request: 'write a fibonacci memoization helper' } satisfies CodeTaskPayload })
+    const msgs = stub.lastReq!.messages
+    expect(msgs).toHaveLength(3)
+    expect(msgs[0].role).toBe('system')
+    expect(msgs[1].role).toBe('user')
+    expect(msgs[1].content).toContain('## Relevant memory')
+    expect(msgs[2].content).toContain('fibonacci memoization helper')
+  })
+
+  it('adds no message when recall finds nothing', async () => {
+    const stub = okStub()
+    const worker = createCoderWorker({ client: stub, defaultModel: 'x', recall: { store: storeReturning(() => []) } })
+    await worker({ payload: { request: 'write a fibonacci memoization helper' } satisfies CodeTaskPayload })
+    expect(stub.lastReq!.messages).toHaveLength(2)
+  })
+
+  it('is fail-safe: recall throwing leaves the request unchanged', async () => {
+    const stub = okStub()
+    const boom = storeReturning(() => { throw new Error('fts down') })
+    const worker = createCoderWorker({ client: stub, defaultModel: 'x', recall: { store: boom } })
+    await worker({ payload: { request: 'write a fibonacci memoization helper' } satisfies CodeTaskPayload })
+    expect(stub.lastReq!.messages).toHaveLength(2)
   })
 })
