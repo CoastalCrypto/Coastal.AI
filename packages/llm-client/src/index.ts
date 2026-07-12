@@ -11,3 +11,11 @@ export {
   createOpenAICompatibleClient,
   type OpenAICompatibleConfig,
 } from './openai-compatible.js'
+
+export {
+  createCompressingLlmClient,
+  type CompressFn,
+  type CompressOutcome,
+  type CompressOpts,
+  type CompressionStat,
+} from './compressing-client.js'

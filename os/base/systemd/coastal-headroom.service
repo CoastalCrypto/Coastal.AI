@@ -1,0 +1,19 @@
+[Unit]
+Description=Coastal.AI headroom proxy (local LLM context compression)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=coastal
+# Local-only compression sidecar: agents on this node call it at 127.0.0.1:8787.
+# No cloud, no context leaves the node. The compressing LlmClient decorator
+# points here (COASTAL_HEADROOM_URL) with fallback:true, so if this service is
+# down the agents degrade to uncompressed calls rather than failing.
+Environment=HEADROOM_WORKSPACE_DIR=/var/lib/coastal/headroom
+ExecStart=/usr/local/bin/headroom proxy --host 127.0.0.1 --port 8787
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
