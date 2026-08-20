@@ -40,7 +40,17 @@ export async function teamRoutes(fastify: FastifyInstance) {
     const sessionId = req.body.sessionId ?? randomUUID()
     void sessionId // reserved: not yet threaded into runTeamChain — see spec's "Out of scope"
     const trace = await runTeamChain(
-      { router, registry: agentRegistry, noteStore, channel, classifier, defaultModel: config.defaultModel },
+      {
+        router,
+        registry: agentRegistry,
+        noteStore,
+        channel,
+        classifier,
+        defaultModel: config.defaultModel,
+        judgeModel: config.quantRouterModel,
+        turnBudget: config.teamTurnBudget,
+        chainTimeoutMs: config.teamChainTimeoutMs,
+      },
       task,
     )
     return reply.send({ trace })

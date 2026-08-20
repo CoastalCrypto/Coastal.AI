@@ -28,6 +28,8 @@ export interface Config {
   infinityUrl: string
   vibeVoiceUrl: string
   tier: 'lite' | 'standard' | 'apex'
+  teamTurnBudget: number
+  teamChainTimeoutMs: number
 }
 
 let _cachedConfig: Config | null = null
@@ -77,6 +79,8 @@ export function loadConfig(): Config {
     infinityUrl: process.env.CC_INFINITY_URL ?? 'http://127.0.0.1:23817',
     vibeVoiceUrl: process.env.CC_VIBEVOICE_URL ?? 'http://127.0.0.1:8001',
     tier: hardware.tier,
+    teamTurnBudget: Number(process.env.CC_TEAM_TURN_BUDGET ?? '6'),
+    teamChainTimeoutMs: Number(process.env.CC_TEAM_CHAIN_TIMEOUT_MS ?? '90000'),
     agentTrustLevel: (() => {
       // File-based override takes precedence over env var
       const dataDir = process.env.CC_DATA_DIR ?? './data'

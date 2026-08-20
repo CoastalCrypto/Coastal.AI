@@ -39,6 +39,7 @@ function baseDeps(overrides: Partial<RunTeamChainDeps> = {}): RunTeamChainDeps {
     channel: new TeamChannel(),
     classifier: { classify: vi.fn().mockResolvedValue({ domain: 'cto', confidence: 0.9, classifiedBy: 'rules' }) } as any,
     defaultModel: 'llama3.2',
+    judgeModel: 'test-judge-model',
     ...overrides,
   }
 }
@@ -151,5 +152,106 @@ describe('runTeamChain', () => {
 
     realStore.close()
     rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('REGRESSION: on a 3-hop chain, each handoff expectation is verified against its OWN direct peer, not whatever turn is last after deeper nesting', async () => {
+    // cto -> cfo (expectation E1) -> coo (expectation E2) -> coo replies directly.
+    // The judge mock below is keyed on WHICH expectation + WHICH reply marker
+    // appear together in the prompt it's given — not on call order — so it
+    // can't be fooled by extra retries. If E1 ever gets checked against COO's
+    // reply (or vice versa), the judge will hand back the "BUG" verdict below.
+    const E1 = 'E1_EXPECTATION_COST_ESTIMATE'
+    const E2 = 'E2_EXPECTATION_INTEGRATION_PLAN'
+    const CFO_REPLY = 'CFO_OWN_REPLY_MARKER'
+    const COO_REPLY = 'COO_OWN_REPLY_MARKER'
+
+    ;(deps.router.chatWithTools as any).mockImplementation(
+      (_model: string, messages: any[], tools: unknown[]) => {
+        const lastContent = String(messages[messages.length - 1]?.content ?? '')
+
+        if (lastContent.includes(E2)) {
+          // coo's turn: handed off from cfo with E2, replies directly (leaf).
+          return Promise.resolve({ content: COO_REPLY, toolCalls: [] })
+        }
+        if (lastContent.includes(E1)) {
+          // cfo's turn: handed off from cto with E1.
+          if ((tools as unknown[]).length === 0) {
+            // forced-direct retry path — no handoff tool offered.
+            return Promise.resolve({ content: CFO_REPLY, toolCalls: [] })
+          }
+          return Promise.resolve({
+            content: CFO_REPLY,
+            toolCalls: [{ id: '2', name: 'handoff', args: { targetAgentId: 'coo', expectation: E2 } }],
+          })
+        }
+        // root call: cto, no incoming expectation yet.
+        return Promise.resolve({
+          content: 'CTO_OWN_REPLY_MARKER',
+          toolCalls: [{ id: '1', name: 'handoff', args: { targetAgentId: 'cfo', expectation: E1 } }],
+        })
+      },
+    )
+
+    ;(deps.router.chat as any).mockImplementation((messages: any[]) => {
+      const content = String(messages[0]?.content ?? '')
+      const checkingE1 = content.includes(E1)
+      const checkingE2 = content.includes(E2)
+      const againstCfoReply = content.includes(CFO_REPLY)
+      const againstCooReply = content.includes(COO_REPLY)
+
+      if (checkingE1 && againstCfoReply) {
+        return Promise.resolve({ reply: JSON.stringify({ satisfied: true, note: 'E1 correctly checked against CFO reply' }), decision: {} })
+      }
+      if (checkingE1 && againstCooReply) {
+        return Promise.resolve({ reply: JSON.stringify({ satisfied: false, note: 'BUG: E1 checked against COO reply' }), decision: {} })
+      }
+      if (checkingE2 && againstCooReply) {
+        return Promise.resolve({ reply: JSON.stringify({ satisfied: true, note: 'E2 correctly checked against COO reply' }), decision: {} })
+      }
+      if (checkingE2 && againstCfoReply) {
+        return Promise.resolve({ reply: JSON.stringify({ satisfied: false, note: 'BUG: E2 checked against CFO reply' }), decision: {} })
+      }
+      return Promise.resolve({ reply: JSON.stringify({ satisfied: false, note: 'unexpected verification call' }), decision: {} })
+    })
+
+    const trace = await runTeamChain(deps, 'plan a project')
+
+    expect(trace).toHaveLength(3)
+    expect(trace[0]).toMatchObject({ agentId: 'cto', handoffTo: 'cfo', expectation: E1 })
+    // trace[1] is cfo's OWN turn — must carry the E1-vs-CFO verdict, never the E2-vs-COO one.
+    expect(trace[1]).toMatchObject({
+      agentId: 'cfo', handoffTo: 'coo', expectation: E2, reply: CFO_REPLY,
+      unresolved: false, verificationNote: 'E1 correctly checked against CFO reply',
+    })
+    // trace[2] is coo's OWN turn — must carry the E2-vs-COO verdict, never get overwritten by E1's check.
+    expect(trace[2]).toMatchObject({
+      agentId: 'coo', reply: COO_REPLY,
+      unresolved: false, verificationNote: 'E2 correctly checked against COO reply',
+    })
+    // Both verdicts satisfied first try — no retries should have fired.
+    expect(deps.router.chatWithTools).toHaveBeenCalledTimes(3)
+  })
+
+  it('a mid-chain chatWithTools failure produces a synthetic error entry instead of rejecting the whole chain', async () => {
+    ;(deps.router.chatWithTools as any)
+      .mockResolvedValueOnce({
+        content: 'ask cfo',
+        toolCalls: [{ id: '1', name: 'handoff', args: { targetAgentId: 'cfo', expectation: 'Give a number' } }],
+      })
+      .mockRejectedValueOnce(new Error('model crashed'))
+
+    const trace = await runTeamChain(deps, 'plan a project')
+
+    expect(trace).toHaveLength(2)
+    expect(trace[0]).toMatchObject({ agentId: 'cto', handoffTo: 'cfo', expectation: 'Give a number' })
+    expect(trace[1]).toMatchObject({
+      agentId: 'system',
+      agentName: 'System',
+      unresolved: true,
+      verificationNote: 'agent call failed',
+    })
+    expect(trace[1].reply).toContain('model crashed')
+    // No verification judge call should have fired for a turn that never happened.
+    expect(deps.router.chat).not.toHaveBeenCalled()
   })
 })

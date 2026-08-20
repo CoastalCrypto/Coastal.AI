@@ -11,7 +11,8 @@ import { buildHandoffToolSchema, parseHandoffCall } from './handoff-tool.js'
 import { writeAgentNote } from './team-notes.js'
 import { verifyCommitment } from './verify-commitment.js'
 
-const CHAIN_TIMEOUT_MS = 90_000
+const DEFAULT_TURN_BUDGET = 6
+const DEFAULT_CHAIN_TIMEOUT_MS = 90_000
 
 export interface RunTeamChainDeps {
   router: Pick<ModelRouter, 'chatWithTools' | 'chat'>
@@ -20,6 +21,12 @@ export interface RunTeamChainDeps {
   channel: TeamChannel
   classifier: Pick<DomainClassifier, 'classify'>
   defaultModel: string
+  /** Cheap model tier for the verification judge (verifyCommitment) — never the large default model. */
+  judgeModel: string
+  /** Max handoffs+retries allowed per chain. Defaults to DEFAULT_TURN_BUDGET if not provided. */
+  turnBudget?: number
+  /** Wall-clock circuit breaker for the whole chain. Defaults to DEFAULT_CHAIN_TIMEOUT_MS if not provided. */
+  chainTimeoutMs?: number
 }
 
 /**
@@ -35,11 +42,13 @@ export async function runTeamChain(deps: RunTeamChainDeps, task: string): Promis
   const startAgent = deps.registry.get(classification.domain) ?? deps.registry.get('general')
   if (!startAgent) throw new Error('runTeamChain: no "general" fallback agent registered')
 
-  const ctx: RunContext = { visited: new Set(), turnBudget: 6, trace: [] }
+  const turnBudget = deps.turnBudget ?? DEFAULT_TURN_BUDGET
+  const chainTimeoutMs = deps.chainTimeoutMs ?? DEFAULT_CHAIN_TIMEOUT_MS
+  const ctx: RunContext = { visited: new Set(), turnBudget, trace: [] }
 
   let timedOut = false
   const timeout = new Promise<void>(resolve => {
-    setTimeout(() => { timedOut = true; resolve() }, CHAIN_TIMEOUT_MS)
+    setTimeout(() => { timedOut = true; resolve() }, chainTimeoutMs)
   })
   await Promise.race([runTurn(deps, startAgent.id, task, ctx, null), timeout])
 
@@ -82,7 +91,15 @@ async function runTurn(
 
   const tools = targets.length > 0 ? [buildHandoffToolSchema(targets)] : []
   const model = agent.modelPref ?? deps.defaultModel
-  let { content, toolCalls } = await deps.router.chatWithTools(model, messages, tools)
+
+  let content: string
+  let toolCalls: Awaited<ReturnType<ModelRouter['chatWithTools']>>['toolCalls']
+  try {
+    ;({ content, toolCalls } = await deps.router.chatWithTools(model, messages, tools))
+  } catch (err) {
+    pushAgentCallFailure(ctx, err)
+    return
+  }
   let handoff = parseHandoffCall(toolCalls)
 
   // A handoff call naming a target canHandoff rejects (self, already visited,
@@ -92,7 +109,12 @@ async function runTurn(
   // with the handoff tool withheld so the agent gives a genuine direct reply
   // instead of silently accepting that leftover text as the turn's output.
   if (handoff && !canHandoff(ctx, handoff.targetAgentId, agentId, activeIds)) {
-    ;({ content, toolCalls } = await deps.router.chatWithTools(model, messages, []))
+    try {
+      ;({ content, toolCalls } = await deps.router.chatWithTools(model, messages, []))
+    } catch (err) {
+      pushAgentCallFailure(ctx, err)
+      return
+    }
     handoff = null
   }
 
@@ -107,35 +129,67 @@ async function runTurn(
       handoffTo: handoff.targetAgentId, expectation: handoff.expectation,
     })
 
+    // Capture the index of the turn about to be created for the handoff
+    // target BEFORE recursing — if that recursive call itself hands off
+    // further (B→C, C→D, ...), ctx.trace.length keeps growing past this
+    // point, so "last element" is no longer a safe way to find "the turn
+    // this direct peer produced." targetIndex pins it precisely.
+    const targetIndex = ctx.trace.length
     await runTurn(deps, handoff.targetAgentId, task, ctx, handoff.expectation)
-    await verifyLastTurn(deps, ctx, handoff.expectation, task)
+    // If the recursive call short-circuited into a synthetic system failure
+    // entry (see pushAgentCallFailure), there is no real reply to verify —
+    // running it through the judge would just clobber the failure note with
+    // an unrelated "verification unavailable" from an unmocked/empty judge
+    // call. Leave it as-is; it's already flagged unresolved.
+    if (ctx.trace[targetIndex]?.agentId !== 'system') {
+      await verifyLastTurn(deps, ctx, targetIndex, handoff.expectation, task)
+    }
   } else {
     ctx.trace.push({ agentId, agentName: agent.name, reply: content })
   }
 }
 
+/** Appends a synthetic system trace entry when an agent call fails outright, mirroring the timeout path's shape. Callers must return immediately after — no further handoffs are attempted for this turn. */
+function pushAgentCallFailure(ctx: RunContext, err: unknown): void {
+  const message = err instanceof Error ? err.message : String(err)
+  ctx.trace.push({
+    agentId: 'system',
+    agentName: 'System',
+    reply: `Agent call failed: ${message}`,
+    unresolved: true,
+    verificationNote: 'agent call failed',
+  })
+}
+
 /**
- * Checks the most recent trace entry (the handoff target's reply) against the
+ * Checks the trace entry at `targetIndex` — the direct peer's own turn,
+ * pinned by the caller before it recursed any deeper — against the
  * expectation. Unsatisfied + budget remaining → exactly one retry, same
  * agent, expectation restated, handoff tool withheld (forces a direct,
  * resolving reply rather than another handoff). Still unsatisfied, or no
  * budget left for a retry → the turn stays flagged unresolved.
+ *
+ * targetIndex must NOT be re-derived as "last element of ctx.trace" here:
+ * by the time a chain 3+ hops deep unwinds, later (nested) verification
+ * calls and their retries may have pushed additional entries, so "last"
+ * would silently point at some other agent's turn instead of this one.
  */
 async function verifyLastTurn(
   deps: RunTeamChainDeps,
   ctx: RunContext,
+  targetIndex: number,
   expectation: string,
   task: string,
 ): Promise<void> {
-  const lastTurn = ctx.trace[ctx.trace.length - 1]
-  const verdict = await verifyCommitment(deps.router, deps.defaultModel, expectation, lastTurn.reply)
-  lastTurn.unresolved = !verdict.satisfied
-  lastTurn.verificationNote = verdict.note
+  const targetTurn = ctx.trace[targetIndex]
+  const verdict = await verifyCommitment(deps.router, deps.judgeModel, expectation, targetTurn.reply)
+  targetTurn.unresolved = !verdict.satisfied
+  targetTurn.verificationNote = verdict.note
 
   if (verdict.satisfied || ctx.turnBudget <= 0) return
 
   ctx.turnBudget -= 1
-  const retryAgentId = lastTurn.agentId
+  const retryAgentId = targetTurn.agentId
   const agent = deps.registry.get(retryAgentId)
   if (!agent) return
 
@@ -148,10 +202,19 @@ async function verifyLastTurn(
     { role: 'user', content: `${expectation}\n\nYour previous reply didn't address this (${verdict.note}). Please respond directly.` },
   ]
   const model = agent.modelPref ?? deps.defaultModel
-  const { content: retryContent } = await deps.router.chatWithTools(model, messages, [])
+
+  let retryContent: string
+  try {
+    ;({ content: retryContent } = await deps.router.chatWithTools(model, messages, []))
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    targetTurn.unresolved = true
+    targetTurn.verificationNote = `retry failed: ${message}`
+    return
+  }
   writeAgentNote(deps.noteStore, retryAgentId, agent.name, retryContent)
 
-  const retryVerdict = await verifyCommitment(deps.router, deps.defaultModel, expectation, retryContent)
+  const retryVerdict = await verifyCommitment(deps.router, deps.judgeModel, expectation, retryContent)
   ctx.trace.push({
     agentId: retryAgentId,
     agentName: agent.name,
