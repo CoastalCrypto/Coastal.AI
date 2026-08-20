@@ -1,28 +1,29 @@
 import type { FastifyInstance } from 'fastify'
+import { randomUUID } from 'node:crypto'
 import { ModelRouter } from '../../models/router.js'
 import { AgentRegistry } from '../../agents/registry.js'
-import { ToolRegistry } from '../../tools/registry.js'
-import { BossAgent } from '../../agents/boss-agent.js'
 import { TeamChannel } from '../../agents/team-channel.js'
-import { createBackend } from '../../tools/backends/index.js'
+import { NoteStore } from '../../memory/notes.js'
+import { DomainClassifier } from '../../routing/domain-classifier.js'
+import { runTeamChain } from '../../agents/run-team-chain.js'
+import type { TurnRecord } from '../../agents/run-context.js'
 import { loadConfig } from '../../config.js'
-import { randomUUID } from 'node:crypto'
 
 export async function teamRoutes(fastify: FastifyInstance) {
   const config = loadConfig()
   const router = new ModelRouter({ ollamaUrl: config.ollamaUrl, vllmUrl: config.vllmUrl, airllmUrl: config.airllmUrl, defaultModel: config.defaultModel })
   const agentRegistry = new AgentRegistry(`${config.dataDir}/agents.db`)
-  const backend = await createBackend(config.agentTrustLevel, [config.agentWorkdir])
-  const toolRegistry = new ToolRegistry({
-    backend,
-    trustLevel: config.agentTrustLevel,
-    workdir: config.agentWorkdir,
-  })
   const channel = new TeamChannel()
+  const noteStore = new NoteStore({ dataDir: `${config.dataDir}/team-notes` })
+  const classifier = new DomainClassifier({
+    ollamaUrl: config.ollamaUrl,
+    routerModel: config.quantRouterModel,
+    confidenceThreshold: config.routerConfidence,
+  })
 
   fastify.post<{
     Body: { task: string; sessionId?: string }
-    Reply: { reply: string; subtaskCount: number; subtasks: Array<{ subtaskId: string; reply: string }> }
+    Reply: { trace: TurnRecord[] }
   }>('/api/team/run', {
     schema: {
       body: {
@@ -35,14 +36,19 @@ export async function teamRoutes(fastify: FastifyInstance) {
       },
     },
   }, async (req, reply) => {
-    const { task, sessionId = randomUUID() } = req.body
-    const boss = new BossAgent(router, agentRegistry, channel, toolRegistry)
-    const result = await boss.run(task, sessionId)
-    return reply.send(result)
+    const { task } = req.body
+    const sessionId = req.body.sessionId ?? randomUUID()
+    void sessionId // reserved: not yet threaded into runTeamChain — see spec's "Out of scope"
+    const trace = await runTeamChain(
+      { router, registry: agentRegistry, noteStore, channel, classifier, defaultModel: config.defaultModel },
+      task,
+    )
+    return reply.send({ trace })
   })
 
   fastify.addHook('onClose', async () => {
     router.close()
     agentRegistry.close()
+    noteStore.close()
   })
 }
