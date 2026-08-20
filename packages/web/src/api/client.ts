@@ -54,6 +54,16 @@ export interface AgentRecord {
   active: boolean
 }
 
+export interface TeamTurn {
+  agentId: string
+  agentName: string
+  reply: string
+  handoffTo?: string
+  expectation?: string
+  unresolved?: boolean
+  verificationNote?: string
+}
+
 export interface KnowledgeDoc {
   id: string
   title: string
@@ -441,7 +451,7 @@ export class CoreClient {
     return res.json()
   }
 
-  async runTeam(task: string, sessionId?: string): Promise<{ reply: string; subtaskCount: number; subtasks: Array<{ subtaskId: string; reply: string }> }> {
+  async runTeam(task: string, sessionId?: string): Promise<{ trace: TeamTurn[] }> {
     const res = await fetch(`${this.baseUrl}/api/team/run`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -1,4 +1,5 @@
 import type { AgentDomain } from '../../components/AgentThinkingAnimation'
+import type { TeamTurn } from '../../api/client'
 
 export type MessageRole = 'user' | 'assistant' | 'approval' | 'team'
 
@@ -13,8 +14,7 @@ export interface Message {
   toolName?: string
   cmd?: string
   resolved?: boolean
-  subtasks?: Array<{ subtaskId: string; reply: string }>
-  subtaskCount?: number
+  trace?: TeamTurn[]
 }
 
 export interface BgPreset {
