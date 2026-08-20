@@ -11,7 +11,7 @@ vi.mock('../api/client', () => ({
     listAgents: vi.fn().mockResolvedValue([]),
     listSessions: vi.fn().mockResolvedValue({ sessions: [] }),
     deleteSession: vi.fn().mockResolvedValue(undefined),
-    runTeam: vi.fn().mockResolvedValue({ reply: '', subtasks: [], subtaskCount: 0 }),
+    runTeam: vi.fn().mockResolvedValue({ trace: [] }),
     uploadFile: vi.fn().mockResolvedValue({ filename: 'test.txt', text: '', isImage: false }),
   },
   adminClient: {

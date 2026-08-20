@@ -242,10 +242,11 @@ export function Chat({ sessionId: initialSessionId, onNav: _onNav }: { sessionId
     try {
       if (teamMode) {
         const res = await coreClient.runTeam(text, currentSessionId)
-        setMessages(m => [...m, { role: 'team', content: res.reply, subtasks: res.subtasks, subtaskCount: res.subtaskCount }])
-        speakText(res.reply)
+        const lastReply = res.trace[res.trace.length - 1]?.reply ?? ''
+        setMessages(m => [...m, { role: 'team', content: lastReply, trace: res.trace }])
+        speakText(lastReply)
         if (Notification.permission === 'granted') {
-          new Notification('Team run complete', { body: res.reply.slice(0, 100), icon: '/favicon.ico' })
+          new Notification('Team run complete', { body: lastReply.slice(0, 100), icon: '/favicon.ico' })
         }
         return
       }
