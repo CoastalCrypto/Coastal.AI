@@ -40,7 +40,9 @@ describe('network-exposed auth gate', () => {
     // normal request/response cycle — /api/events/history is a quick GET
     // under the same prefix, so it exercises the identical auth-gate branch.
     { method: 'GET' as const, url: '/api/events/history' },
-    { method: 'GET' as const, url: '/ws/session' },
+    // /ws/session is NOT here — it's a WebSocket upgrade, gated by its own
+    // first-message handshake instead of this header-based hook (browsers
+    // can't attach a custom header to a WS upgrade). See ws.test.ts.
   ]
 
   describe('when CC_HOST is localhost (default)', () => {
@@ -179,5 +181,98 @@ describe('mustChangePassword server-side enforcement', () => {
       headers: { 'x-admin-session': newSessionToken },
     })
     expect(adminRes.statusCode).toBe(200)
+  })
+})
+
+// EventSource can't set a custom header, so gated SSE routes (/api/events,
+// /api/pipeline/*/events) accept a short-lived, single-use ticket via
+// ?ticket= instead. The ticket itself can only be minted through a normal
+// (header-authenticated) POST, so this doesn't weaken the network-exposed
+// gate — it just moves the credential from a header to a query param for
+// the one transport that structurally cannot carry a header.
+describe('SSE ticket auth (network-exposed)', () => {
+  let server: Awaited<ReturnType<typeof buildServer>>
+  let dataDir: string
+  let sessionToken: string
+  const originalDataDir = process.env.CC_DATA_DIR
+  const originalHost = process.env.CC_HOST
+
+  beforeAll(async () => {
+    dataDir = mkdtempSync(join(tmpdir(), 'cc-sse-ticket-test-'))
+    process.env.CC_DATA_DIR = dataDir
+    process.env.CC_HOST = '0.0.0.0'
+    invalidateConfig()
+    server = await buildServer()
+    await server.listen({ port: 0, host: '127.0.0.1' })
+
+    // Get a session past the mustChangePassword gate so it's usable outright.
+    const login = await server.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { username: 'admin', password: 'admin' },
+    })
+    const defaultToken = JSON.parse(login.body).sessionToken
+    await server.inject({
+      method: 'PATCH',
+      url: '/api/auth/password',
+      headers: { 'x-admin-session': defaultToken },
+      payload: { currentPassword: 'admin', newPassword: 'a-real-password-123' },
+    })
+    const relogin = await server.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { username: 'admin', password: 'a-real-password-123' },
+    })
+    sessionToken = JSON.parse(relogin.body).sessionToken
+  })
+
+  afterAll(async () => {
+    await server.close()
+    if (originalDataDir === undefined) delete process.env.CC_DATA_DIR
+    else process.env.CC_DATA_DIR = originalDataDir
+    if (originalHost === undefined) delete process.env.CC_HOST
+    else process.env.CC_HOST = originalHost
+    invalidateConfig()
+    rmSync(dataDir, { recursive: true, force: true })
+  })
+
+  it('POST /api/events/ticket requires auth (it is itself under isNetworkRoute)', async () => {
+    const res = await server.inject({ method: 'POST', url: '/api/events/ticket' })
+    expect(res.statusCode).toBe(401)
+  })
+
+  it('mints a ticket with a valid session, then the ticket authenticates a gated GET', async () => {
+    const mint = await server.inject({
+      method: 'POST',
+      url: '/api/events/ticket',
+      headers: { 'x-admin-session': sessionToken },
+    })
+    expect(mint.statusCode).toBe(200)
+    const { ticket } = JSON.parse(mint.body)
+    expect(typeof ticket).toBe('string')
+
+    // No x-admin-session at all here — only the ticket authenticates this request.
+    const res = await server.inject({ method: 'GET', url: `/api/events/history?ticket=${ticket}` })
+    expect(res.statusCode).not.toBe(401)
+  })
+
+  it('a ticket is single-use — the second attempt to use it is rejected', async () => {
+    const mint = await server.inject({
+      method: 'POST',
+      url: '/api/events/ticket',
+      headers: { 'x-admin-session': sessionToken },
+    })
+    const { ticket } = JSON.parse(mint.body)
+
+    const first = await server.inject({ method: 'GET', url: `/api/events/history?ticket=${ticket}` })
+    expect(first.statusCode).not.toBe(401)
+
+    const second = await server.inject({ method: 'GET', url: `/api/events/history?ticket=${ticket}` })
+    expect(second.statusCode).toBe(401)
+  })
+
+  it('an unknown ticket does not authenticate', async () => {
+    const res = await server.inject({ method: 'GET', url: '/api/events/history?ticket=not-a-real-ticket' })
+    expect(res.statusCode).toBe(401)
   })
 })
