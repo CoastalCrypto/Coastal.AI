@@ -114,6 +114,11 @@ export function OllamaSection({ onModelsChanged }: Props) {
       const timeout = setTimeout(() => { ws.close(); resolve() }, 5000)
       const register = () => {
         clearTimeout(timeout)
+        // /ws/session can't be header-authenticated (see server.ts) — send
+        // the token as the first message instead, before register. No-op on
+        // a localhost-only server.
+        const token = sessionStorage.getItem('cc_admin_session') ?? ''
+        ws.send(JSON.stringify({ type: 'auth', token }))
         ws.send(JSON.stringify({ type: 'register', sessionId }))
         resolve()
       }

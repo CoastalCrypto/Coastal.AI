@@ -13,7 +13,15 @@ export function useReconnectingWs(url: string, onMessage: (data: any) => void) {
   const connect = useCallback(() => {
     const ws = new WebSocket(url)
     wsRef.current = ws
-    ws.onopen = () => { delayRef.current = 1000 }
+    ws.onopen = () => {
+      delayRef.current = 1000
+      // A browser WebSocket can't attach a custom header to the upgrade
+      // handshake, so /ws/session authenticates via this first message
+      // instead. Harmless no-op on a localhost-only server, which doesn't
+      // require it.
+      const token = sessionStorage.getItem('cc_admin_session') ?? ''
+      ws.send(JSON.stringify({ type: 'auth', token }))
+    }
     ws.onmessage = (e) => {
       try { onMessageRef.current(JSON.parse(e.data)) } catch (err) { console.error('[useReconnectingWs] failed to parse message', err, e.data) }
     }

@@ -1,6 +1,27 @@
 import { useEffect, useRef, useState } from 'react'
 import { coreHttpOrigin } from '../platform/coreOrigin'
 
+function adminHeaders(): Record<string, string> {
+  const session = sessionStorage.getItem('cc_admin_session') ?? ''
+  return session ? { 'x-admin-session': session } : {}
+}
+
+// EventSource can't send the x-admin-session header, so a network-exposed
+// server requires a short-lived ticket (minted via an ordinary,
+// header-authenticated POST) passed as a query param instead. Shared with
+// /api/events — a ticket just proves "recently authenticated," it isn't
+// tied to a specific stream.
+async function fetchTicket(): Promise<string | null> {
+  try {
+    const res = await fetch('/api/events/ticket', { method: 'POST', headers: adminHeaders() })
+    if (!res.ok) return null
+    const { ticket } = await res.json() as { ticket: string }
+    return ticket
+  } catch {
+    return null
+  }
+}
+
 export interface LiveToolCall {
   toolName: string
   args: Record<string, unknown>
@@ -48,37 +69,50 @@ export function usePipelineRun(runId: string | null, stageCount: number) {
       })),
     })
 
-    const es = new EventSource(`${coreHttpOrigin()}/api/pipeline/run/${runId}/events`)
-    esRef.current = es
+    let cancelled = false
+    void (async () => {
+      const ticket = await fetchTicket()
+      if (cancelled) return
 
-    es.onmessage = (e) => {
-      const event = JSON.parse(e.data)
-      setState(prev => {
-        if (!prev) return prev
-        return applyEvent(prev, event)
-      })
-    }
-    es.onerror = () => {
-      // Don't overwrite 'done' — stream closes normally after pipeline completes
-      setState(prev => prev && prev.status !== 'done' ? { ...prev, status: 'error' } : prev)
-      es.close()
-    }
+      const url = ticket
+        ? `${coreHttpOrigin()}/api/pipeline/run/${runId}/events?ticket=${encodeURIComponent(ticket)}`
+        : `${coreHttpOrigin()}/api/pipeline/run/${runId}/events`
+      const es = new EventSource(url)
+      esRef.current = es
 
-    return () => { es.close(); esRef.current = null }
+      es.onmessage = (e) => {
+        const event = JSON.parse(e.data)
+        setState(prev => {
+          if (!prev) return prev
+          return applyEvent(prev, event)
+        })
+      }
+      es.onerror = () => {
+        // Don't overwrite 'done' — stream closes normally after pipeline completes
+        setState(prev => prev && prev.status !== 'done' ? { ...prev, status: 'error' } : prev)
+        es.close()
+      }
+    })()
+
+    return () => {
+      cancelled = true
+      esRef.current?.close()
+      esRef.current = null
+    }
   }, [runId])
 
   const steer = async (message: string) => {
     if (!runId) return
     await fetch(`/api/pipeline/run/${runId}/steer`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...adminHeaders() },
       body: JSON.stringify({ message }),
     })
   }
 
   const abort = async () => {
     if (!runId) return
-    await fetch(`/api/pipeline/run/${runId}`, { method: 'DELETE' })
+    await fetch(`/api/pipeline/run/${runId}`, { method: 'DELETE', headers: adminHeaders() })
   }
 
   return { state, steer, abort }
