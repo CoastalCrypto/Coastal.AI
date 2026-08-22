@@ -15,7 +15,7 @@ export function useReconnectingWs(url: string, onMessage: (data: any) => void) {
     wsRef.current = ws
     ws.onopen = () => { delayRef.current = 1000 }
     ws.onmessage = (e) => {
-      try { onMessageRef.current(JSON.parse(e.data)) } catch {}
+      try { onMessageRef.current(JSON.parse(e.data)) } catch (err) { console.error('[useReconnectingWs] failed to parse message', err, e.data) }
     }
     ws.onclose = () => {
       timerRef.current = setTimeout(() => {

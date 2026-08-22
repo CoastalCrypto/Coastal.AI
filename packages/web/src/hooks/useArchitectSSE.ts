@@ -12,7 +12,7 @@ const listeners = new Set<Listener>()
 
 function broadcast(event: any) {
   for (const fn of listeners) {
-    try { fn(event) } catch {}
+    try { fn(event) } catch (err) { console.error('[useArchitectSSE] listener threw', err) }
   }
 }
 
@@ -25,7 +25,9 @@ function ensureConnected() {
   es.onmessage = (msg) => {
     try {
       broadcast(JSON.parse(msg.data))
-    } catch {}
+    } catch (err) {
+      console.error('[useArchitectSSE] failed to parse event data', err, msg.data)
+    }
   }
 
   es.onerror = () => {

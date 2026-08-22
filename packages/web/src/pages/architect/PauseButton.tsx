@@ -10,7 +10,9 @@ export function PauseButton({ onPaused }: { onPaused: () => void }) {
     try {
       await coreClient.architectSetPower('off')
       onPaused()
-    } catch {} finally {
+    } catch (err) {
+      console.error('[PauseButton] architectSetPower failed', err)
+    } finally {
       setActing(false)
       setConfirming(false)
     }

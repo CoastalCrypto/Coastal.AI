@@ -322,7 +322,9 @@ export function Chat({ sessionId: initialSessionId, onNav: _onNav }: { sessionId
                 return copy
               })
             }
-          } catch {}
+          } catch (err) {
+            console.error('[Chat] failed to parse SSE data line', err, line)
+          }
           eventType = ''
         }
       }
@@ -433,7 +435,9 @@ export function Chat({ sessionId: initialSessionId, onNav: _onNav }: { sessionId
           onVeto={async () => {
             try {
               await fetch('/api/admin/architect/veto', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ proposalId: architectToast.proposalId }) })
-            } catch {}
+            } catch (err) {
+              console.error('[Chat] architect veto request failed', err)
+            }
             setArchitectToast(null)
           }}
           onDismiss={() => setArchitectToast(null)}
