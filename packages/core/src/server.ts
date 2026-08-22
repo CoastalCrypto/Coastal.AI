@@ -18,6 +18,8 @@ import { architectCallbackRoutes } from './api/routes/architect-callbacks.js'
 import { architectSSERoutes } from './api/routes/architect-events-sse.js'
 import { architectUserProfileRoutes } from './api/routes/architect-user-profile.js'
 import { noteRoutes } from './api/routes/notes.js'
+import { getOrCreateCallbackKey } from './architect/callback-key.js'
+import { verifyCallbackToken } from './architect/verify-callback-token.js'
 import { openArchitectDb } from './architect/db.js'
 import { WorkItemStore } from './architect/store.js'
 import { CycleStore } from './architect/cycle-store.js'
@@ -195,19 +197,10 @@ export async function buildServer() {
   await fastify.register(architectUserProfileRoutes, { profileStore: userProfileStore })
   await fastify.register(architectInsightRoutes, { cycleStore, workStore: architectStore })
   await fastify.register(architectReceiptRoutes, { cycleStore })
+  const callbackKey = getOrCreateCallbackKey(config.dataDir)
   await fastify.register(architectCallbackRoutes, {
     cycleStore,
-    verifyToken: (token: string) => {
-      // Stub decoder for v1.5.0: both the daemon and server share the same host/data dir,
-      // so the architect daemon can pass a real signer via a shared mechanism in a future
-      // chunk. For now, accept tokens that are valid base64url-encoded JSON with the
-      // required shape. Real HMAC verification lives in the architect package (CallbackSigner).
-      try {
-        const decoded = JSON.parse(Buffer.from(token, 'base64url').toString())
-        if (decoded.cycleId && decoded.gate && decoded.decision) return decoded
-        return null
-      } catch { return null }
-    },
+    verifyToken: (token: string) => verifyCallbackToken(callbackKey, token),
   })
   await fastify.register(architectSSERoutes, { db: architectDb })
 
