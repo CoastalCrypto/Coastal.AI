@@ -49,9 +49,9 @@
   },
   {
     "name": "team-task",
-    "description": "Delegate a complex task to the Coastal.AI multi-agent team — BossAgent fans it out to specialist agents.",
+    "description": "Delegate a complex task to the Coastal.AI multi-agent team — classifies to a lead agent, who can hand off to specialist peers as needed.",
     "agentId": "general",
-    "prompt": "Orchestrate the multi-agent team to complete: {{task}}\n\nContext / constraints: {{context}}\n\nUse BossAgent to fan out work to the appropriate specialists (CTO, COO, CFO, Product Manager, QA Lead, Frontend Wizard, System Integrator, UX Architect). Coordinate their outputs into a unified result.\n\nReport:\n- Which agents were involved and what each contributed\n- Consolidated outcome\n- Unresolved items or handoff recommendations"
+    "prompt": "Complete the following team task: {{task}}\n\nContext / constraints: {{context}}\n\nIf this needs a specialist's input (CTO, COO, CFO, Product Manager, QA Lead, Frontend Wizard, System Integrator, UX Architect), hand off to them directly with a specific, checkable expectation of what they should deliver — only hand off if you genuinely need their expertise.\n\nReport:\n- Which agents were involved and what each contributed\n- Consolidated outcome\n- Unresolved items or handoff recommendations"
   },
   {
     "name": "devops",
