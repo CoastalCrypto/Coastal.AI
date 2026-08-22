@@ -4,6 +4,7 @@ import rateLimit from '@fastify/rate-limit'
 import websocket from '@fastify/websocket'
 import { healthRoutes } from './api/routes/health.js'
 import { wsRoutes } from './api/routes/ws.js'
+import { consumeTicket } from './api/sse-ticket.js'
 import { agentEventsRoute } from './api/routes/agent-events.js'
 import { graphQLRoutes } from './api/routes/graphql.js'
 import { chatRoutes } from './api/routes/chat.js'
@@ -89,6 +90,33 @@ export async function buildServer() {
   // It is also passed to userRoutes below.
   const db = new Database(join(config.dataDir, 'coastal-ai.db'))
   const userStore = new UserStore(db, adminToken)
+  const isNetworkExposed = config.host !== '127.0.0.1' && config.host !== '::1' && config.host !== 'localhost'
+
+  // Shared by the onRequest hook below and by the /ws/session first-message
+  // handshake (wsRoutes) — a WebSocket upgrade can't be checked by this hook
+  // the way a normal fetch() can (see isNetworkRoute comment), so it does its
+  // own auth using this exact same session logic, kept in one place so the
+  // two surfaces can't drift apart.
+  function checkSessionAuth(token: string): { ok: true } | { ok: false; reason: 'invalid' | 'password_change_required' } {
+    if (!token) return { ok: false, reason: 'invalid' }
+    // 2. Legacy admin session token (issued by /api/admin/login)
+    if (validateSessionToken(adminToken, token)) return { ok: true }
+    // 3. User session token (issued by /api/auth/login) — admin role required
+    const claims = userStore.verifySessionToken(token)
+    if (claims?.role === 'admin') {
+      // A must-change-password account (the seeded default admin/admin, or
+      // any account an admin just reset) must not be usable for anything
+      // gated by this hook until the password is actually changed — that
+      // update happens via /api/auth/password, which never reaches this
+      // hook (it's not an /api/admin/* route and isn't in isNetworkRoute),
+      // so it stays reachable. This is a live DB check, not something
+      // embedded in the token, so it takes effect immediately on change.
+      const user = userStore.get(claims.userId)
+      if (user?.mustChangePassword) return { ok: false, reason: 'password_change_required' }
+      return { ok: true }
+    }
+    return { ok: false, reason: 'invalid' }
+  }
 
   fastify.addHook('onRequest', async (req, reply) => {
     // CORS preflight must bypass auth so the browser can complete the handshake.
@@ -101,6 +129,11 @@ export async function buildServer() {
     // these stay open (no login friction for the single local user); the moment
     // CC_HOST exposes the server to a LAN/network, every one of these requires
     // the same session/admin-token auth as /api/admin.
+    //
+    // /ws/session is deliberately NOT here: it's a WebSocket upgrade, and a
+    // browser's native WebSocket API can't attach a custom header to that
+    // handshake. It authenticates itself instead via a first-message
+    // handshake in handleSessionWs (wsRoutes below), reusing checkSessionAuth.
     const isNetworkRoute = req.url.startsWith('/api/chat')
       || req.url.startsWith('/api/upload')
       || req.url.startsWith('/api/team')
@@ -109,9 +142,7 @@ export async function buildServer() {
       || req.url.startsWith('/api/search')
       || req.url.startsWith('/api/persona')
       || req.url.startsWith('/api/events')
-      || req.url.startsWith('/ws/session')
     // Only enforce auth on admin routes, and on the routes above when server is network-exposed
-    const isNetworkExposed = config.host !== '127.0.0.1' && config.host !== '::1' && config.host !== 'localhost'
     if (!isAdminRoute && !(isNetworkExposed && isNetworkRoute)) return
     if (req.url === '/api/admin/login') return
 
@@ -127,25 +158,20 @@ export async function buildServer() {
     const sessionHeader = req.headers['x-admin-session'] ?? ''
     const session = typeof sessionHeader === 'string' ? sessionHeader : sessionHeader[0] ?? ''
     if (session) {
-      // 2. Legacy admin session token (issued by /api/admin/login)
-      if (validateSessionToken(adminToken, session)) return
-      // 3. User session token (issued by /api/auth/login) — admin role required
-      const claims = userStore.verifySessionToken(session)
-      if (claims?.role === 'admin') {
-        // A must-change-password account (the seeded default admin/admin, or
-        // any account an admin just reset) must not be usable for anything
-        // gated by this hook until the password is actually changed — that
-        // update happens via /api/auth/password, which never reaches this
-        // hook (it's not an /api/admin/* route and isn't in isNetworkRoute),
-        // so it stays reachable. This is a live DB check, not something
-        // embedded in the token, so it takes effect immediately on change.
-        const user = userStore.get(claims.userId)
-        if (user?.mustChangePassword) {
-          return reply.status(403).send({ error: 'password_change_required', message: 'Default password must be changed before continuing.' })
-        }
-        return
+      const result = checkSessionAuth(session)
+      if (result.ok) return
+      if (result.reason === 'password_change_required') {
+        return reply.status(403).send({ error: 'password_change_required', message: 'Default password must be changed before continuing.' })
       }
-      console.warn(`[auth] 401 ${req.method} ${req.url} — session present but invalid (role=${claims?.role ?? 'null'}, prefix=${session.slice(0, 3)})`)
+      console.warn(`[auth] 401 ${req.method} ${req.url} — session present but invalid (prefix=${session.slice(0, 3)})`)
+    } else if (!isAdminRoute && req.method === 'GET') {
+      // EventSource can't set headers at all — a network-exposed SSE route
+      // may instead present a short-lived, single-use ticket minted via an
+      // authenticated POST just before connecting (see sse-ticket.ts).
+      const queryTicket = (req.query as Record<string, string> | undefined)?.ticket
+      const ticket = typeof queryTicket === 'string' ? queryTicket : ''
+      if (ticket && consumeTicket(ticket)) return
+      console.warn(`[auth] 401 ${req.method} ${req.url} — no session token in x-admin-session header`)
     } else {
       console.warn(`[auth] 401 ${req.method} ${req.url} — no session token in x-admin-session header`)
     }
@@ -167,7 +193,10 @@ export async function buildServer() {
   // of the two limits; each route still enforces its own size check.
   await fastify.register(multipart, { limits: { fileSize: 25 * 1024 * 1024, files: 1 } })
   await fastify.register(healthRoutes)
-  await fastify.register(wsRoutes)
+  await fastify.register(wsRoutes, {
+    isNetworkExposed,
+    validateSession: (token: string) => checkSessionAuth(token).ok,
+  })
   await fastify.register(adminRoutes)
 
   const agentRegistry = new AgentRegistry(join(config.dataDir, 'agents.db'))
