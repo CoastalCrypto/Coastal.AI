@@ -63,7 +63,9 @@ function unsubscribe(fn: Listener) {
  */
 export function useArchitectSSE(onEvent: (event: any) => void) {
   const onEventRef = useRef(onEvent)
-  onEventRef.current = onEvent
+  useEffect(() => {
+    onEventRef.current = onEvent
+  }, [onEvent])
 
   useEffect(() => {
     const handler: Listener = (event) => onEventRef.current(event)
