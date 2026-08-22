@@ -135,7 +135,7 @@ export default function App() {
   }
 
   // Force password change for default admin account before entering the app
-  if ((currentUser as any).mustChangePassword) {
+  if (currentUser.mustChangePassword) {
     return (
       <ChangePassword onDone={(updatedUser) => {
         const merged = { ...currentUser, ...updatedUser, mustChangePassword: false }

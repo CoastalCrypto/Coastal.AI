@@ -32,7 +32,7 @@ export function Models() {
       setModels(m)
       setRegistry(reg as Record<string, Record<string, string>>)
       setAgents(agentList)
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Failed to load models', e)
     }
   }, [])
