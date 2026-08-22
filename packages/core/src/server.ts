@@ -93,8 +93,22 @@ export async function buildServer() {
     // The @fastify/cors plugin replies to OPTIONS with the proper Access-Control-* headers.
     if (req.method === 'OPTIONS') return
     const isAdminRoute = req.url.startsWith('/api/admin')
-    const isNetworkRoute = req.url.startsWith('/api/chat') || req.url.startsWith('/api/upload')
-    // Only enforce auth on admin routes, and on chat/upload when server is network-exposed
+    // Routes that hand agents tool/shell execution, or expose cross-session data,
+    // are gated the same way chat/upload always were — enforced only when the
+    // server is actually reachable off localhost. On a localhost-only install
+    // these stay open (no login friction for the single local user); the moment
+    // CC_HOST exposes the server to a LAN/network, every one of these requires
+    // the same session/admin-token auth as /api/admin.
+    const isNetworkRoute = req.url.startsWith('/api/chat')
+      || req.url.startsWith('/api/upload')
+      || req.url.startsWith('/api/team')
+      || req.url.startsWith('/api/pipeline')
+      || req.url.startsWith('/api/sessions')
+      || req.url.startsWith('/api/search')
+      || req.url.startsWith('/api/persona')
+      || req.url.startsWith('/api/events')
+      || req.url.startsWith('/ws/session')
+    // Only enforce auth on admin routes, and on the routes above when server is network-exposed
     const isNetworkExposed = config.host !== '127.0.0.1' && config.host !== '::1' && config.host !== 'localhost'
     if (!isAdminRoute && !(isNetworkExposed && isNetworkRoute)) return
     if (req.url === '/api/admin/login') return
