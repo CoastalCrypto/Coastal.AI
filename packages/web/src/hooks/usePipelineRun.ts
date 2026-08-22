@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { coreHttpOrigin } from '../platform/coreOrigin'
 
+function adminHeaders(): Record<string, string> {
+  const session = sessionStorage.getItem('cc_admin_session') ?? ''
+  return session ? { 'x-admin-session': session } : {}
+}
+
 export interface LiveToolCall {
   toolName: string
   args: Record<string, unknown>
@@ -71,14 +76,14 @@ export function usePipelineRun(runId: string | null, stageCount: number) {
     if (!runId) return
     await fetch(`/api/pipeline/run/${runId}/steer`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...adminHeaders() },
       body: JSON.stringify({ message }),
     })
   }
 
   const abort = async () => {
     if (!runId) return
-    await fetch(`/api/pipeline/run/${runId}`, { method: 'DELETE' })
+    await fetch(`/api/pipeline/run/${runId}`, { method: 'DELETE', headers: adminHeaders() })
   }
 
   return { state, steer, abort }

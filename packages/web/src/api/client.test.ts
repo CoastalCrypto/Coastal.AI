@@ -104,4 +104,34 @@ describe('CoreClient admin methods', () => {
       })
     )
   })
+
+  // Regression: /api/persona is auth-gated on network-exposed servers
+  // (server.ts's isNetworkRoute). The client must send the session token
+  // or every persona read/write 401s the moment CC_HOST leaves localhost.
+  it('getPersona sends session token', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true, json: async () => ({ persona: {}, configured: true }),
+    } as Response)
+    await client.getPersona()
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/persona'),
+      expect.objectContaining({
+        headers: expect.objectContaining({ 'x-admin-session': SESSION_TOKEN }),
+      })
+    )
+  })
+
+  it('setPersona sends session token', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true, json: async () => ({ persona: {}, configured: true }),
+    } as Response)
+    await client.setPersona({ agentName: 'Max' })
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/persona'),
+      expect.objectContaining({
+        method: 'PUT',
+        headers: expect.objectContaining({ 'x-admin-session': SESSION_TOKEN }),
+      })
+    )
+  })
 })
