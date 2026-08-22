@@ -17,6 +17,10 @@ const PERSONALITY_TEXT: Record<string, string> = {
   analytical: 'Analytical and precise. Cite sources. State uncertainty explicitly. Structure responses with headers and bullet points.',
 }
 
+function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e)
+}
+
 function detectPreset(personality: string): string {
   for (const [id, text] of Object.entries(PERSONALITY_TEXT)) {
     if (personality === text) return id
@@ -64,9 +68,9 @@ export function Settings({ onNav: _onNav }: { onNav: (page: NavPage) => void }) 
       await coreClient.setTrustLevel(next)
       setTrustSaved(true)
       setTimeout(() => setTrustSaved(false), 3000)
-    } catch (e: any) {
+    } catch (e: unknown) {
       setTrustLevel(previous)
-      setError(`Failed to update trust level: ${e.message ?? 'unknown error'}`)
+      setError(`Failed to update trust level: ${errorMessage(e) || 'unknown error'}`)
     } finally {
       setTrustSaving(false)
     }
@@ -77,8 +81,8 @@ export function Settings({ onNav: _onNav }: { onNav: (page: NavPage) => void }) 
     try {
       await coreClient.restartServer()
       setTimeout(() => window.location.reload(), 5000)
-    } catch (e: any) {
-      setError(`Failed to restart server: ${e.message ?? 'unknown error'}`)
+    } catch (e: unknown) {
+      setError(`Failed to restart server: ${errorMessage(e) || 'unknown error'}`)
       setRestarting(false)
     }
   }

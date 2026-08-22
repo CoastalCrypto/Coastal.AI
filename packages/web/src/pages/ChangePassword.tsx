@@ -1,8 +1,12 @@
 import { useState } from 'react'
-import { coreClient } from '../api/client'
+import { coreClient, type UserAccount } from '../api/client'
 
 interface Props {
-  onDone: (updatedUser: any) => void
+  onDone: (updatedUser: UserAccount) => void
+}
+
+function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e)
 }
 
 export function ChangePassword({ onDone }: Props) {
@@ -24,8 +28,8 @@ export function ChangePassword({ onDone }: Props) {
     try {
       const { user } = await coreClient.changePassword(current, next)
       onDone(user)
-    } catch (e: any) {
-      setError(e.message ?? 'Password change failed')
+    } catch (e: unknown) {
+      setError(errorMessage(e) || 'Password change failed')
     } finally {
       setLoading(false)
     }

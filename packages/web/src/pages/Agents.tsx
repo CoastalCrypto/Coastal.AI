@@ -19,6 +19,10 @@ function adminHeaders(): Record<string, string> {
   return session ? { 'x-admin-session': session } : {}
 }
 
+function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e)
+}
+
 const PANEL_STYLE = {
   background: 'rgba(13,31,51,0.80)',
   border: '1px solid rgba(0,229,255,0.20)',
@@ -242,8 +246,8 @@ export function Agents({ onNav: _onNav }: { onNav: (page: NavPage) => void }) {
       if (res.status === 401) { setLoadError('Session expired — please log out and sign in again'); return }
       if (!res.ok) { setLoadError(`Failed to load agents (HTTP ${res.status})`); return }
       setAgents(await res.json())
-    } catch (err: any) {
-      setLoadError(err?.message ?? 'Network error — is the server running?')
+    } catch (err: unknown) {
+      setLoadError(errorMessage(err) || 'Network error — is the server running?')
     }
   }
 
@@ -278,8 +282,8 @@ export function Agents({ onNav: _onNav }: { onNav: (page: NavPage) => void }) {
       setEditSoul('')
       setAdding(false)
       load()
-    } catch (e: any) {
-      alert(`Failed to save agent: ${e.message}`)
+    } catch (e: unknown) {
+      alert(`Failed to save agent: ${errorMessage(e)}`)
     }
   }
 
@@ -292,8 +296,8 @@ export function Agents({ onNav: _onNav }: { onNav: (page: NavPage) => void }) {
       })
       if (!res.ok) throw new Error(`Server returned ${res.status}`)
       load()
-    } catch (e: any) {
-      alert(`Failed to delete agent: ${e.message}`)
+    } catch (e: unknown) {
+      alert(`Failed to delete agent: ${errorMessage(e)}`)
     }
   }
 

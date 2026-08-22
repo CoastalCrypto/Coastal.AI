@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { coreClient } from '../../api/client'
+import { coreClient, type WorkItem } from '../../api/client'
 import { statusLabel } from '../../utils/architect-labels'
 import { relativeTime } from '../../utils/relative-time'
 import { useArchitectSSE } from '../../hooks/useArchitectSSE'
@@ -14,8 +14,12 @@ const STATUS_COLORS: Record<string, string> = {
   paused:         'text-gray-400 bg-gray-400/10',
 }
 
+function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e)
+}
+
 export function QueueTab() {
-  const [items, setItems] = useState<any[]>([])
+  const [items, setItems] = useState<WorkItem[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [title, setTitle] = useState('')
@@ -29,7 +33,7 @@ export function QueueTab() {
   const load = useCallback(() => {
     coreClient.architectWorkItems('all')
       .then(setItems)
-      .catch((e: any) => setError(e.message))
+      .catch((e: unknown) => setError(errorMessage(e)))
       .finally(() => setLoading(false))
   }, [])
 
@@ -44,7 +48,7 @@ export function QueueTab() {
     try {
       await coreClient.architectCreateWorkItem({ title: title.trim(), body: body.trim() || undefined })
       setTitle(''); setBody(''); setCreating(false); load()
-    } catch (e: any) { setError(e.message) }
+    } catch (e: unknown) { setError(errorMessage(e)) }
     finally { setSaving(false) }
   }
 
@@ -53,7 +57,7 @@ export function QueueTab() {
       const statusMap: Record<string, string> = { pause: 'paused', resume: 'pending', cancel: 'cancelled' }
       await coreClient.architectPatchWorkItem(id, { status: statusMap[action] })
       load()
-    } catch (e: any) { setError(e.message) }
+    } catch (e: unknown) { setError(errorMessage(e)) }
   }
 
   if (loading) return <div className="animate-pulse font-mono text-xs text-cyan-400/60">loading missions...</div>
@@ -162,7 +166,7 @@ export function QueueTab() {
               {expanded === item.id && (
                 <div className="p-4 rounded-b-lg animate-slide-up" style={{ background: '#112240', borderTop: 'none' }}>
                   {item.body && <div className="mb-3"><span className="text-[10px] font-mono text-cyan-400/60">DETAILS</span><p className="text-xs mt-1 whitespace-pre-wrap" style={{ color: '#94adc4' }}>{item.body}</p></div>}
-                  {item.targetHints?.length > 0 && <div className="mb-3"><span className="text-[10px] font-mono text-cyan-400/60">TARGET FILES</span><p className="text-xs mt-1 font-mono" style={{ color: '#94adc4' }}>{item.targetHints.join(', ')}</p></div>}
+                  {item.targetHints && item.targetHints.length > 0 && <div className="mb-3"><span className="text-[10px] font-mono text-cyan-400/60">TARGET FILES</span><p className="text-xs mt-1 font-mono" style={{ color: '#94adc4' }}>{item.targetHints.join(', ')}</p></div>}
                   <div className="flex gap-4 flex-wrap">
                     <span className="text-[10px] font-mono" style={{ color: '#4a6a8a' }}>budget: {item.budgetIters} iters / {item.budgetLoc} LOC</span>
                     <span className="text-[10px] font-mono" style={{ color: '#4a6a8a' }}>approval: {item.approvalPolicy}</span>

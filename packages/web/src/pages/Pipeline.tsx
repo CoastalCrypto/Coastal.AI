@@ -22,6 +22,21 @@ interface Stage {
   loopBack?: { toStageIdx: number; condition: string; maxIterations: number }
 }
 
+interface SavedPipeline {
+  id: string
+  name: string
+  stages: Array<{ agentId: string; type: string; loopBack?: Stage['loopBack'] }>
+}
+
+interface RecentRun {
+  runId: string
+  status: string
+  totalDurationMs?: number
+  startedAt: number
+  pipelineName: string
+  stageCount: number
+}
+
 function uid() { return Math.random().toString(36).slice(2) }
 
 export function Pipeline({ onNav }: { onNav: (p: NavPage) => void }) {
@@ -38,9 +53,9 @@ export function Pipeline({ onNav }: { onNav: (p: NavPage) => void }) {
   const [activeRunId, setActiveRunId] = useState<string | null>(null)
   const [activeStageCount, setActiveStageCount] = useState(0)
   const [pipelineName, setPipelineName] = useState('')
-  const [savedPipelines, setSavedPipelines] = useState<any[]>([])
+  const [savedPipelines, setSavedPipelines] = useState<SavedPipeline[]>([])
   const [showLibrary, setShowLibrary] = useState(false)
-  const [recentRuns, setRecentRuns] = useState<any[]>([])
+  const [recentRuns, setRecentRuns] = useState<RecentRun[]>([])
   const [showRuns, setShowRuns] = useState(false)
 
   useEffect(() => {
@@ -144,9 +159,9 @@ export function Pipeline({ onNav }: { onNav: (p: NavPage) => void }) {
     }
   }
 
-  const loadPipeline = (p: any) => {
+  const loadPipeline = (p: SavedPipeline) => {
     setPipelineName(p.name)
-    setStages((p.stages as any[]).map(s => ({ id: uid(), agentId: s.agentId, loopBack: s.loopBack })))
+    setStages(p.stages.map(s => ({ id: uid(), agentId: s.agentId, loopBack: s.loopBack })))
     setShowLibrary(false)
   }
 
@@ -256,7 +271,7 @@ export function Pipeline({ onNav }: { onNav: (p: NavPage) => void }) {
             {recentRuns.length === 0 && (
               <p style={{ fontSize: '12px', color: '#475569' }}>No runs yet. Start a pipeline to see history here.</p>
             )}
-            {recentRuns.map((r: any) => {
+            {recentRuns.map((r) => {
               const statusColor = r.status === 'done' ? '#10b981' : r.status === 'error' ? '#ff5252' : r.status === 'aborted' ? '#ffb300' : '#00e5ff'
               const durationLabel = r.totalDurationMs != null ? `${(r.totalDurationMs / 1000).toFixed(1)}s` : null
               const timeLabel = new Date(r.startedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })

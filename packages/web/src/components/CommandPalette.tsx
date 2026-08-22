@@ -18,6 +18,7 @@ interface Props {
 export function CommandPalette({ onNav, onClose }: Props) {
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState(0)
+  const [selectedResetForQuery, setSelectedResetForQuery] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
@@ -51,7 +52,12 @@ export function CommandPalette({ onNav, onClose }: Props) {
           || (c.keywords ?? []).some(k => k.includes(q))
       })
 
-  useEffect(() => { setSelected(0) }, [query])
+  // Reset the highlighted row whenever the query changes — derived from
+  // props/state during render rather than in an effect.
+  if (query !== selectedResetForQuery) {
+    setSelectedResetForQuery(query)
+    setSelected(0)
+  }
 
   useEffect(() => {
     inputRef.current?.focus()

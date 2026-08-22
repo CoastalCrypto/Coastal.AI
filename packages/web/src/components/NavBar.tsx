@@ -22,6 +22,10 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'architect', label: 'Architect', icon: '🏗', adminOnly: true },
 ]
 
+interface CoastalShell {
+  onUpdateAvailable?: (cb: (info: { version: string }) => void) => void
+}
+
 interface NavBarProps {
   page: NavPage
   onNav: (page: NavPage) => void
@@ -57,7 +61,7 @@ function useUpdateBanner() {
 
   // Also listen for Electron update notification
   useEffect(() => {
-    const shell = (window as any).coastalShell
+    const shell = (window as unknown as { coastalShell?: CoastalShell }).coastalShell
     shell?.onUpdateAvailable?.((info: { version: string }) => {
       setBanner(`Desktop update v${info.version} ready — restart to install`)
     })

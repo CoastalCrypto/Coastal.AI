@@ -44,6 +44,10 @@ const CHANNEL_META: Record<ChannelType, { label: string; icon: string; color: st
 
 interface Field { key: string; label: string; placeholder: string; secret?: boolean }
 
+function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e)
+}
+
 const TYPES = Object.keys(CHANNEL_META) as ChannelType[]
 
 function TypeBadge({ type }: { type: ChannelType }) {
@@ -134,7 +138,7 @@ export function Channels({ onNav: _onNav }: { onNav: (page: NavPage) => void }) 
         await coreClient.createChannel({ type: formType, name: formName, config: formConfig })
       }
       closeForm(); load()
-    } catch (e: any) { setError(e.message) }
+    } catch (e: unknown) { setError(errorMessage(e)) }
     finally { setSaving(false) }
   }
 
@@ -152,8 +156,8 @@ export function Channels({ onNav: _onNav }: { onNav: (page: NavPage) => void }) 
     try {
       const r = await coreClient.testChannel(id, testMsg || undefined)
       setTestResult(prev => ({ ...prev, [id]: r }))
-    } catch (e: any) {
-      setTestResult(prev => ({ ...prev, [id]: { success: false, error: e.message } }))
+    } catch (e: unknown) {
+      setTestResult(prev => ({ ...prev, [id]: { success: false, error: errorMessage(e) } }))
     } finally { setTestingId(null) }
   }
 
@@ -162,10 +166,10 @@ export function Channels({ onNav: _onNav }: { onNav: (page: NavPage) => void }) 
     setBroadcasting(true); setBroadcastResult('')
     try {
       const results = await coreClient.broadcastChannels(broadcastMsg)
-      const ok  = results.filter((r: any) => r.success).length
-      const fail = results.filter((r: any) => !r.success).length
+      const ok  = results.filter((r) => r.success).length
+      const fail = results.filter((r) => !r.success).length
       setBroadcastResult(`Sent to ${ok} channel${ok !== 1 ? 's' : ''}${fail ? `, ${fail} failed` : ''}`)
-    } catch (e: any) { setBroadcastResult(`Error: ${e.message}`) }
+    } catch (e: unknown) { setBroadcastResult(`Error: ${errorMessage(e)}`) }
     finally { setBroadcasting(false) }
   }
 

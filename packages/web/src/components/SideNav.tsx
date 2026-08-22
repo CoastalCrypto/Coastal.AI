@@ -24,7 +24,7 @@ export function SideNav({ page, onNav }: { page: NavPage; onNav: (page: NavPage)
   const [open, setOpen] = useState(false)
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768)
   const [updateAvailable, setUpdateAvailable] = useState(false)
-  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [userEmail] = useState<string | null>(() => localStorage.getItem('userEmail') || 'admin@coastal.ai')
 
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 768)
@@ -34,11 +34,6 @@ export function SideNav({ page, onNav }: { page: NavPage; onNav: (page: NavPage)
 
   useEffect(() => {
     coreClient.checkForUpdate().then(({ updateAvailable: avail }) => setUpdateAvailable(avail)).catch(() => {})
-  }, [])
-
-  useEffect(() => {
-    const email = localStorage.getItem('userEmail') || 'admin@coastal.ai'
-    setUserEmail(email)
   }, [])
 
   const handleNavClick = (id: NavPage) => {

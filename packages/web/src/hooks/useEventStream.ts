@@ -24,6 +24,7 @@ export function useEventStream(maxEvents = 100) {
   const [connected, setConnected] = useState(false)
   const esRef = useRef<EventSource | null>(null)
   const reconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const connectRef = useRef<() => void>(() => {})
 
   const connect = useCallback(() => {
     if (esRef.current) esRef.current.close()
@@ -48,9 +49,13 @@ export function useEventStream(maxEvents = 100) {
       setConnected(false)
       es.close()
       // Reconnect after 3s — store timeout so cleanup can cancel it
-      reconnectRef.current = setTimeout(connect, 3000)
+      reconnectRef.current = setTimeout(() => connectRef.current(), 3000)
     }
   }, [maxEvents])
+
+  useEffect(() => {
+    connectRef.current = connect
+  }, [connect])
 
   useEffect(() => {
     connect()

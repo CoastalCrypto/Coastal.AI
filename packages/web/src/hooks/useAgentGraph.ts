@@ -88,6 +88,7 @@ export function useAgentGraph() {
   const reactionCleanupRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const connectRef = useRef<() => void>(() => {})
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return
@@ -154,11 +155,15 @@ export function useAgentGraph() {
       } else if (e.code !== 1000) {
         console.warn(`[AgentGraph] WebSocket closed: code=${e.code} reason=${e.reason || '(none)'}`)
       }
-      reconnectRef.current = setTimeout(connect, 3000)
+      reconnectRef.current = setTimeout(() => connectRef.current(), 3000)
     }
 
     ws.onerror = () => ws.close()
   }, [])
+
+  useEffect(() => {
+    connectRef.current = connect
+  }, [connect])
 
   useEffect(() => {
     connect()

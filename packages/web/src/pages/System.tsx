@@ -29,6 +29,10 @@ function StatCard({ label, children }: { label: string; children: React.ReactNod
   )
 }
 
+function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e)
+}
+
 function fmtUptime(s: number): string {
   const h = Math.floor(s / 3600)
   const m = Math.floor((s % 3600) / 60)
@@ -112,7 +116,7 @@ export function System({ onNav: _onNav }: { onNav: (page: NavPage) => void }) {
     try {
       await coreClient.architectSetPower(!architectPower ? 'on' : 'off')
       setArchitectPower(!architectPower)
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Failed to toggle architect power:', e)
     } finally {
       setArchitectLoading(false)
@@ -129,8 +133,8 @@ export function System({ onNav: _onNav }: { onNav: (page: NavPage) => void }) {
     try {
       const { message } = await coreClient.triggerUpdate()
       setUpdateMsg(message)
-    } catch (e: any) {
-      setUpdateMsg(`Error: ${e.message}`)
+    } catch (e: unknown) {
+      setUpdateMsg(`Error: ${errorMessage(e)}`)
     } finally {
       setUpdating(false)
     }

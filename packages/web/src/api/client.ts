@@ -219,6 +219,160 @@ export interface NoteCreateInput {
 
 export type NotePatchInput = Partial<Omit<NoteCreateInput, 'id'>>
 
+// ── Architect: work items / cycles ──────────────────────────────────────────
+// Mirrors packages/core/src/architect/types.ts — keep in sync.
+export type WorkItemStatus = 'pending' | 'active' | 'awaiting_human' | 'merged' | 'cancelled' | 'error' | 'paused'
+export type CycleStage = 'planning' | 'plan_review' | 'building' | 'pr_review' | 'done' | 'cancelled'
+export type CycleOutcome = 'merged' | 'built' | 'failed' | 'vetoed' | 'error' | 'revised'
+export type ArchitectApprovalPolicy = 'full' | 'plan-only' | 'pr-only' | 'none'
+export type WorkItemPriority = 'high' | 'normal' | 'low'
+export type WorkItemSource = 'ui' | 'markdown' | 'skill_md' | 'github' | 'skill_gap' | 'curriculum'
+export type FailureKind =
+  | 'parse' | 'apply' | 'locked' | 'budget' | 'lint' | 'type' | 'build' | 'test' | 'eval'
+  | 'env_branch' | 'env_gh' | 'env_push' | 'env_perm' | 'env_db' | 'env_llm'
+
+export interface WorkItem {
+  id: string
+  source: WorkItemSource
+  sourceRef: string | null
+  title: string
+  body: string
+  targetHints: string[] | null
+  acceptance: string | null
+  budgetLoc: number
+  budgetIters: number
+  approvalPolicy: ArchitectApprovalPolicy
+  reviewTimeoutMin: number
+  onTimeout: 'revise' | 'reject' | 'auto_approve'
+  priority: WorkItemPriority
+  status: WorkItemStatus
+  pausedReason: string | null
+  pausedAt: number | null
+  resumable: boolean
+  recurrenceCount: number
+  escalatedAt: number | null
+  allowSelfModify: boolean
+  createdByUserId: string | null
+  dedupSignature: string | null
+  createdAt: number
+  updatedAt: number
+}
+
+export interface Cycle {
+  id: string
+  workItemId: string | null
+  kind: 'normal' | 'curriculum_scan'
+  iteration: number
+  stage: CycleStage
+  planText: string | null
+  diffText: string | null
+  branchName: string | null
+  prUrl: string | null
+  testSummary: string | null
+  modelUsed: string | null
+  failureKind: FailureKind | null
+  reviseContext: Record<string, unknown> | null
+  durationMs: number | null
+  outcome: CycleOutcome | null
+  errorMessage: string | null
+  createdAt: number
+  updatedAt: number
+}
+
+export interface ArchitectInsights {
+  successRate: number
+  avgIterations: number
+  totalDurationMs: number
+  topFailureKind: string | null
+  openQueueDepth: number
+  errorCount: number
+}
+
+export interface ArchitectReceipt {
+  cycleId: string
+  workItemId: string | null
+  prUrl: string | null
+  branchName: string | null
+  planText: string | null
+  testSummary: string | null
+  modelUsed: string | null
+  iteration: number
+  mergedAt: number
+}
+
+export interface ArchitectReceipts {
+  release: string
+  prs: ArchitectReceipt[]
+  totals: { prsMerged: number }
+}
+
+// ── Custom tools ─────────────────────────────────────────────────────────────
+// Mirrors packages/core/src/tools/custom/loader.ts's CustomToolRecord.
+export interface CustomToolRecord {
+  id: string
+  name: string
+  description: string
+  parameters: string
+  implBody: string
+  enabled: number
+  createdAt: number
+  updatedAt: number
+}
+
+// ── Channels ─────────────────────────────────────────────────────────────────
+// Mirrors packages/core/src/channels/types.ts's ChannelRecord.
+export type ChannelType = 'telegram' | 'discord' | 'slack' | 'zapier'
+export interface ChannelRecord {
+  id: string
+  type: ChannelType
+  name: string
+  config: string
+  enabled: number
+  createdAt: number
+  updatedAt: number
+}
+export interface ChannelBroadcastResult {
+  id: string
+  name: string
+  success: boolean
+  error?: string
+}
+
+// ── Analytics ────────────────────────────────────────────────────────────────
+// Mirrors packages/core/src/analytics/store.ts.
+export interface ToolStat {
+  toolName: string
+  callCount: number
+  avgDurationMs: number
+  successRate: number
+}
+export interface DayStat {
+  date: string
+  calls: number
+  sessions: number
+}
+export interface AnalyticsSnapshot {
+  totalToolCalls: number
+  totalSessions: number
+  avgDurationMs: number
+  overallSuccessRate: number
+  topTools: ToolStat[]
+  last7Days: DayStat[]
+  decisionBreakdown: Record<string, number>
+}
+
+// ── Users ────────────────────────────────────────────────────────────────────
+// Mirrors packages/core/src/users/store.ts's UserRecord.
+export type UserRole = 'admin' | 'operator' | 'viewer'
+export interface UserAccount {
+  id: string
+  username: string
+  role: UserRole
+  mustChangePassword: boolean
+  createdAt: number
+  updatedAt: number
+}
+
 export class CoreClient {
   private baseUrl: string
   private sessionToken: string | undefined
@@ -489,19 +643,19 @@ export class CoreClient {
     }
   }
 
-  async getAnalytics(): Promise<any> {
+  async getAnalytics(): Promise<AnalyticsSnapshot> {
     const res = await fetch(`${this.baseUrl}/api/analytics`)
     if (!res.ok) throw new Error(`Analytics failed (${res.status})`)
     return res.json()
   }
 
-  async listTools(): Promise<any[]> {
+  async listTools(): Promise<CustomToolRecord[]> {
     const res = await fetch(`${this.baseUrl}/api/admin/tools`, { headers: this.adminHeaders() })
     if (!res.ok) throw new Error(`List tools failed (${res.status})`)
     return res.json()
   }
 
-  async createTool(data: { name: string; description: string; parameters: string; implBody: string }): Promise<any> {
+  async createTool(data: { name: string; description: string; parameters: string; implBody: string }): Promise<CustomToolRecord> {
     const res = await fetch(`${this.baseUrl}/api/admin/tools`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...this.adminHeaders() },
@@ -511,7 +665,7 @@ export class CoreClient {
     return res.json()
   }
 
-  async updateTool(id: string, data: Partial<{ name: string; description: string; parameters: string; implBody: string; enabled: boolean }>): Promise<any> {
+  async updateTool(id: string, data: Partial<{ name: string; description: string; parameters: string; implBody: string; enabled: boolean }>): Promise<CustomToolRecord> {
     const res = await fetch(`${this.baseUrl}/api/admin/tools/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...this.adminHeaders() },
@@ -543,13 +697,13 @@ export class CoreClient {
     return res.json()
   }
 
-  async listChannels(): Promise<any[]> {
+  async listChannels(): Promise<ChannelRecord[]> {
     const res = await fetch(`${this.baseUrl}/api/admin/channels`, { headers: this.adminHeaders() })
     if (!res.ok) throw new Error(`List channels failed (${res.status})`)
     return res.json()
   }
 
-  async createChannel(data: { type: string; name: string; config: Record<string, string> }): Promise<any> {
+  async createChannel(data: { type: string; name: string; config: Record<string, string> }): Promise<ChannelRecord> {
     const res = await fetch(`${this.baseUrl}/api/admin/channels`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...this.adminHeaders() },
@@ -559,7 +713,7 @@ export class CoreClient {
     return res.json()
   }
 
-  async updateChannel(id: string, data: Partial<{ name: string; config: Record<string, string>; enabled: boolean }>): Promise<any> {
+  async updateChannel(id: string, data: Partial<{ name: string; config: Record<string, string>; enabled: boolean }>): Promise<ChannelRecord> {
     const res = await fetch(`${this.baseUrl}/api/admin/channels/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...this.adminHeaders() },
@@ -591,7 +745,7 @@ export class CoreClient {
     return res.json()
   }
 
-  async broadcastChannels(message: string): Promise<any[]> {
+  async broadcastChannels(message: string): Promise<ChannelBroadcastResult[]> {
     const res = await fetch(`${this.baseUrl}/api/admin/channels/broadcast`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...this.adminHeaders() },
@@ -610,14 +764,14 @@ export class CoreClient {
     return res.json()
   }
 
-  async architectWorkItems(status = 'all'): Promise<any[]> {
+  async architectWorkItems(status = 'all'): Promise<WorkItem[]> {
     const res = await fetch(`${this.baseUrl}/api/admin/architect/work-items?status=${status}`, { headers: this.adminHeaders() })
     this.checkAuth(res)
     if (!res.ok) throw new Error(`Failed to list work items (${res.status})`)
     return res.json()
   }
 
-  async architectCreateWorkItem(data: { title: string; body?: string }): Promise<any> {
+  async architectCreateWorkItem(data: { title: string; body?: string }): Promise<WorkItem> {
     const res = await fetch(`${this.baseUrl}/api/admin/architect/work-items`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...this.adminHeaders() },
@@ -628,7 +782,7 @@ export class CoreClient {
     return res.json()
   }
 
-  async architectPatchWorkItem(id: string, data: Record<string, unknown>): Promise<any> {
+  async architectPatchWorkItem(id: string, data: Record<string, unknown>): Promise<WorkItem> {
     const res = await fetch(`${this.baseUrl}/api/admin/architect/work-items/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...this.adminHeaders() },
@@ -639,21 +793,21 @@ export class CoreClient {
     return res.json()
   }
 
-  async architectActivity(limit = 50): Promise<any[]> {
+  async architectActivity(limit = 50): Promise<Cycle[]> {
     const res = await fetch(`${this.baseUrl}/api/admin/architect/activity?limit=${limit}`, { headers: this.adminHeaders() })
     this.checkAuth(res)
     if (!res.ok) throw new Error(`Activity failed (${res.status})`)
     return res.json()
   }
 
-  async architectCycle(id: string): Promise<any> {
+  async architectCycle(id: string): Promise<Cycle> {
     const res = await fetch(`${this.baseUrl}/api/admin/architect/cycles/${id}`, { headers: this.adminHeaders() })
     this.checkAuth(res)
     if (!res.ok) throw new Error(`Cycle not found (${res.status})`)
     return res.json()
   }
 
-  async architectApproval(cycleId: string, data: { gate: string; decision: string; comment?: string }): Promise<any> {
+  async architectApproval(cycleId: string, data: { gate: string; decision: string; comment?: string }): Promise<{ ok: true }> {
     const res = await fetch(`${this.baseUrl}/api/admin/architect/cycles/${cycleId}/approval`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...this.adminHeaders() },
@@ -664,7 +818,7 @@ export class CoreClient {
     return res.json()
   }
 
-  async architectSetPower(state: 'on' | 'off'): Promise<any> {
+  async architectSetPower(state: 'on' | 'off'): Promise<{ ok: true; power: 'on' | 'off' }> {
     const res = await fetch(`${this.baseUrl}/api/admin/architect/power`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...this.adminHeaders() },
@@ -675,7 +829,7 @@ export class CoreClient {
     return res.json()
   }
 
-  async architectSetMode(mode: string): Promise<any> {
+  async architectSetMode(mode: string): Promise<{ ok: true; mode: string }> {
     const res = await fetch(`${this.baseUrl}/api/admin/architect/mode`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...this.adminHeaders() },
@@ -686,7 +840,7 @@ export class CoreClient {
     return res.json()
   }
 
-  async architectRunNow(): Promise<any> {
+  async architectRunNow(): Promise<{ ok: true; message: string }> {
     const res = await fetch(`${this.baseUrl}/api/admin/architect/run-now`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...this.adminHeaders() },
@@ -697,14 +851,14 @@ export class CoreClient {
     return res.json()
   }
 
-  async architectInsights(range = 30): Promise<any> {
+  async architectInsights(range = 30): Promise<ArchitectInsights> {
     const res = await fetch(`${this.baseUrl}/api/admin/architect/insights?range=${range}`, { headers: this.adminHeaders() })
     this.checkAuth(res)
     if (!res.ok) throw new Error(`Insights failed (${res.status})`)
     return res.json()
   }
 
-  async architectReceipts(): Promise<any> {
+  async architectReceipts(): Promise<ArchitectReceipts> {
     const res = await fetch(`${this.baseUrl}/api/admin/architect/receipts`, { headers: this.adminHeaders() })
     this.checkAuth(res)
     if (!res.ok) throw new Error(`Receipts failed (${res.status})`)
@@ -842,7 +996,7 @@ export class CoreClient {
     return res.json()
   }
 
-  async setupFirstUser(username: string, password: string): Promise<{ sessionToken: string; user: any }> {
+  async setupFirstUser(username: string, password: string): Promise<{ sessionToken: string; user: UserAccount }> {
     const res = await fetch(`${this.baseUrl}/api/auth/setup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -852,7 +1006,7 @@ export class CoreClient {
     return res.json()
   }
 
-  async loginUser(username: string, password: string): Promise<{ sessionToken: string; user: any }> {
+  async loginUser(username: string, password: string): Promise<{ sessionToken: string; user: UserAccount }> {
     const res = await fetch(`${this.baseUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -862,13 +1016,13 @@ export class CoreClient {
     return res.json()
   }
 
-  async getMe(): Promise<{ user: any }> {
+  async getMe(): Promise<{ user: UserAccount }> {
     const res = await fetch(`${this.baseUrl}/api/auth/me`, { headers: this.adminHeaders() })
     if (!res.ok) throw new Error('Not authenticated')
     return res.json()
   }
 
-  async changePassword(currentPassword: string, newPassword: string): Promise<{ user: any }> {
+  async changePassword(currentPassword: string, newPassword: string): Promise<{ user: UserAccount }> {
     const res = await fetch(`${this.baseUrl}/api/auth/password`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...this.adminHeaders() },
@@ -944,13 +1098,13 @@ export class CoreClient {
     return res.json()
   }
 
-  async listUsers(): Promise<any[]> {
+  async listUsers(): Promise<UserAccount[]> {
     const res = await fetch(`${this.baseUrl}/api/admin/users`, { headers: this.adminHeaders() })
     if (!res.ok) throw new Error(`List users failed (${res.status})`)
     return res.json()
   }
 
-  async createUser(username: string, password: string, role: string): Promise<any> {
+  async createUser(username: string, password: string, role: string): Promise<UserAccount> {
     const res = await fetch(`${this.baseUrl}/api/admin/users`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...this.adminHeaders() },
@@ -960,7 +1114,7 @@ export class CoreClient {
     return res.json()
   }
 
-  async updateUser(id: string, data: { role?: string; password?: string; username?: string }): Promise<any> {
+  async updateUser(id: string, data: { role?: string; password?: string; username?: string }): Promise<UserAccount> {
     const res = await fetch(`${this.baseUrl}/api/admin/users/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...this.adminHeaders() },
