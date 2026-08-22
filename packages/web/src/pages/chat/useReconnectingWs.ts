@@ -5,6 +5,7 @@ export function useReconnectingWs<T>(url: string, onMessage: (data: T) => void) 
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const delayRef = useRef(1000)
   const onMessageRef = useRef(onMessage)
+  const connectRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     onMessageRef.current = onMessage
@@ -20,11 +21,15 @@ export function useReconnectingWs<T>(url: string, onMessage: (data: T) => void) 
     ws.onclose = () => {
       timerRef.current = setTimeout(() => {
         delayRef.current = Math.min(delayRef.current * 2, 30_000)
-        connect()
+        connectRef.current()
       }, delayRef.current)
     }
     ws.onerror = () => ws.close()
   }, [url])
+
+  useEffect(() => {
+    connectRef.current = connect
+  }, [connect])
 
   useEffect(() => {
     connect()

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 interface Step {
   id: string
@@ -41,11 +41,7 @@ export function InstallerWizard({ onComplete }: { onComplete: () => void }) {
     })
   }, [])
 
-  useEffect(() => {
-    runChecks()
-  }, [])
-
-  const runChecks = async () => {
+  const runChecks = useCallback(async () => {
     setPhase('checking')
     updateStep('node', { status: 'running' })
     try {
@@ -56,7 +52,11 @@ export function InstallerWizard({ onComplete }: { onComplete: () => void }) {
     } catch {
       setPhase('error')
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    void (async () => { await runChecks() })()
+  }, [runChecks])
 
   const pullModel = async () => {
     setPhase('pulling')

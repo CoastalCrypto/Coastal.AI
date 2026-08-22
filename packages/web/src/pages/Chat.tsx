@@ -114,6 +114,11 @@ export function Chat({ sessionId: initialSessionId, onNav: _onNav }: { sessionId
   }, [agentList.length])
 
 
+  const agentListLengthRef = useRef(0)
+  useEffect(() => {
+    agentListLengthRef.current = agentList.length
+  }, [agentList.length])
+
   useEffect(() => {
     const loadAgents = () =>
       coreClient.listAgents()
@@ -124,7 +129,7 @@ export function Chat({ sessionId: initialSessionId, onNav: _onNav }: { sessionId
         .catch(() => setAgentListError(true))
     loadAgents()
     const retryTimer = setTimeout(() => {
-      if (agentList.length === 0) loadAgents()
+      if (agentListLengthRef.current === 0) loadAgents()
     }, 2000)
     return () => clearTimeout(retryTimer)
   }, [])

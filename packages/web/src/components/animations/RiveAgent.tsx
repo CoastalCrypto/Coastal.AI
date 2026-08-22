@@ -66,9 +66,13 @@ export function RiveAgent({
   const speakingInput = useStateMachineInput(rive, 'AgentController', 'isSpeaking')
 
   useEffect(() => {
+    // Rive's StateMachineInput API is a mutable binding — assigning .value
+    // is how you drive the state machine, not a React-owned value.
+    // eslint-disable-next-line react-hooks/immutability
     if (thinkingInput) thinkingInput.value = isThinking
   }, [thinkingInput, isThinking])
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/immutability
     if (speakingInput) speakingInput.value = isSpeaking
   }, [speakingInput, isSpeaking])
 

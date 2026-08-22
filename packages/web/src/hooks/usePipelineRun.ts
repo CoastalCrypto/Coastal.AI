@@ -33,11 +33,14 @@ export interface PipelineRunState {
 
 export function usePipelineRun(runId: string | null, stageCount: number) {
   const [state, setState] = useState<PipelineRunState | null>(null)
+  const [initializedRunId, setInitializedRunId] = useState<string | null>(null)
   const esRef = useRef<EventSource | null>(null)
 
-  useEffect(() => {
-    if (!runId) return
-    setState({
+  // Reset run state as soon as the run identity changes, rather than in an
+  // effect — this is state derived from props, not a side effect.
+  if (runId !== initializedRunId) {
+    setInitializedRunId(runId)
+    setState(runId ? {
       runId,
       status: 'running',
       stageCount,
@@ -46,7 +49,11 @@ export function usePipelineRun(runId: string | null, stageCount: number) {
         stageIdx: i, agentId: '', agentName: `Stage ${i + 1}`,
         status: 'waiting', toolCalls: [], steerMessages: [], iteration: 0,
       })),
-    })
+    } : null)
+  }
+
+  useEffect(() => {
+    if (!runId) return
 
     const es = new EventSource(`${coreHttpOrigin()}/api/pipeline/run/${runId}/events`)
     esRef.current = es

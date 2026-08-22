@@ -29,7 +29,7 @@ export function useAgentMemory() {
 
   useEffect(() => {
     cancelledRef.current = false
-    load()
+    void (async () => { await load() })()
     intervalRef.current = setInterval(load, POLL_INTERVAL_MS)
 
     return () => {
