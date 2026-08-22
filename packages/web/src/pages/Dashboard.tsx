@@ -87,6 +87,10 @@ function adminHeaders(): Record<string, string> {
   return session ? { 'x-admin-session': session } : {}
 }
 
+function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e)
+}
+
 const EMPTY_FORM = { name: '', schedule: '0 9 * * 1-5', task: '', agentId: 'general' }
 
 function CronSection() {
@@ -101,8 +105,8 @@ function CronSection() {
     try {
       const res = await fetch('/api/admin/crons', { headers: adminHeaders(), signal })
       if (res.ok) setJobs(await res.json())
-    } catch (e: any) {
-      if (e?.name !== 'AbortError') console.warn('[Dashboard] Failed to load cron jobs:', e)
+    } catch (e: unknown) {
+      if (!(e instanceof DOMException && e.name === 'AbortError')) console.warn('[Dashboard] Failed to load cron jobs:', e)
     }
   }
 
@@ -139,8 +143,8 @@ function CronSection() {
       if (!res.ok) throw new Error(`Server returned ${res.status}`)
       cancel()
       load()
-    } catch (e: any) {
-      alert(`Failed to save cron job: ${e.message}`)
+    } catch (e: unknown) {
+      alert(`Failed to save cron job: ${errorMessage(e)}`)
     }
   }
 
@@ -153,7 +157,7 @@ function CronSection() {
       })
       if (!res.ok) throw new Error(`Server returned ${res.status}`)
       load()
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.warn('[Dashboard] Failed to toggle cron job:', e)
     }
   }
@@ -164,8 +168,8 @@ function CronSection() {
       const res = await fetch(`/api/admin/crons/${id}`, { method: 'DELETE', headers: adminHeaders() })
       if (!res.ok) throw new Error(`Server returned ${res.status}`)
       load()
-    } catch (e: any) {
-      alert(`Failed to delete cron job: ${e.message}`)
+    } catch (e: unknown) {
+      alert(`Failed to delete cron job: ${errorMessage(e)}`)
     }
   }
 
@@ -174,7 +178,7 @@ function CronSection() {
     try {
       const res = await fetch(`/api/admin/crons/${id}/trigger`, { method: 'POST', headers: adminHeaders() })
       if (!res.ok) throw new Error(`Server returned ${res.status}`)
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.warn('[Dashboard] Failed to trigger cron job:', e)
     } finally {
       setTriggering(null)
