@@ -131,7 +131,20 @@ export async function buildServer() {
       if (validateSessionToken(adminToken, session)) return
       // 3. User session token (issued by /api/auth/login) — admin role required
       const claims = userStore.verifySessionToken(session)
-      if (claims?.role === 'admin') return
+      if (claims?.role === 'admin') {
+        // A must-change-password account (the seeded default admin/admin, or
+        // any account an admin just reset) must not be usable for anything
+        // gated by this hook until the password is actually changed — that
+        // update happens via /api/auth/password, which never reaches this
+        // hook (it's not an /api/admin/* route and isn't in isNetworkRoute),
+        // so it stays reachable. This is a live DB check, not something
+        // embedded in the token, so it takes effect immediately on change.
+        const user = userStore.get(claims.userId)
+        if (user?.mustChangePassword) {
+          return reply.status(403).send({ error: 'password_change_required', message: 'Default password must be changed before continuing.' })
+        }
+        return
+      }
       console.warn(`[auth] 401 ${req.method} ${req.url} — session present but invalid (role=${claims?.role ?? 'null'}, prefix=${session.slice(0, 3)})`)
     } else {
       console.warn(`[auth] 401 ${req.method} ${req.url} — no session token in x-admin-session header`)
