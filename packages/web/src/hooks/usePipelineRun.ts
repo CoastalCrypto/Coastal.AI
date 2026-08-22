@@ -84,7 +84,16 @@ export function usePipelineRun(runId: string | null, stageCount: number) {
   return { state, steer, abort }
 }
 
-function applyEvent(state: PipelineRunState, event: any): PipelineRunState {
+type PipelineEvent =
+  | { type: 'stage_start'; stageIdx: number; agentId: string; agentName: string; iteration: number }
+  | { type: 'tool_call_start'; sessionId: string; toolName: string; args: Record<string, unknown> }
+  | { type: 'tool_call_end'; sessionId: string; toolName: string; durationMs?: number }
+  | { type: 'stage_steer'; message: string }
+  | { type: 'stage_end'; stageIdx: number; output?: string; durationMs?: number }
+  | { type: 'pipeline_done'; finalOutput?: string }
+  | { type: 'pipeline_error'; stageIdx: number; error?: string }
+
+function applyEvent(state: PipelineRunState, event: PipelineEvent): PipelineRunState {
   const stages = [...state.stages]
   switch (event.type) {
     case 'stage_start': {

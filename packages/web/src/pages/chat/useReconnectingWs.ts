@@ -1,6 +1,6 @@
 import { useRef, useEffect, useCallback } from 'react'
 
-export function useReconnectingWs(url: string, onMessage: (data: any) => void) {
+export function useReconnectingWs<T>(url: string, onMessage: (data: T) => void) {
   const wsRef = useRef<WebSocket | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const delayRef = useRef(1000)

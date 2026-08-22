@@ -2,6 +2,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { adminClient, SESSION_EXPIRED, type OllamaModel } from '../api/client'
 import { coreWsOrigin } from '../platform/coreOrigin'
 
+function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e)
+}
+
 interface PullProgress {
   status?: string
   completed?: number
@@ -39,8 +43,8 @@ export function OllamaSection({ onModelsChanged }: Props) {
         // Auto-refresh parent model list since scan also imports
         if (result.models.length > 0) onModelsChanged()
       }
-    } catch (e: any) {
-      setScanError(e.message ?? 'Could not reach the core server')
+    } catch (e: unknown) {
+      setScanError(errorMessage(e) || 'Could not reach the core server')
       setLocalModels([])
     } finally {
       setLoading(false)
@@ -55,8 +59,8 @@ export function OllamaSection({ onModelsChanged }: Props) {
       await adminClient.importOllamaModel(name)
       await refresh()
       onModelsChanged()
-    } catch (e: any) {
-      setSyncMsg(`Import failed: ${e.message}`)
+    } catch (e: unknown) {
+      setSyncMsg(`Import failed: ${errorMessage(e)}`)
       setTimeout(() => setSyncMsg(null), 4000)
     } finally {
       setImportingId(null)
@@ -70,8 +74,8 @@ export function OllamaSection({ onModelsChanged }: Props) {
       await refresh()
       onModelsChanged()
       setTimeout(() => setSyncMsg(null), 3000)
-    } catch (e: any) {
-      setSyncMsg(`Sync failed: ${e.message}`)
+    } catch (e: unknown) {
+      setSyncMsg(`Sync failed: ${errorMessage(e)}`)
       setTimeout(() => setSyncMsg(null), 4000)
     }
   }
@@ -123,8 +127,8 @@ export function OllamaSection({ onModelsChanged }: Props) {
 
     try {
       await adminClient.pullOllamaModel(name, sessionId)
-    } catch (err: any) {
-      setPullError(err.message)
+    } catch (err: unknown) {
+      setPullError(errorMessage(err))
       setPulling(false)
       ws.close()
     }

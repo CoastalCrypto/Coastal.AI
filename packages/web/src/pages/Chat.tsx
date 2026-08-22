@@ -13,6 +13,32 @@ import { BackgroundPicker } from './chat/BackgroundPicker'
 import { ArchitectToast } from './chat/ArchitectToast'
 import { useReconnectingWs } from './chat/useReconnectingWs'
 
+// The Web Speech API (SpeechRecognition / webkitSpeechRecognition) isn't in
+// TypeScript's default DOM lib — declare only the surface this file uses.
+interface SpeechRecognitionResultLike {
+  0: { transcript: string }
+}
+interface SpeechRecognitionEventLike {
+  results: ArrayLike<SpeechRecognitionResultLike>
+}
+interface SpeechRecognitionInstance {
+  continuous: boolean
+  interimResults: boolean
+  onresult: ((e: SpeechRecognitionEventLike) => void) | null
+  onend: (() => void) | null
+  start(): void
+  stop(): void
+}
+interface SpeechRecognitionConstructor {
+  new (): SpeechRecognitionInstance
+}
+
+type ChatWsMessage =
+  | { type: 'proactive_suggestion'; sessionId?: string; suggestion: string }
+  | { type: 'approval_request'; approvalId: string; agentId?: string; agentName?: string; toolName?: string; cmd?: string }
+  | { type: 'architect_proposal'; proposalId: string; summary: string; vetoDeadline: number }
+  | { type: 'architect_applied'; summary: string }
+
 export function Chat({ sessionId: initialSessionId, onNav: _onNav }: { sessionId: string; onNav: (page: string) => void }) {
   const [currentSessionId] = useState(initialSessionId)
   const [messages, setMessages] = useState<Message[]>([
@@ -118,15 +144,19 @@ export function Chat({ sessionId: initialSessionId, onNav: _onNav }: { sessionId
   }, [])
 
   // Speech recognition
-  const recognitionRef = useRef<any>(null)
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
   useEffect(() => {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    const win = window as unknown as {
+      SpeechRecognition?: SpeechRecognitionConstructor
+      webkitSpeechRecognition?: SpeechRecognitionConstructor
+    }
+    const SR = win.SpeechRecognition || win.webkitSpeechRecognition
     if (!SR) return
     const r = new SR()
     r.continuous = false
     r.interimResults = true
-    r.onresult = (e: any) =>
-      setInput(Array.from(e.results).map((res: any) => res[0].transcript).join(''))
+    r.onresult = (e) =>
+      setInput(Array.from(e.results).map((res) => res[0].transcript).join(''))
     r.onend = () => {
       setIsListening(false)
       if (inputRealtime.current.trim()) sendRef.current()
@@ -194,7 +224,7 @@ export function Chat({ sessionId: initialSessionId, onNav: _onNav }: { sessionId
 
   // ── WebSocket ────────────────────────────────────────────────────
 
-  const handleWsMessage = useCallback((data: any) => {
+  const handleWsMessage = useCallback((data: ChatWsMessage) => {
     if (data.type === 'proactive_suggestion' && (!data.sessionId || data.sessionId === currentSessionId)) {
       setSuggestions(prev => [...prev.slice(-2), data.suggestion])
     }
@@ -399,8 +429,8 @@ export function Chat({ sessionId: initialSessionId, onNav: _onNav }: { sessionId
         setFileNotice('')
       }
       inputRef2.current?.focus()
-    } catch (err: any) {
-      setFileNotice(`Error: ${err.message}`)
+    } catch (err: unknown) {
+      setFileNotice(`Error: ${err instanceof Error ? err.message : String(err)}`)
       setTimeout(() => setFileNotice(''), 4000)
     }
   }

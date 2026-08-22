@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
-import { coreClient } from '../../api/client'
+import { coreClient, type ArchitectInsights } from '../../api/client'
 import { failureLabel } from '../../utils/architect-labels'
 import { useArchitectSSE } from '../../hooks/useArchitectSSE'
 
 export function InsightsTab() {
-  const [data, setData] = useState<any>(null)
+  const [data, setData] = useState<ArchitectInsights | null>(null)
   const [loading, setLoading] = useState(true)
 
   const refresh = useCallback(() => {
