@@ -42,7 +42,7 @@
       "protobufjs"
     ],
     "overrides": {
-      "@xmldom/xmldom": ">=0.9.9",
+      "@xmldom/xmldom": ">=0.9.10",
       "loader-utils": ">=2.0.4"
     }
   }
