@@ -5,6 +5,7 @@ import websocket from '@fastify/websocket'
 import { healthRoutes } from './api/routes/health.js'
 import { wsRoutes } from './api/routes/ws.js'
 import { consumeTicket } from './api/sse-ticket.js'
+import { isPublicRoute, requiredRoleFor, satisfiesRole } from './api/auth-policy.js'
 import { agentEventsRoute } from './api/routes/agent-events.js'
 import { graphQLRoutes } from './api/routes/graphql.js'
 import { chatRoutes } from './api/routes/chat.js'
@@ -64,7 +65,7 @@ import { PipelineStore } from './pipeline/store.js'
 import { SteerQueue } from './pipeline/steer-queue.js'
 import { AsyncPipelineRunner } from './pipeline/runner.js'
 import { UnifiedMemory } from './memory/index.js'
-import { UserStore } from './users/store.js'
+import { UserStore, type UserRole } from './users/store.js'
 import { AgentRegistry } from './agents/registry.js'
 import { PermissionGate } from './agents/permission-gate.js'
 import { CustomToolLoader } from './tools/custom/loader.js'
@@ -90,63 +91,54 @@ export async function buildServer() {
   // It is also passed to userRoutes below.
   const db = new Database(join(config.dataDir, 'coastal-ai.db'))
   const userStore = new UserStore(db, adminToken)
-  const isNetworkExposed = config.host !== '127.0.0.1' && config.host !== '::1' && config.host !== 'localhost'
 
   // Shared by the onRequest hook below and by the /ws/session first-message
   // handshake (wsRoutes) — a WebSocket upgrade can't be checked by this hook
-  // the way a normal fetch() can (see isNetworkRoute comment), so it does its
-  // own auth using this exact same session logic, kept in one place so the
-  // two surfaces can't drift apart.
-  function checkSessionAuth(token: string): { ok: true } | { ok: false; reason: 'invalid' | 'password_change_required' } {
+  // the way a normal fetch() can, so it does its own auth using this exact
+  // same session-resolution logic, kept in one place so the two surfaces
+  // can't drift apart. Resolves to the caller's role rather than a bare
+  // ok/fail — the hook enforces the per-route minimum role on top of this.
+  function checkSessionAuth(token: string): { ok: true; role: UserRole } | { ok: false; reason: 'invalid' | 'password_change_required' } {
     if (!token) return { ok: false, reason: 'invalid' }
-    // 2. Legacy admin session token (issued by /api/admin/login)
-    if (validateSessionToken(adminToken, token)) return { ok: true }
-    // 3. User session token (issued by /api/auth/login) — admin role required
+    // Legacy admin session token (issued by /api/admin/login) — full admin.
+    if (validateSessionToken(adminToken, token)) return { ok: true, role: 'admin' }
+    // User session token (issued by /api/auth/login) — role is whatever the
+    // account holds. A must-change-password account (the seeded default
+    // admin/admin, or any account an admin just reset) is blocked from
+    // every route this hook gates until the password is actually changed —
+    // /api/auth/me and /api/auth/password are public routes precisely so
+    // that changing it stays reachable. This is a live DB check, not
+    // something embedded in the token, so it takes effect immediately.
     const claims = userStore.verifySessionToken(token)
-    if (claims?.role === 'admin') {
-      // A must-change-password account (the seeded default admin/admin, or
-      // any account an admin just reset) must not be usable for anything
-      // gated by this hook until the password is actually changed — that
-      // update happens via /api/auth/password, which never reaches this
-      // hook (it's not an /api/admin/* route and isn't in isNetworkRoute),
-      // so it stays reachable. This is a live DB check, not something
-      // embedded in the token, so it takes effect immediately on change.
-      const user = userStore.get(claims.userId)
-      if (user?.mustChangePassword) return { ok: false, reason: 'password_change_required' }
-      return { ok: true }
-    }
-    return { ok: false, reason: 'invalid' }
+    if (!claims) return { ok: false, reason: 'invalid' }
+    const user = userStore.get(claims.userId)
+    if (user?.mustChangePassword) return { ok: false, reason: 'password_change_required' }
+    return { ok: true, role: claims.role }
   }
 
   fastify.addHook('onRequest', async (req, reply) => {
     // CORS preflight must bypass auth so the browser can complete the handshake.
     // The @fastify/cors plugin replies to OPTIONS with the proper Access-Control-* headers.
     if (req.method === 'OPTIONS') return
-    const isAdminRoute = req.url.startsWith('/api/admin')
-    // Routes that hand agents tool/shell execution, or expose cross-session data,
-    // are gated the same way chat/upload always were — enforced only when the
-    // server is actually reachable off localhost. On a localhost-only install
-    // these stay open (no login friction for the single local user); the moment
-    // CC_HOST exposes the server to a LAN/network, every one of these requires
-    // the same session/admin-token auth as /api/admin.
-    //
-    // /ws/session is deliberately NOT here: it's a WebSocket upgrade, and a
-    // browser's native WebSocket API can't attach a custom header to that
-    // handshake. It authenticates itself instead via a first-message
-    // handshake in handleSessionWs (wsRoutes below), reusing checkSessionAuth.
-    const isNetworkRoute = req.url.startsWith('/api/chat')
-      || req.url.startsWith('/api/upload')
-      || req.url.startsWith('/api/team')
-      || req.url.startsWith('/api/pipeline')
-      || req.url.startsWith('/api/sessions')
-      || req.url.startsWith('/api/search')
-      || req.url.startsWith('/api/persona')
-      || req.url.startsWith('/api/events')
-    // Only enforce auth on admin routes, and on the routes above when server is network-exposed
-    if (!isAdminRoute && !(isNetworkExposed && isNetworkRoute)) return
-    if (req.url === '/api/admin/login') return
+    if (isPublicRoute(req.url)) return
+    // Every /ws/* route is a WebSocket upgrade, not a normal request/response
+    // cycle — a browser's native WebSocket API can't attach a custom header
+    // to the upgrade handshake, so these authenticate themselves via their
+    // own first-message handshake instead (handleSessionWs, agent-events'
+    // equivalent), unconditionally. Gating the upgrade request itself here
+    // would 401 the handshake before it can even start.
+    if (req.url.startsWith('/ws/')) return
 
-    // 1. Raw admin token (legacy / CLI usage)
+    // Deny by default, at every bind address — see api/auth-policy.ts. A
+    // route reaches this point only if it isn't in PUBLIC_ROUTES, so every
+    // one of them needs a valid session carrying at least the role
+    // requiredRoleFor() assigns it (falling through to admin-only when
+    // nothing matches).
+    const required = requiredRoleFor(req.method, req.url)
+
+    // 1. Raw admin token (legacy / CLI / internal service calls, e.g. the
+    //    cron scheduler's self-call to /api/chat below). Admin outranks
+    //    every requirement, so this is a flat bypass once the token matches.
     const rawHeader = req.headers['x-admin-token'] ?? ''
     const raw = typeof rawHeader === 'string' ? rawHeader : rawHeader[0] ?? ''
     if (raw) {
@@ -159,15 +151,21 @@ export async function buildServer() {
     const session = typeof sessionHeader === 'string' ? sessionHeader : sessionHeader[0] ?? ''
     if (session) {
       const result = checkSessionAuth(session)
-      if (result.ok) return
+      if (result.ok) {
+        if (satisfiesRole(result.role, required)) return
+        console.warn(`[auth] 403 ${req.method} ${req.url} — role '${result.role}' below required '${required}'`)
+        return reply.status(403).send({ error: 'forbidden', message: `Requires ${required} role or higher.` })
+      }
       if (result.reason === 'password_change_required') {
         return reply.status(403).send({ error: 'password_change_required', message: 'Default password must be changed before continuing.' })
       }
       console.warn(`[auth] 401 ${req.method} ${req.url} — session present but invalid (prefix=${session.slice(0, 3)})`)
-    } else if (!isAdminRoute && req.method === 'GET') {
-      // EventSource can't set headers at all — a network-exposed SSE route
-      // may instead present a short-lived, single-use ticket minted via an
-      // authenticated POST just before connecting (see sse-ticket.ts).
+    } else if (req.method === 'GET' && required === 'viewer') {
+      // EventSource can't set headers at all — a viewer-level GET route may
+      // instead present a short-lived, single-use ticket minted via an
+      // authenticated POST just before connecting (see sse-ticket.ts). A
+      // ticket carries no role of its own, so it is accepted only where the
+      // route's own requirement is already the lowest rank.
       const queryTicket = (req.query as Record<string, string> | undefined)?.ticket
       const ticket = typeof queryTicket === 'string' ? queryTicket : ''
       if (ticket && consumeTicket(ticket)) return
@@ -194,8 +192,10 @@ export async function buildServer() {
   await fastify.register(multipart, { limits: { fileSize: 25 * 1024 * 1024, files: 1 } })
   await fastify.register(healthRoutes)
   await fastify.register(wsRoutes, {
-    isNetworkExposed,
-    validateSession: (token: string) => checkSessionAuth(token).ok,
+    validateSession: (token: string) => {
+      const result = checkSessionAuth(token)
+      return result.ok && satisfiesRole(result.role, requiredRoleFor('GET', '/ws/session'))
+    },
   })
   await fastify.register(adminRoutes)
 
@@ -324,9 +324,13 @@ export async function buildServer() {
   const cronStore = new CronStore(db)
   const internalHost = (config.host === '0.0.0.0' || config.host === '::') ? '127.0.0.1' : config.host
   const cronScheduler = new CronScheduler(cronStore, async (agentId, task) => {
+    // /api/chat now requires an operator session on every bind address (see
+    // api/auth-policy.ts) — the scheduler is an in-process caller with no
+    // session of its own, so it authenticates with the same raw admin token
+    // the onRequest hook already treats as a full bypass.
     const res = await fetch(`http://${internalHost}:${config.port}/api/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken },
       body: JSON.stringify({ message: task, sessionId: `cron_${agentId}_${Date.now()}` }),
     })
     const data = await res.json() as any

@@ -3,7 +3,6 @@ import type { SocketStream } from '@fastify/websocket'
 import { handleSessionWs } from '../ws/session.js'
 
 export interface WsRoutesOptions {
-  isNetworkExposed: boolean
   validateSession: (token: string) => boolean
 }
 

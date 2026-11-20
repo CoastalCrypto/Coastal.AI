@@ -26,11 +26,14 @@ describe('health endpoint', () => {
   })
 })
 
-// Regression coverage for the auth hook's isNetworkRoute set. These routes hand
-// out agent/tool execution or cross-session data — Finding #1 of the 2026-08-21
-// security audit was that they were never gated even when CC_HOST exposes the
-// server off localhost.
-describe('network-exposed auth gate', () => {
+// Regression coverage for api/auth-policy.ts's deny-by-default posture.
+// Finding #1 of the 2026-08-21 security audit was that these routes were
+// never gated unless CC_HOST exposed the server off localhost — left wide
+// open on the overwhelmingly common install (desktop app, `pnpm start` on a
+// dev box). The fix removed the CC_HOST condition entirely: every route not
+// in PUBLIC_ROUTES now requires a session at every bind address, localhost
+// included, so this suite doesn't need to flip CC_HOST at all to exercise it.
+describe('deny-by-default auth gate', () => {
   const guardedRoutes = [
     { method: 'POST' as const, url: '/api/team/run' },
     { method: 'GET' as const, url: '/api/sessions' },
@@ -45,56 +48,88 @@ describe('network-exposed auth gate', () => {
     // can't attach a custom header to a WS upgrade). See ws.test.ts.
   ]
 
-  describe('when CC_HOST is localhost (default)', () => {
-    let server: Awaited<ReturnType<typeof buildServer>>
+  let server: Awaited<ReturnType<typeof buildServer>>
+  let dataDir: string
+  let adminSession: string
+  const originalDataDir = process.env.CC_DATA_DIR
 
-    beforeAll(async () => {
-      invalidateConfig()
-      server = await buildServer()
-      await server.listen({ port: 0, host: '127.0.0.1' })
+  beforeAll(async () => {
+    dataDir = mkdtempSync(join(tmpdir(), 'cc-deny-by-default-test-'))
+    process.env.CC_DATA_DIR = dataDir
+    invalidateConfig()
+    server = await buildServer()
+    await server.listen({ port: 0, host: '127.0.0.1' })
+
+    // Past the mustChangePassword gate, so this session is usable outright —
+    // admin outranks every route's required role, so one session is enough
+    // to sanity-check that the gate opens for *somebody*, not just that it
+    // closes for nobody.
+    const login = await server.inject({
+      method: 'POST', url: '/api/auth/login', payload: { username: 'admin', password: 'admin' },
     })
-
-    afterAll(async () => {
-      await server.close()
+    const defaultToken = JSON.parse(login.body).sessionToken
+    await server.inject({
+      method: 'PATCH', url: '/api/auth/password', headers: { 'x-admin-session': defaultToken },
+      payload: { currentPassword: 'admin', newPassword: 'a-real-password-123' },
     })
-
-    for (const { method, url } of guardedRoutes) {
-      it(`${method} ${url} is NOT gated (unchanged local-only behavior)`, async () => {
-        const res = await server.inject({ method, url })
-        expect(res.statusCode).not.toBe(401)
-      })
-    }
+    const relogin = await server.inject({
+      method: 'POST', url: '/api/auth/login', payload: { username: 'admin', password: 'a-real-password-123' },
+    })
+    adminSession = JSON.parse(relogin.body).sessionToken
   })
 
-  describe('when CC_HOST exposes the server off localhost', () => {
-    let server: Awaited<ReturnType<typeof buildServer>>
-    const originalHost = process.env.CC_HOST
+  afterAll(async () => {
+    await server.close()
+    if (originalDataDir === undefined) delete process.env.CC_DATA_DIR
+    else process.env.CC_DATA_DIR = originalDataDir
+    invalidateConfig()
+    rmSync(dataDir, { recursive: true, force: true })
+  })
 
-    beforeAll(async () => {
-      process.env.CC_HOST = '0.0.0.0'
-      invalidateConfig()
-      server = await buildServer()
-      await server.listen({ port: 0, host: '127.0.0.1' })
-    })
-
-    afterAll(async () => {
-      await server.close()
-      if (originalHost === undefined) delete process.env.CC_HOST
-      else process.env.CC_HOST = originalHost
-      invalidateConfig()
-    })
-
-    for (const { method, url } of guardedRoutes) {
-      it(`${method} ${url} requires auth without a session`, async () => {
-        const res = await server.inject({ method, url })
-        expect(res.statusCode).toBe(401)
-      })
-    }
-
-    it('/api/admin/* still requires auth (unaffected by this fix)', async () => {
-      const res = await server.inject({ method: 'GET', url: '/api/admin/models' })
+  for (const { method, url } of guardedRoutes) {
+    it(`${method} ${url} requires auth, even on a localhost-bound server`, async () => {
+      const res = await server.inject({ method, url })
       expect(res.statusCode).toBe(401)
     })
+
+    it(`${method} ${url} opens for a sufficiently-privileged session`, async () => {
+      const res = await server.inject({ method, url, headers: { 'x-admin-session': adminSession } })
+      expect(res.statusCode).not.toBe(401)
+    })
+  }
+
+  it('/api/admin/* requires auth', async () => {
+    const res = await server.inject({ method: 'GET', url: '/api/admin/models' })
+    expect(res.statusCode).toBe(401)
+  })
+
+  it('/api/health and /api/version stay reachable with no session', async () => {
+    const health = await server.inject({ method: 'GET', url: '/health' })
+    expect(health.statusCode).toBe(200)
+    const version = await server.inject({ method: 'GET', url: '/api/version' })
+    expect(version.statusCode).toBe(200)
+  })
+
+  it('a role below the route\'s requirement is rejected with 403, not 401', async () => {
+    const createRes = await server.inject({
+      method: 'POST', url: '/api/admin/users',
+      headers: { 'x-admin-session': adminSession },
+      payload: { username: 'a-viewer', password: 'a-real-password-123', role: 'viewer' },
+    })
+    expect(createRes.statusCode).toBe(201)
+    const viewerLogin = await server.inject({
+      method: 'POST', url: '/api/auth/login', payload: { username: 'a-viewer', password: 'a-real-password-123' },
+    })
+    const viewerSession = JSON.parse(viewerLogin.body).sessionToken
+
+    // /api/team/run is operator-and-above; a viewer session must be refused,
+    // but refused as "wrong role", not "no credential at all".
+    const res = await server.inject({
+      method: 'POST', url: '/api/team/run',
+      headers: { 'x-admin-session': viewerSession },
+    })
+    expect(res.statusCode).toBe(403)
+    expect(JSON.parse(res.body).error).toBe('forbidden')
   })
 })
 

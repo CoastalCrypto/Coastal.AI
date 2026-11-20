@@ -2,7 +2,6 @@ import type { FastifyRequest } from 'fastify'
 import type { SocketStream } from '@fastify/websocket'
 
 export interface HandleSessionWsOptions {
-  isNetworkExposed: boolean
   validateSession: (token: string) => boolean
 }
 
@@ -13,21 +12,19 @@ const AUTH_TIMEOUT_MS = 5000
 // A browser's native WebSocket API can't attach a custom header to the
 // upgrade handshake, so this route isn't gated by server.ts's onRequest
 // hook — it authenticates itself here instead, via the client's first
-// message, only when the server is actually network-exposed. On a
-// localhost-only install this is a no-op (authenticated starts true), same
-// as it's always behaved.
+// message, unconditionally (mirrors /ws/agent-events's handshake in
+// agent-events.ts). Everything but an `{type:'auth'}` message is dropped
+// until authenticated, with a timeout that closes the socket.
 export function handleSessionWs(connection: SocketStream, _req: FastifyRequest, opts: HandleSessionWsOptions) {
   const socket = connection.socket
-  let authenticated = !opts.isNetworkExposed
+  let authenticated = false
 
-  const authTimeout = opts.isNetworkExposed
-    ? setTimeout(() => {
-        if (!authenticated) {
-          console.warn('[ws/session] 1008 Unauthorized — no auth received within timeout')
-          socket.close(1008, 'Unauthorized')
-        }
-      }, AUTH_TIMEOUT_MS)
-    : undefined
+  const authTimeout = setTimeout(() => {
+    if (!authenticated) {
+      console.warn('[ws/session] 1008 Unauthorized — no auth received within timeout')
+      socket.close(1008, 'Unauthorized')
+    }
+  }, AUTH_TIMEOUT_MS)
 
   socket.on('message', (raw) => {
     try {
@@ -35,11 +32,11 @@ export function handleSessionWs(connection: SocketStream, _req: FastifyRequest, 
       if (msg.type === 'auth') {
         if (opts.validateSession(String(msg.token ?? ''))) {
           authenticated = true
-          if (authTimeout) clearTimeout(authTimeout)
+          clearTimeout(authTimeout)
         }
         return
       }
-      if (!authenticated) return // drop everything else until authenticated (network-exposed only)
+      if (!authenticated) return // drop everything else until a valid {type:'auth'} message arrives
       if (msg.type === 'register' && typeof msg.sessionId === 'string') {
         // Validate format to prevent session hijacking
         if (/^[a-zA-Z0-9_-]{8,128}$/.test(msg.sessionId)) {
@@ -56,6 +53,6 @@ export function handleSessionWs(connection: SocketStream, _req: FastifyRequest, 
   })
 
   socket.on('close', () => {
-    if (authTimeout) clearTimeout(authTimeout)
+    clearTimeout(authTimeout)
   })
 }

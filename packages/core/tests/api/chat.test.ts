@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { buildServer } from '../../src/server.js'
+import { invalidateConfig } from '../../src/config.js'
+import { getOrCreateAdminToken } from '../../src/api/routes/admin.js'
 
 vi.mock('../../src/models/router.js', () => ({
   ModelRouter: vi.fn().mockImplementation(() => ({
@@ -36,18 +41,32 @@ vi.mock('mem0ai', () => ({
 
 describe('POST /api/chat', () => {
   let server: Awaited<ReturnType<typeof buildServer>>
+  let dataDir: string
+  let adminToken: string
+  const originalDataDir = process.env.CC_DATA_DIR
 
   beforeAll(async () => {
+    dataDir = mkdtempSync(join(tmpdir(), 'cc-chat-test-'))
+    process.env.CC_DATA_DIR = dataDir
+    invalidateConfig()
+    adminToken = getOrCreateAdminToken(dataDir)
     server = await buildServer()
     await server.listen({ port: 0, host: '127.0.0.1' })
   })
 
-  afterAll(async () => await server.close())
+  afterAll(async () => {
+    await server.close()
+    if (originalDataDir === undefined) delete process.env.CC_DATA_DIR
+    else process.env.CC_DATA_DIR = originalDataDir
+    invalidateConfig()
+    rmSync(dataDir, { recursive: true, force: true })
+  })
 
   it('returns assistant reply', async () => {
     const res = await server.inject({
       method: 'POST',
       url: '/api/chat',
+      headers: { 'x-admin-token': adminToken },
       payload: {
         sessionId: 'test-session',
         message: 'hello',
@@ -63,8 +82,18 @@ describe('POST /api/chat', () => {
     const res = await server.inject({
       method: 'POST',
       url: '/api/chat',
+      headers: { 'x-admin-token': adminToken },
       payload: { sessionId: 'test' },
     })
     expect(res.statusCode).toBe(400)
+  })
+
+  it('without a session or admin token, requires auth', async () => {
+    const res = await server.inject({
+      method: 'POST',
+      url: '/api/chat',
+      payload: { sessionId: 'test', message: 'hello' },
+    })
+    expect(res.statusCode).toBe(401)
   })
 })
