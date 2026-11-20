@@ -150,6 +150,12 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.28.0
         version: 1.28.0(@cfworker/json-schema@4.1.1)(zod@4.4.1)
+      '@modelcontextprotocol/server-memory':
+        specifier: 2026.1.26
+        version: 2026.1.26(@cfworker/json-schema@4.1.1)(zod@4.4.1)
+      '@modelcontextprotocol/server-sequential-thinking':
+        specifier: 2025.12.18
+        version: 2025.12.18(@cfworker/json-schema@4.1.1)(zod@4.4.1)
       better-sqlite3:
         specifier: ^11.10.0
         version: 11.10.0
@@ -1970,6 +1976,16 @@ packages:
     peerDependenciesMeta:
       '@cfworker/json-schema':
         optional: true
+
+  '@modelcontextprotocol/server-memory@2026.1.26':
+    resolution: {integrity: sha512-7F0hbaEB4lVqkYhNWmrC5jJjEWPCofgXd7OIk3h97HyvJL6aTAhlUNYaH8lCDxAzlK9sr2pLCkZEYI+m4HSOiA==}
+    deprecated: 'Date-based versions are no longer published. This package has resumed semantic versioning at 1.0.0: install the latest version.'
+    hasBin: true
+
+  '@modelcontextprotocol/server-sequential-thinking@2025.12.18':
+    resolution: {integrity: sha512-eFR5I9Z9czXQhDn05wahetZU83YNPO+p1HLSEZZEM5q9U1CLF7zv9+TrmSBfRoPaksEAoM8pTWQ33lRCScSFeQ==}
+    deprecated: 'Date-based versions are no longer published. This package has resumed semantic versioning at 1.0.0: install the latest version.'
+    hasBin: true
 
   '@module-federation/error-codes@0.22.0':
     resolution: {integrity: sha512-xF9SjnEy7vTdx+xekjPCV5cIHOGCkdn3pIxo9vU7gEZMIw0SvAEdsy6Uh17xaCpm8V0FWvR0SZoK9Ik6jGOaug==}
@@ -9152,6 +9168,24 @@ snapshots:
       '@cfworker/json-schema': 4.1.1
     transitivePeerDependencies:
       - supports-color
+
+  '@modelcontextprotocol/server-memory@2026.1.26(@cfworker/json-schema@4.1.1)(zod@4.4.1)':
+    dependencies:
+      '@modelcontextprotocol/sdk': 1.28.0(@cfworker/json-schema@4.1.1)(zod@4.4.1)
+    transitivePeerDependencies:
+      - '@cfworker/json-schema'
+      - supports-color
+      - zod
+
+  '@modelcontextprotocol/server-sequential-thinking@2025.12.18(@cfworker/json-schema@4.1.1)(zod@4.4.1)':
+    dependencies:
+      '@modelcontextprotocol/sdk': 1.28.0(@cfworker/json-schema@4.1.1)(zod@4.4.1)
+      chalk: 5.6.2
+      yargs: 17.7.2
+    transitivePeerDependencies:
+      - '@cfworker/json-schema'
+      - supports-color
+      - zod
 
   '@module-federation/error-codes@0.22.0': {}
 

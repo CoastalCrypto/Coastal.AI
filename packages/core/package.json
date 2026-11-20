@@ -144,6 +144,8 @@
     "@fastify/rate-limit": "^9.1.0",
     "@fastify/websocket": "^8.3.0",
     "@modelcontextprotocol/sdk": "^1.28.0",
+    "@modelcontextprotocol/server-memory": "2026.1.26",
+    "@modelcontextprotocol/server-sequential-thinking": "2025.12.18",
     "better-sqlite3": "^11.10.0",
     "croner": "^10.0.1",
     "dotenv": "^16.4.0",

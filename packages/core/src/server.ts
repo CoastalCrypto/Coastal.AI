@@ -72,6 +72,7 @@ import { CustomToolLoader } from './tools/custom/loader.js'
 import { EdgeFeedbackStore } from './agents/edge-feedback.js'
 import { ChannelManager } from './channels/manager.js'
 import { McpStore } from './tools/mcp/store.js'
+import { resolveLocalBin } from './tools/mcp/resolve-local-bin.js'
 import { BrowserSessionManager } from './tools/browser/session-manager.js'
 import { loadConfig } from './config.js'
 import multipart from '@fastify/multipart'
@@ -341,20 +342,23 @@ export async function buildServer() {
   const skillStore = new SkillStore(db)
   skillStore.seedDefaults()
   const mcpStore = new McpStore(db)
-  // Seed default MCP servers if empty
+  // Seed default MCP servers if empty. Launched via `node <resolved bin>`
+  // rather than `npx <package>@<version>` — both packages are now real
+  // dependencies of @coastal-ai/core (see package.json), so this never
+  // reaches the npm registry at runtime, on this or any later boot.
   if (mcpStore.list().length === 0) {
     mcpStore.upsert({
       id: 'logic',
       name: 'Thinking',
-      command: process.platform === 'win32' ? 'npx.cmd' : 'npx',
-      args: ['@modelcontextprotocol/server-sequential-thinking@2025.12.18'],
+      command: process.execPath,
+      args: [resolveLocalBin('@modelcontextprotocol/server-sequential-thinking')],
       enabled: true
     })
     mcpStore.upsert({
       id: 'memory',
       name: 'Local Knowledge Graph',
-      command: process.platform === 'win32' ? 'npx.cmd' : 'npx',
-      args: ['@modelcontextprotocol/server-memory@2026.1.26'],
+      command: process.execPath,
+      args: [resolveLocalBin('@modelcontextprotocol/server-memory')],
       enabled: true
     })
   }
