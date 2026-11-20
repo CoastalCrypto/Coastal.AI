@@ -15,7 +15,7 @@
     "@apollo/client": "^3.8.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
-    "@rive-app/react-canvas": "^4.27.3",
+    "@rive-app/react-canvas": "^4.39.0",
     "@xyflow/react": "^12.10.2",
     "d3-force": "^3.0.0",
     "graphql": "^16.8.0",
