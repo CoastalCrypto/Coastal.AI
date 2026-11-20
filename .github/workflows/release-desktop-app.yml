@@ -47,7 +47,7 @@ jobs:
       APPIMAGE_EXTRACT_AND_RUN: 1
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Linux Tauri system dependencies
         if: matrix.os == 'ubuntu-22.04'
