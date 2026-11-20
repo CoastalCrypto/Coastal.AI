@@ -29,6 +29,7 @@
 import type { A2AMessage, AgentIdentity } from '../types.js'
 import type { A2ATransport } from './types.js'
 import { verifyMessage } from './a2a-envelope.js'
+import { createReplayGuard } from './replay-guard.js'
 import type { PeerRegistry } from '../identity/peer-registry.js'
 
 /** Maximum chars in a Telegram text message. */
@@ -82,6 +83,9 @@ export function createTelegramTransport(config: TelegramTransportConfig): A2ATra
   const { identity, client, peerRegistry, peerChats, broadcastChatId } = config
 
   const subscribers = new Set<(msg: A2AMessage) => void>()
+  // One guard per transport (= per receiving node) — see localhost.ts's
+  // identical comment for why this must not be the shared module default.
+  const replayGuard = createReplayGuard()
 
   const handleIncoming = (incoming: TelegramIncoming) => {
     if (!incoming.text.startsWith(A2A_WIRE_PREFIX)) return // not A2A traffic
@@ -97,7 +101,7 @@ export function createTelegramTransport(config: TelegramTransportConfig): A2ATra
     const tofu = peerRegistry.recordOrVerify(parsed.from.agentId, parsed.from.publicKey)
     if (!tofu.trusted) return
     // Signature verify
-    const sig = verifyMessage(parsed, { knownPublicKey: parsed.from.publicKey })
+    const sig = verifyMessage(parsed, { knownPublicKey: parsed.from.publicKey, replayGuard })
     if (!sig.valid) return
     for (const handler of subscribers) {
       try { handler(parsed) } catch { /* swallow */ }

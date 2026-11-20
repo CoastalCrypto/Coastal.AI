@@ -5,6 +5,7 @@ import { generateIdentity } from '../../identity/keypair.js'
 import {
   canonicalize, signMessage, verifyMessage,
 } from '../a2a-envelope.js'
+import { createReplayGuard } from '../replay-guard.js'
 
 describe('canonicalize', () => {
   it('sorts object keys lexicographically and recursively', () => {
@@ -109,5 +110,71 @@ describe('signMessage + verifyMessage', () => {
     )
     const stripped = { ...signed, signature: '' }
     expect(verifyMessage(stripped).valid).toBe(false)
+  })
+})
+
+describe('verifyMessage: freshness and replay protection', () => {
+  // Every test here injects its own replayGuard (rather than relying on the
+  // shared module-level default) so a messageId reused *within* a test is
+  // never affected by what ran before it in this file.
+
+  it('accepts a message within the clock-skew window', () => {
+    const id = generateIdentity('agent-A')
+    const now = 1_000_000
+    const signed = signMessage({ to: 'agent-B', kind: 'agent.hello', payload: null, timestamp: now }, id)
+    const result = verifyMessage(signed, { now: () => now + 60_000, replayGuard: createReplayGuard() })
+    expect(result.valid).toBe(true)
+  })
+
+  it('rejects a message outside the clock-skew window, even with a valid signature', () => {
+    const id = generateIdentity('agent-A')
+    const now = 1_000_000
+    const signed = signMessage({ to: 'agent-B', kind: 'agent.hello', payload: null, timestamp: now }, id)
+    const result = verifyMessage(signed, { now: () => now + 121_000, replayGuard: createReplayGuard() })
+    expect(result.valid).toBe(false)
+    expect(result.reason).toMatch(/clock-skew/)
+  })
+
+  it('accepts a message the first time, rejects the identical envelope replayed after', () => {
+    const id = generateIdentity('agent-A')
+    const guard = createReplayGuard()
+    const signed = signMessage({ to: 'agent-B', kind: 'task.claim', payload: { taskId: 't-1' } }, id)
+
+    const first = verifyMessage(signed, { replayGuard: guard })
+    expect(first.valid).toBe(true)
+
+    const replay = verifyMessage(signed, { replayGuard: guard })
+    expect(replay.valid).toBe(false)
+    expect(replay.reason).toMatch(/replayed/)
+  })
+
+  it('does not let an unsigned decoy pre-empt a legitimate message\'s messageId', () => {
+    // Signature verification must happen before the replay check — if a
+    // decoy with a forged (invalid) signature could still "consume" a
+    // messageId, an attacker could grief a legitimate sender's next
+    // message by guessing or observing the ID in advance.
+    const id = generateIdentity('agent-A')
+    const guard = createReplayGuard()
+    const signed = signMessage({ to: 'agent-B', kind: 'task.claim', payload: { taskId: 't-1' } }, id)
+
+    const decoy = { ...signed, signature: 'not-a-real-signature' }
+    const decoyResult = verifyMessage(decoy, { replayGuard: guard })
+    expect(decoyResult.valid).toBe(false)
+    expect(decoyResult.reason).toMatch(/signature/)
+
+    // The real message, same ID, must still succeed — the decoy never
+    // reached the replay guard.
+    const realResult = verifyMessage(signed, { replayGuard: guard })
+    expect(realResult.valid).toBe(true)
+  })
+
+  it('two different messages with different IDs never collide', () => {
+    const id = generateIdentity('agent-A')
+    const guard = createReplayGuard()
+    const a = signMessage({ to: 'agent-B', kind: 'task.heartbeat', payload: null }, id)
+    const b = signMessage({ to: 'agent-B', kind: 'task.heartbeat', payload: null }, id)
+    expect(a.messageId).not.toBe(b.messageId)
+    expect(verifyMessage(a, { replayGuard: guard }).valid).toBe(true)
+    expect(verifyMessage(b, { replayGuard: guard }).valid).toBe(true)
   })
 })
