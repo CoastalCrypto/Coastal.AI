@@ -1,6 +1,6 @@
 # Smoke-test image — mirrors the CoastalOS post-install environment on Ubuntu 24.04
 # Build context: repo root
-FROM ubuntu:24.04
+FROM ubuntu:26.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV CC_PORT=4747
