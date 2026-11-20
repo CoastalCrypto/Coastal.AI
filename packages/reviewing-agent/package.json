@@ -14,8 +14,8 @@
     "@coastal-ai/llm-client": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "typescript": "~5.9.3",
-    "vitest": "^1.6.0"
+    "@types/node": "^26.6.6",
+    "typescript": "~7.0.2",
+    "vitest": "^5.1.0"
   }
 }
