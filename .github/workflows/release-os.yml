@@ -58,7 +58,7 @@ jobs:
           bash os/kiosk/build/test/smoke-test.sh "$ISO"
 
       - name: Upload ISO artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coastalos-${{ github.event.inputs.version || 'ci' }}-${{ github.run_number }}.iso
           path: coastalos-*.iso
