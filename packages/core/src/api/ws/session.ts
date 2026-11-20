@@ -1,5 +1,5 @@
 import type { FastifyRequest } from 'fastify'
-import type { SocketStream } from '@fastify/websocket'
+import type { WebSocket } from 'ws'
 
 export interface HandleSessionWsOptions {
   validateSession: (token: string) => boolean
@@ -7,7 +7,9 @@ export interface HandleSessionWsOptions {
 
 const AUTH_TIMEOUT_MS = 5000
 
-// @fastify/websocket v8 passes a SocketStream; the raw WebSocket is at connection.socket
+// @fastify/websocket v9+ passes the raw ws WebSocket directly as the
+// handler's first argument (the v8-era SocketStream {socket: WebSocket}
+// wrapper was removed).
 //
 // A browser's native WebSocket API can't attach a custom header to the
 // upgrade handshake, so this route isn't gated by server.ts's onRequest
@@ -15,8 +17,7 @@ const AUTH_TIMEOUT_MS = 5000
 // message, unconditionally (mirrors /ws/agent-events's handshake in
 // agent-events.ts). Everything but an `{type:'auth'}` message is dropped
 // until authenticated, with a timeout that closes the socket.
-export function handleSessionWs(connection: SocketStream, _req: FastifyRequest, opts: HandleSessionWsOptions) {
-  const socket = connection.socket
+export function handleSessionWs(socket: WebSocket, _req: FastifyRequest, opts: HandleSessionWsOptions) {
   let authenticated = false
 
   const authTimeout = setTimeout(() => {

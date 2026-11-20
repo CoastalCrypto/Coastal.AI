@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify'
-import type { SocketStream } from '@fastify/websocket'
+import type { WebSocket } from 'ws'
 import { handleSessionWs } from '../ws/session.js'
 
 export interface WsRoutesOptions {
@@ -7,7 +7,10 @@ export interface WsRoutesOptions {
 }
 
 export async function wsRoutes(fastify: FastifyInstance, opts: WsRoutesOptions) {
-  fastify.get('/ws/session', { websocket: true }, (connection: SocketStream, req: FastifyRequest) => {
-    handleSessionWs(connection, req, opts)
+  // @fastify/websocket v9+ passes the raw ws WebSocket directly as the
+  // handler's first argument — the v8-era SocketStream wrapper (a
+  // {socket: WebSocket} object) was removed.
+  fastify.get('/ws/session', { websocket: true }, (socket: WebSocket, req: FastifyRequest) => {
+    handleSessionWs(socket, req, opts)
   })
 }
