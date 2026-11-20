@@ -53,7 +53,7 @@ export class AgentPipeline {
 
       const toolDefs = this.toolRegistry.getDefinitionsFor(agentConfig.tools)
       const session = new AgentSession(agentConfig, toolDefs, this.personaMgr.get())
-      const loop = new AgenticLoop(this.router.ollama, this.toolRegistry, this.gate, this.log)
+      const loop = new AgenticLoop(this.router, this.toolRegistry, this.gate, this.log)
 
       const stageStart = Date.now()
       const result = await loop.run(session, currentInput, `${sid}_stage_${stageResults.length}`, [])

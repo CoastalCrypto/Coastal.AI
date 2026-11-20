@@ -76,7 +76,7 @@ export async function streamRoutes(
         write('token', { token })
       }
 
-      const loop = new AgenticLoop(router.ollama, toolRegistry, gate, log, onApprovalNeeded, undefined, onToken)
+      const loop = new AgenticLoop(router, toolRegistry, gate, log, onApprovalNeeded, undefined, onToken)
       const result = await loop.run(session, message, sessionId, messages, undefined, undefined, images)
 
       // Only send full reply when tokens were NOT streamed (tool-use path, or model returned all at once)

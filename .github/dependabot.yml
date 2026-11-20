@@ -1,0 +1,37 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    # pnpm workspace — a single root manifest covers every package/*
+    # and apps/* dependency; Dependabot resolves the workspace graph
+    # from here rather than needing one entry per package.
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      # Security advisories still get their own individual PR regardless of
+      # grouping (Dependabot's documented behavior) — these groups only
+      # batch routine version-bump PRs so ~15 packages don't each spam a
+      # separate PR for the same monorepo-wide dependency.
+      typescript-tooling:
+        patterns:
+          - "typescript"
+          - "vitest"
+          - "@types/*"
+          - "eslint*"
+      fastify:
+        patterns:
+          - "fastify"
+          - "@fastify/*"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "docker"
+    directories:
+      - "/os/kiosk/build/test"
+      - "/packages/core"
+    schedule:
+      interval: "weekly"

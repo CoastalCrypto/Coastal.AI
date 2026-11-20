@@ -116,7 +116,7 @@ The standalone desktop edition — a native window running the full Coastal.AI s
 
 ### Requirements
 
-- For **local** model inference, install [**Ollama**](https://ollama.com) — the in-app setup wizard checks for it and helps you pull a model. Prefer the cloud? Claude / Gemini / OpenAI work with an API key instead.
+- For **local** model inference, install [**Ollama**](https://ollama.com) — the in-app setup wizard checks for it and helps you pull a model. Prefer the cloud? Set `ANTHROPIC_API_KEY` and point an agent's `modelPref` at any `claude-*` model (via `PATCH /api/admin/agents/:id`, or a soul file's frontmatter) for native Claude.
 
 ### Build it yourself
 
@@ -274,16 +274,16 @@ Coastal.AI agents can run shell commands, write files, and execute code. The **t
 
 | Level | What it means | When to use |
 |-------|--------------|-------------|
-| `trusted` *(default)* | Agents run in your user account — same access as you | Local single-user installs, development |
-| `sandboxed` | Agents run in a Linux namespace with overlayfs isolation | Linux servers, multi-user setups, production |
+| `sandboxed` *(default)* | Agents run in a Linux namespace with overlayfs isolation (falls back to a Docker container when the namespace isn't available) | Linux servers, multi-user setups, production |
+| `trusted` | Agents run in your user account — same access as you | Local single-user installs, development |
 | `autonomous` | Agents run without approval gates | Advanced automation only |
 
-### Default: Trusted
+### Default: Sandboxed
 
-The default trust level is `trusted`. This means:
+The default trust level is `sandboxed`. This means:
 - ✅ All data stays on your device
 - ✅ No network calls to external services
-- ⚠️ Agents have the same filesystem access as your user account
+- ✅ Agents are isolated from your filesystem by default — shell/file tools run inside a namespace or container, not directly against your user account
 
 ### Enabling Sandbox (Linux only)
 
@@ -297,7 +297,7 @@ CC_TRUST_LEVEL=sandboxed node packages/core/dist/main.js
 echo "sandboxed" > ./data/.trust-level
 ```
 
-> Sandbox mode uses Linux `unshare` + overlayfs. It is not available on macOS or Windows (falls back to `trusted` automatically).
+> Sandbox mode's namespace isolation uses Linux `unshare` + overlayfs and isn't available on macOS or Windows — `createBackend()` falls back to a Docker container for isolation there instead of to unsandboxed `trusted` behavior, as long as Docker itself is installed.
 
 ---
 
@@ -949,6 +949,7 @@ You can customize behavior by setting these before starting the app (or in a `.e
 | `CC_DATA_DIR` | `./data` | Where data is stored (SQLite, persona, etc.) |
 | `CC_OLLAMA_URL` | `http://127.0.0.1:11434` | Ollama endpoint |
 | `CC_DEFAULT_MODEL` | `llama3.2` | AI model to use |
+| `ANTHROPIC_API_KEY` | _(none)_ | Enables native Claude — set an agent's `modelPref` to any `claude-*` model name |
 | `CC_TRUST_LEVEL` | `sandboxed` | Agent trust tier |
 | `CC_AGENT_WORKDIR` | `./data/workspace` | Agent sandbox folder |
 | `CC_VLLM_URL` | `http://127.0.0.1:8000` | vLLM endpoint (optional, auto-probed) |

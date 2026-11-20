@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3'
 import { randomUUID } from 'node:crypto'
-import vm from 'node:vm'
 import type { CoreTool } from '../core/file.js'
+import { runInSandbox } from './process-sandbox.js'
 
 const TOOL_TIMEOUT_MS = 5000
 
@@ -67,41 +67,11 @@ export class CustomToolLoader {
         reversible: false,
       },
       execute: async (args: Record<string, unknown>): Promise<string> => {
-        // Sandboxed execution — no access to process, fs, require.
-        // We disconnect host prototypes by stringifying arguments and defining
-        // the console interface directly inside the VM, closing the prototype escape hatch.
-        const sandbox = Object.create(null)
-        sandbox.argsJson = JSON.stringify(args || {})
-        vm.createContext(sandbox)
-
-        const script = new vm.Script(`
-          (async function() {
-            let __result = '';
-            const console = {
-              log: (...a) => { __result += a.join(' ') + '\\n' },
-              error: (...a) => { __result += '[error] ' + a.join(' ') + '\\n' }
-            };
-            const args = JSON.parse(argsJson);
-            try {
-              const r = await (async function(args) {
-                ${row.impl_body}
-              })(args);
-              if (r !== undefined) {
-                __result += (String(__result).length > 0 ? '\\n' : '') + String(r);
-              }
-            } catch (e) {
-              __result += (String(__result).length > 0 ? '\\n' : '') + '[error] ' + String(e);
-            }
-            return __result.trim();
-          })();
-        `)
-
-        try {
-          const result = await script.runInContext(sandbox, { timeout: TOOL_TIMEOUT_MS })
-          return result || '(no output)'
-        } catch (e: any) {
-          return `[tool error] ${e.message}`
-        }
+        // Runs in a separate OS process with Node's permission model denying
+        // filesystem/child_process/worker/addon access — see
+        // process-sandbox.ts and sandbox-worker.ts for exactly what boundary
+        // this provides (and, as honestly stated there, what it doesn't).
+        return runInSandbox(row.impl_body, args, TOOL_TIMEOUT_MS)
       },
     }
   }
