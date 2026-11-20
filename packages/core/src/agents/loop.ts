@@ -1,9 +1,9 @@
-import type { OllamaClient } from '../models/ollama.js'
-import type { AgentSession, ChatMessage } from './session.js'
+import type { LocalChatMessage } from '../models/ollama.js'
+import type { AgentSession, ChatMessage, OllamaToolSchema } from './session.js'
 import type { ToolRegistry } from '../tools/registry.js'
 import type { PermissionGate } from './permission-gate.js'
 import type { ActionLog } from './action-log.js'
-import type { LoopResult, GateDecision } from './types.js'
+import type { LoopResult, GateDecision, ToolCall } from './types.js'
 import type { SkillGapsLog } from './skill-gaps.js'
 import type { SteerQueue } from '../pipeline/steer-queue.js'
 import { runBackgroundReview } from './learning-thread.js'
@@ -13,11 +13,29 @@ import { eventBus } from '../events/bus.js'
 const MAX_TURNS = () => { const n = Number(process.env.CC_AGENT_MAX_TURNS ?? 10); return (isNaN(n) || n < 1) ? 10 : n }
 const MAX_RESULT_CHARS = () => { const n = Number(process.env.CC_TOOL_RESULT_MAX_CHARS ?? 4000); return (isNaN(n) || n < 1) ? 4000 : n }
 
+/**
+ * Exactly what AgenticLoop needs from an inference backend — deliberately
+ * narrower than models/openai-compat.ts's InferenceClient (which also
+ * demands a `chat(model, messages)` method ModelRouter's own `chat()`
+ * doesn't structurally match, since that one takes `(messages, options)`
+ * and resolves the model itself via cascade routing). AgenticLoop only
+ * ever calls chatWithTools and the streaming fallback, so this is the
+ * actual contract: a raw OllamaClient satisfies it today exactly as it
+ * always has, and so does ModelRouter — which means the agent loop can
+ * take either one and actually reach whichever backend (Ollama, vLLM,
+ * AirLLM, or now Anthropic once a model name routes there) the caller
+ * wired in, instead of being hard-pinned to Ollama specifically.
+ */
+export interface ToolCallingClient {
+  chatWithTools(model: string, messages: ChatMessage[], tools: OllamaToolSchema[]): Promise<{ content: string; toolCalls: ToolCall[] }>
+  chatStream(model: string, messages: LocalChatMessage[]): AsyncGenerator<string>
+}
+
 export class AgenticLoop {
   private skillGaps?: SkillGapsLog
 
   constructor(
-    private ollama: OllamaClient,
+    private inference: ToolCallingClient,
     private registry: ToolRegistry,
     private gate: PermissionGate,
     private log: ActionLog,
@@ -62,7 +80,7 @@ export class AgenticLoop {
         }
         if (!iterBudget.consume()) break
 
-        const { content, toolCalls } = await this.ollama.chatWithTools(
+        const { content, toolCalls } = await this.inference.chatWithTools(
           session.agent.modelPref ?? process.env.CC_DEFAULT_MODEL ?? 'llama3.2',
           messages,
           session.toolSchemas,
@@ -73,7 +91,7 @@ export class AgenticLoop {
           let finalContent = content
           if (this.onToken && !content) {
             const model = session.agent.modelPref ?? process.env.CC_DEFAULT_MODEL ?? 'llama3.2'
-            for await (const token of this.ollama.chatStream(model, messages)) {
+            for await (const token of this.inference.chatStream(model, messages)) {
               this.onToken(token)
               finalContent += token
             }
