@@ -6,6 +6,7 @@ import { healthRoutes } from './api/routes/health.js'
 import { wsRoutes } from './api/routes/ws.js'
 import { consumeTicket } from './api/sse-ticket.js'
 import { isPublicRoute, requiredRoleFor, satisfiesRole } from './api/auth-policy.js'
+import { createAuthRateLimiter } from './api/auth-rate-limit.js'
 import { agentEventsRoute } from './api/routes/agent-events.js'
 import { graphQLRoutes } from './api/routes/graphql.js'
 import { chatRoutes } from './api/routes/chat.js'
@@ -55,6 +56,7 @@ export async function buildServer() {
   const fastify = Fastify({ logger: false, maxParamLength: 500 })
   const ctx = await createAppContext()
   const { config, adminToken, userStore } = ctx
+  const authRateLimiter = createAuthRateLimiter()
 
   // Shared by the onRequest hook below and by the /ws/session first-message
   // handshake (wsRoutes) — a WebSocket upgrade can't be checked by this hook
@@ -93,6 +95,20 @@ export async function buildServer() {
     // would 401 the handshake before it can even start.
     if (req.url.startsWith('/ws/')) return
 
+    // This hook does a timingSafeEqual comparison against the raw admin
+    // token and a session-token/HMAC verification on every request — CodeQL
+    // flagged it as an authorization check with no rate limiting. @fastify/
+    // rate-limit (used below for specific routes like /api/auth/login) only
+    // attaches to a matched route's handler chain; this hook runs before
+    // routing, so there's no per-route config to hang off here. authRateLimit
+    // only counts actual WRONG credentials (a mismatched raw token, an
+    // invalid session) against the budget — a valid session that's merely
+    // the wrong role, or no credential presented at all, isn't a guessing
+    // attempt and never throttles a legitimate client.
+    if (authRateLimiter.isLimited(req.ip)) {
+      return reply.status(429).send({ error: 'rate_limited', message: 'Too many failed authentication attempts. Try again later.' })
+    }
+
     // Deny by default, at every bind address — see api/auth-policy.ts. A
     // route reaches this point only if it isn't in PUBLIC_ROUTES, so every
     // one of them needs a valid session carrying at least the role
@@ -109,6 +125,8 @@ export async function buildServer() {
       const a = Buffer.from(raw, 'utf8')
       const b = Buffer.from(adminToken, 'utf8')
       if (a.length === b.length && timingSafeEqual(a, b)) return
+      authRateLimiter.recordFailure(req.ip)
+      console.warn(`[auth] 401 ${req.method} ${req.url} — x-admin-token present but did not match`)
     }
 
     const sessionHeader = req.headers['x-admin-session'] ?? ''
@@ -123,6 +141,7 @@ export async function buildServer() {
       if (result.reason === 'password_change_required') {
         return reply.status(403).send({ error: 'password_change_required', message: 'Default password must be changed before continuing.' })
       }
+      authRateLimiter.recordFailure(req.ip)
       console.warn(`[auth] 401 ${req.method} ${req.url} — session present but invalid (prefix=${session.slice(0, 3)})`)
     } else if (req.method === 'GET' && required === 'viewer') {
       // EventSource can't set headers at all — a viewer-level GET route may

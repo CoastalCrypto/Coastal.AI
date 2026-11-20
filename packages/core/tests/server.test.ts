@@ -311,3 +311,66 @@ describe('SSE ticket auth (network-exposed)', () => {
     expect(res.statusCode).toBe(401)
   })
 })
+
+// CodeQL flagged the onRequest hook's timingSafeEqual/session-verification
+// checks as an authorization path with no rate limiting (nothing stopped
+// unlimited admin-token or session-token guesses). Own describe block with
+// its own server, since the limiter's state is tied to one buildServer()
+// instance and deliberately persists across requests within it — sharing
+// a server with other auth tests would mean whichever ran first exhausts
+// the budget for the rest.
+describe('auth rate limiting', () => {
+  let server: Awaited<ReturnType<typeof buildServer>>
+  let dataDir: string
+  const originalDataDir = process.env.CC_DATA_DIR
+
+  beforeAll(async () => {
+    dataDir = mkdtempSync(join(tmpdir(), 'cc-auth-rate-limit-test-'))
+    process.env.CC_DATA_DIR = dataDir
+    invalidateConfig()
+    server = await buildServer()
+    await server.listen({ port: 0, host: '127.0.0.1' })
+  })
+
+  afterAll(async () => {
+    await server.close()
+    if (originalDataDir === undefined) delete process.env.CC_DATA_DIR
+    else process.env.CC_DATA_DIR = originalDataDir
+    invalidateConfig()
+    rmSync(dataDir, { recursive: true, force: true })
+  })
+
+  // Order matters within this describe block: both tests share one server,
+  // and therefore one limiter instance keyed by the same injected-request
+  // IP. Once the first test below trips the limiter for that IP, every
+  // subsequent request from it gets 429 regardless of credentials — so the
+  // "no credential is ever counted" test has to run first, while the
+  // budget is still clean, not after.
+  it('a request with no credential at all is never counted toward the failure budget', async () => {
+    // Confirms the limiter is scoped to actual wrong-credential attempts,
+    // not every unauthenticated request — otherwise a burst of ordinary,
+    // uncredentialed browser traffic (checking if a session exists yet)
+    // could lock a legitimate client out on its own.
+    for (let i = 0; i < 25; i++) {
+      const res = await server.inject({ method: 'GET', url: '/api/sessions' })
+      expect(res.statusCode).toBe(401)
+    }
+  })
+
+  it('a wrong x-admin-session eventually gets rate-limited to 429, not endlessly re-tried as 401', async () => {
+    let lastStatus = 0
+    // MAX_FAILURES_PER_WINDOW (auth-rate-limit.ts) is 20 — comfortably more
+    // attempts than that proves the limiter actually engages rather than
+    // relying on an exact count this test would need to track in lockstep
+    // with that module's internal default.
+    for (let i = 0; i < 25; i++) {
+      const res = await server.inject({
+        method: 'GET', url: '/api/sessions',
+        headers: { 'x-admin-session': `not-a-real-session-${i}` },
+      })
+      lastStatus = res.statusCode
+      if (lastStatus === 429) break
+    }
+    expect(lastStatus).toBe(429)
+  })
+})
