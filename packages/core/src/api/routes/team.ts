@@ -1,23 +1,22 @@
 import type { FastifyInstance } from 'fastify'
-import { ModelRouter } from '../../models/router.js'
-import { AgentRegistry } from '../../agents/registry.js'
-import { ToolRegistry } from '../../tools/registry.js'
+import type { ModelRouter } from '../../models/router.js'
+import type { AgentRegistry } from '../../agents/registry.js'
+import type { ToolRegistry } from '../../tools/registry.js'
 import { BossAgent } from '../../agents/boss-agent.js'
 import { TeamChannel } from '../../agents/team-channel.js'
-import { createBackend } from '../../tools/backends/index.js'
-import { loadConfig } from '../../config.js'
 import { randomUUID } from 'node:crypto'
 
-export async function teamRoutes(fastify: FastifyInstance) {
-  const config = loadConfig()
-  const router = new ModelRouter({ ollamaUrl: config.ollamaUrl, vllmUrl: config.vllmUrl, airllmUrl: config.airllmUrl, defaultModel: config.defaultModel })
-  const agentRegistry = new AgentRegistry(`${config.dataDir}/agents.db`)
-  const backend = await createBackend(config.agentTrustLevel, [config.agentWorkdir])
-  const toolRegistry = new ToolRegistry({
-    backend,
-    trustLevel: config.agentTrustLevel,
-    workdir: config.agentWorkdir,
-  })
+export interface TeamRouteDeps {
+  registry: AgentRegistry
+  router: ModelRouter
+  toolRegistry: ToolRegistry
+}
+
+export async function teamRoutes(fastify: FastifyInstance, opts: TeamRouteDeps) {
+  const { registry, router, toolRegistry } = opts
+  // In-memory pub/sub bus, local to this route group — no persistent state
+  // of its own, so unlike router/registry/toolRegistry there is nothing
+  // here that benefits from being shared with the rest of the app.
   const channel = new TeamChannel()
 
   fastify.post<{
@@ -36,13 +35,8 @@ export async function teamRoutes(fastify: FastifyInstance) {
     },
   }, async (req, reply) => {
     const { task, sessionId = randomUUID() } = req.body
-    const boss = new BossAgent(router, agentRegistry, channel, toolRegistry)
+    const boss = new BossAgent(router, registry, channel, toolRegistry)
     const result = await boss.run(task, sessionId)
     return reply.send(result)
-  })
-
-  fastify.addHook('onClose', async () => {
-    router.close()
-    agentRegistry.close()
   })
 }
