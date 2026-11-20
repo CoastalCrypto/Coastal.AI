@@ -500,8 +500,8 @@ importers:
         specifier: ^3.15.1
         version: 3.15.1
       lottie-react:
-        specifier: ^2.4.1
-        version: 2.4.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        specifier: ^3.1.2
+        version: 3.1.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       react:
         specifier: ^19.2.4
         version: 19.2.4
@@ -526,7 +526,7 @@ importers:
         version: 4.2.2(vite@8.0.5(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@types/node@24.12.0)(esbuild@0.28.1)(jiti@2.6.1)(terser@5.51.2)(tsx@4.22.3)(yaml@2.8.3))
       '@testing-library/jest-dom':
         specifier: ^7.0.1
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@1.6.1(@types/node@24.12.0)(jsdom@29.0.1)(lightningcss@1.32.0)(terser@5.46.1))
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@1.6.1(@types/node@24.12.0)(jsdom@29.0.1)(lightningcss@1.32.0)(terser@5.51.2))
       '@testing-library/react':
         specifier: ^16.3.2
         version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -5685,11 +5685,11 @@ packages:
   lop@0.4.2:
     resolution: {integrity: sha512-RefILVDQ4DKoRZsJ4Pj22TxE3omDO47yFpkIBoDKzkqPRISs5U1cnAdg/5583YPkWPaLIYHOKRMQSvjFsO26cw==}
 
-  lottie-react@2.4.1:
-    resolution: {integrity: sha512-LQrH7jlkigIIv++wIyrOYFLHSKQpEY4zehPicL9bQsrt1rnoKRYCYgpCUe5maqylNtacy58/sQDZTkwMcTRxZw==}
+  lottie-react@3.1.2:
+    resolution: {integrity: sha512-otbTz+Kk1ksYzcWFAlcH8xFGBWkW/hUNEHy6gLvYf7kgEkZxyPT8lXJeBu/5o0xo0cdMwvd/lwkpuXCTSQmJdQ==}
     peerDependencies:
-      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react: ^18.2.0 || ^19.0.0
+      react-dom: ^18.2.0 || ^19.0.0
 
   lottie-web@5.13.0:
     resolution: {integrity: sha512-+gfBXl6sxXMPe8tKQm7qzLnUy5DUPJPKIyRHwtpCpyUEYjHYRJC/5gjUvdkuO2c3JllrPtHXH5UJJK8LRYl5yQ==}
@@ -10813,7 +10813,7 @@ snapshots:
       picocolors: 1.1.1
       pretty-format: 27.5.1
 
-  '@testing-library/jest-dom@7.0.1(@testing-library/dom@10.4.1)(vitest@1.6.1(@types/node@24.12.0)(jsdom@29.0.1)(lightningcss@1.32.0)(terser@5.46.1))':
+  '@testing-library/jest-dom@7.0.1(@testing-library/dom@10.4.1)(vitest@1.6.1(@types/node@24.12.0)(jsdom@29.0.1)(lightningcss@1.32.0)(terser@5.51.2))':
     dependencies:
       '@adobe/css-tools': 4.5.0
       '@testing-library/dom': 10.4.1
@@ -10823,7 +10823,7 @@ snapshots:
       picocolors: 1.1.1
       redent: 3.0.0
     optionalDependencies:
-      vitest: 1.6.1(@types/node@24.12.0)(jsdom@29.0.1)(lightningcss@1.32.0)(terser@5.46.1)
+      vitest: 1.6.1(@types/node@24.12.0)(jsdom@29.0.1)(lightningcss@1.32.0)(terser@5.51.2)
 
   '@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
     dependencies:
@@ -13548,7 +13548,7 @@ snapshots:
       option: 0.2.4
       underscore: 1.13.8
 
-  lottie-react@2.4.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
+  lottie-react@3.1.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
     dependencies:
       lottie-web: 5.13.0
       react: 19.2.4
