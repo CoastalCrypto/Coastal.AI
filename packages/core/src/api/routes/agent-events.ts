@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import type { SocketStream } from '@fastify/websocket'
+import type { WebSocket } from 'ws'
 import type Database from 'better-sqlite3'
 import { eventBus } from '../../events/bus.js'
 import type { AgentEvent } from '../../events/types.js'
@@ -354,8 +354,9 @@ export async function agentEventsRoute(
     return { agentId, toolName, score: newScore, weight }
   })
 
-  app.get('/ws/agent-events', { websocket: true }, (connection: SocketStream, req) => {
-    const socket = connection.socket
+  // @fastify/websocket v9+ passes the raw ws WebSocket directly as the
+  // handler's first argument (the v8-era SocketStream wrapper was removed).
+  app.get('/ws/agent-events', { websocket: true }, (socket: WebSocket, req) => {
     let authenticated = false
 
     // Check header/query auth (backwards compat)
