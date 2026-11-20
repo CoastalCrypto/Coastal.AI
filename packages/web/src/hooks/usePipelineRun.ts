@@ -6,11 +6,11 @@ function adminHeaders(): Record<string, string> {
   return session ? { 'x-admin-session': session } : {}
 }
 
-// EventSource can't send the x-admin-session header, so a network-exposed
-// server requires a short-lived ticket (minted via an ordinary,
-// header-authenticated POST) passed as a query param instead. Shared with
-// /api/events — a ticket just proves "recently authenticated," it isn't
-// tied to a specific stream.
+// EventSource can't send the x-admin-session header, so the gated SSE route
+// requires a short-lived ticket (minted via an ordinary, header-authenticated
+// POST) passed as a query param instead — at every bind address (see
+// api/auth-policy.ts). Shared with /api/events — a ticket just proves
+// "recently authenticated," it isn't tied to a specific stream.
 async function fetchTicket(): Promise<string | null> {
   try {
     const res = await fetch('/api/events/ticket', { method: 'POST', headers: adminHeaders() })

@@ -105,9 +105,9 @@ describe('CoreClient admin methods', () => {
     )
   })
 
-  // Regression: /api/persona is auth-gated on network-exposed servers
-  // (server.ts's isNetworkRoute). The client must send the session token
-  // or every persona read/write 401s the moment CC_HOST leaves localhost.
+  // Regression: /api/persona is auth-gated at every bind address
+  // (api/auth-policy.ts). The client must send the session token or every
+  // persona read/write 401s.
   it('getPersona sends session token', async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true, json: async () => ({ persona: {}, configured: true }),

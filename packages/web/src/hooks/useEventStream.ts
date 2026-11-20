@@ -6,11 +6,10 @@ function adminHeaders(): Record<string, string> {
   return session ? { 'x-admin-session': session } : {}
 }
 
-// EventSource can't send the x-admin-session header, so a network-exposed
-// server requires a short-lived ticket (minted via an ordinary,
-// header-authenticated POST) passed as a query param instead. On a
-// localhost-only server this call still succeeds — the endpoint just isn't
-// gated — so the extra round trip is harmless either way.
+// EventSource can't send the x-admin-session header, so the gated SSE route
+// requires a short-lived ticket (minted via an ordinary, header-authenticated
+// POST) passed as a query param instead — at every bind address, not just
+// when network-exposed (see api/auth-policy.ts).
 async function fetchTicket(): Promise<string | null> {
   try {
     const res = await fetch(`${coreHttpOrigin()}/api/events/ticket`, {
