@@ -118,7 +118,7 @@ jobs:
           echo "EOF"      >> "$GITHUB_OUTPUT"
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.tag.outputs.ref }}
           name: "CoastalClaw ${{ steps.tag.outputs.ref }}"
