@@ -818,7 +818,7 @@ Coastal.AI runs as three cooperating processes:
 │  EventBus (SSE, 200-event ring buffer)                             │
 │  AnalyticsStore (action_log → snapshots)                           │
 │  ChannelManager (Telegram / Discord / Slack / Zapier)              │
-│  UnifiedMemory + InfinityClient    BossAgent + TeamChannel         │
+│  UnifiedMemory + InfinityClient    runTeamChain + TeamChannel      │
 │                                                                    │
 │  /api/auth/*  /api/admin/*  /api/chat  /api/events  /api/analytics│
 └──────────────┬─────────────────────────────────────────────────────┘
@@ -873,6 +873,7 @@ single-node install never imports them. Software-complete today — the
 | Package | What it does |
 |---------|--------------|
 | [`packages/coordination`](packages/coordination) | The peer kernel — Ed25519-signed A2A envelopes, TOFU peer registry, a 6-state super-option task board, atomic handoff + zombie reclaim, a dependency resolver, broadcast replication, and pluggable transports (localhost / TCP+mDNS / Telegram) |
+| [`packages/node-runtime`](packages/node-runtime) | `coastal-cluster` CLI — provisions and boots a BC-250 node from `/etc/coastal/{node,roster}.json`: identity + peer registry + coordination DB, assembling a validated roster from staged public tuples |
 | [`packages/llm-client`](packages/llm-client) | Injectable LLM interface + OpenAI-compatible HTTP adapter (llama.cpp / Ollama / OpenAI), SSE streaming |
 | [`packages/planner-agent`](packages/planner-agent) | Decomposes a `plan_task` goal into `code_task` + `review_task` subtasks with dependency edges (deterministic or LLM-backed) |
 | [`packages/coding-agent`](packages/coding-agent) | Claims `code_task`, drives a model to produce code |
@@ -1092,9 +1093,11 @@ DELETE /api/admin/users/:id
 
 ```
 POST /api/team/run
-  { "task": "..." }
-  → { reply, subtaskCount, subtasks: [{ subtaskId, reply }] }
+  { "task": "...", "sessionId"?: "..." }
+  → { trace: [{ agentId, agentName, reply, handoffTo?, expectation?, unresolved?, verificationNote? }] }
 ```
+
+One entry per turn — a chain that hands off runs multiple turns across agents; `trace` has one entry per agent handled.
 
 ### Pipeline
 
@@ -1207,7 +1210,7 @@ Coastal.AI/
 │   │       ├── events/            # SSE ring buffer
 │   │       ├── analytics/         # Action log + snapshots
 │   │       ├── persona/           # Persona manager
-│   │       ├── agents/            # AgenticLoop, BossAgent, MetaAgent, TeamChannel
+│   │       ├── agents/            # AgenticLoop, MetaAgent, TeamChannel, runTeamChain
 │   │       ├── pipeline/          # PipelineStore, AsyncPipelineRunner, SteerQueue
 │   │       ├── cron/              # Scheduled job store + croner scheduler
 │   │       ├── skills/            # Skill template store
@@ -1223,8 +1226,8 @@ Coastal.AI/
 │   │       └── hooks/             # useEventStream, usePipelineRun
 │   ├── daemon/                    # Proactive scheduler + voice
 │   ├── architect/                 # Self-build loop: Planner, Patcher, Validator
-│   ├── desktop/                   # Tauri desktop shell (Win/macOS/Linux)
 │   ├── coordination/              # A2A peer kernel — task board, identity, transports, replication
+│   ├── node-runtime/              # coastal-cluster CLI — BC-250 node provisioning/boot
 │   ├── llm-client/                # Injectable LLM client (llama.cpp / Ollama / OpenAI)
 │   ├── planner-agent/             # plan_task → code + review decomposition
 │   ├── coding-agent/              # code_task worker
@@ -1232,6 +1235,8 @@ Coastal.AI/
 │   ├── curator-agent/             # notes-substrate grader / pruner
 │   ├── mission-control/           # swarm dashboard (node:http + SSE)
 │   └── swarm-demos/               # runnable end-to-end multi-agent demos
+├── apps/
+│   └── desktop/                   # Tauri desktop shell (Win/macOS/Linux)
 ├── os/                            # Coastal.AI OS product (two editions + shared base)
 │   ├── base/                      # shared: VERSION, apt lane, systemd units
 │   ├── kiosk/                     # desktop USB ISO edition (live-build + VibeVoice)
