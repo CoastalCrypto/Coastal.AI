@@ -392,7 +392,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
   })
 
   // PATCH /api/admin/trust-level — change the agent shell trust tier
-  fastify.patch<{ Body: { level: 'sandboxed' | 'trusted' | 'autonomous' } }>(
+  fastify.patch<{ Body: { level: 'sandboxed' | 'trusted' | 'autonomous' | 'remote' } }>(
     '/api/admin/trust-level',
     {
       schema: {
@@ -400,7 +400,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
           type: 'object',
           required: ['level'],
           properties: {
-            level: { type: 'string', enum: ['sandboxed', 'trusted', 'autonomous'] },
+            level: { type: 'string', enum: ['sandboxed', 'trusted', 'autonomous', 'remote'] },
           },
         },
       },

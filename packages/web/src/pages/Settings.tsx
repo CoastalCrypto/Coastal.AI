@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { coreClient, type Persona } from '../api/client'
 import type { NavPage } from '../components/SideNav'
 
-type TrustLevel = 'sandboxed' | 'trusted' | 'autonomous'
+type TrustLevel = 'sandboxed' | 'trusted' | 'autonomous' | 'remote'
 
 const PERSONALITY_PRESETS = [
   { id: 'direct', label: 'Direct', desc: 'Concise, data-first, no filler.' },
@@ -117,6 +117,8 @@ export function Settings({ onNav: _onNav }: { onNav: (page: NavPage) => void }) 
                   ? 'Agents can read and write anywhere on your system.'
                   : trustLevel === 'trusted'
                   ? 'Agents are restricted to their workspace folder.'
+                  : trustLevel === 'remote'
+                  ? 'Agents run on a separate machine over SSH, with full access there.'
                   : 'Agents are heavily restricted and cannot access the filesystem.'}
               </p>
               {trustSaved && (
@@ -144,6 +146,7 @@ export function Settings({ onNav: _onNav }: { onNav: (page: NavPage) => void }) 
                 <option value="sandboxed">Sandboxed</option>
                 <option value="trusted">Trusted</option>
                 <option value="autonomous">Autonomous</option>
+                <option value="remote">Remote (SSH)</option>
               </select>
             </div>
           </div>

@@ -169,7 +169,13 @@ export async function createAppContext(): Promise<AppContext> {
   // not in trustLevel/workdir, so a second createBackend() call would just
   // re-run NamespaceBackend.isAvailable()'s blocking unshare(1) probe for an
   // identical result.
-  const sharedBackend = await createBackend(config.agentTrustLevel, [config.agentWorkdir])
+  const sharedBackend = await createBackend(
+    config.agentTrustLevel,
+    [config.agentWorkdir],
+    config.agentTrustLevel === 'remote'
+      ? { host: config.sshHost!, port: config.sshPort, username: config.sshUser!, privateKeyPath: config.sshKeyPath! }
+      : undefined,
+  )
   const chatBrowserManager = config.agentTrustLevel !== 'sandboxed' ? new BrowserSessionManager() : undefined
   const chatToolRegistry = new ToolRegistry({
     backend: sharedBackend,
@@ -248,6 +254,7 @@ export async function createAppContext(): Promise<AppContext> {
     personaMgr.close()
     modelRouter.close()
     skillGapsLog.close()
+    await sharedBackend.dispose?.()
     await chatBrowserManager?.closeAll()
     await unifiedMemory.close()
     architectDb.close()

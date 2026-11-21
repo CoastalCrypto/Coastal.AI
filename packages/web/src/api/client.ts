@@ -1147,14 +1147,14 @@ export class CoreClient {
     }
   }
 
-  async getTrustLevel(): Promise<'sandboxed' | 'trusted' | 'autonomous'> {
+  async getTrustLevel(): Promise<'sandboxed' | 'trusted' | 'autonomous' | 'remote'> {
     const res = await fetch(`${this.baseUrl}/api/admin/trust-level`, { headers: this.adminHeaders() })
     if (!res.ok) throw new Error(`Failed to get trust level (${res.status})`)
-    const { level } = await res.json() as { level: 'sandboxed' | 'trusted' | 'autonomous' }
+    const { level } = await res.json() as { level: 'sandboxed' | 'trusted' | 'autonomous' | 'remote' }
     return level
   }
 
-  async setTrustLevel(level: 'sandboxed' | 'trusted' | 'autonomous'): Promise<void> {
+  async setTrustLevel(level: 'sandboxed' | 'trusted' | 'autonomous' | 'remote'): Promise<void> {
     const res = await fetch(`${this.baseUrl}/api/admin/trust-level`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...this.adminHeaders() },

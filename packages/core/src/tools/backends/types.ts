@@ -14,4 +14,6 @@ export interface ShellBackend {
     sessionId: string,
     timeoutMs?: number,
   ): Promise<ShellResult>
+  /** Tears down any persistent connection/resource. Only backends that hold one (e.g. SshBackend) implement this. */
+  dispose?(): Promise<void>
 }

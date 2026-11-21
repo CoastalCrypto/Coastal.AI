@@ -22,18 +22,28 @@ export function createShellTools(backend: ShellBackend, agentWorkdir: string): C
         reversible: false,
       },
       execute: async (args) => {
-        const rootWorkdir = resolve(agentWorkdir)
-        const requestedCwd = resolve(String(args.workdir ?? rootWorkdir))
-
-        // Block workdir escapes
-        if (!requestedCwd.startsWith(rootWorkdir)) {
-          return `Error: cwd escape attempt blocked. Requested: ${requestedCwd}, allowed: ${rootWorkdir}`
+        // SshBackend's workdir is a path on the *remote* host — resolve()/
+        // startsWith() against the local agentWorkdir is meaningless there,
+        // so it's passed through verbatim instead of locally containment-
+        // checked. 'remote' is already a full-access tier (no local sandbox
+        // either), so this isn't a containment regression.
+        let requestedCwd: string
+        if (backend.name === 'ssh') {
+          requestedCwd = String(args.workdir ?? '.')
+        } else {
+          const rootWorkdir = resolve(agentWorkdir)
+          requestedCwd = resolve(String(args.workdir ?? rootWorkdir))
+          if (!requestedCwd.startsWith(rootWorkdir)) {
+            return `Error: cwd escape attempt blocked. Requested: ${requestedCwd}, allowed: ${rootWorkdir}`
+          }
         }
 
         const available = await backend.isAvailable()
         if (!available) {
           const hint = backend.name === 'docker'
             ? ' Ensure Docker Desktop is running (or set CC_TRUST_LEVEL=trusted).'
+            : backend.name === 'ssh'
+            ? ' Check CC_SSH_HOST/CC_SSH_USER/CC_SSH_KEY_PATH and that the remote host is reachable.'
             : ''
           return `Error: shell backend '${backend.name}' is not available.${hint}`
         }

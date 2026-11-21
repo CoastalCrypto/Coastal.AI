@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { HardwareProbe } from './system/hardware.js'
 
-export type TrustLevel = 'sandboxed' | 'trusted' | 'autonomous'
+export type TrustLevel = 'sandboxed' | 'trusted' | 'autonomous' | 'remote'
 
 export interface Config {
   port: number
@@ -23,6 +23,11 @@ export interface Config {
   approvalTimeoutMs: number
   defaultModel: string
   agentTrustLevel: TrustLevel
+  /** Only set (and only required) when agentTrustLevel is 'remote' — see loadConfig()'s validation. */
+  sshHost: string | undefined
+  sshPort: number
+  sshUser: string | undefined
+  sshKeyPath: string | undefined
   cloudConsentGranted: boolean
   vllmUrl: string
   airllmUrl: string
@@ -90,11 +95,21 @@ export function loadConfig(): Config {
       const raw = (existsSync(trustFile)
         ? readFileSync(trustFile, 'utf8').trim()
         : null) ?? process.env.CC_TRUST_LEVEL ?? 'sandboxed' // <-- Changed default to 'sandboxed'
-      if (!['sandboxed', 'trusted', 'autonomous'].includes(raw)) {
-        throw new Error(`Trust level must be 'sandboxed'|'trusted'|'autonomous', got: "${raw}"`)
+      if (!['sandboxed', 'trusted', 'autonomous', 'remote'].includes(raw)) {
+        throw new Error(`Trust level must be 'sandboxed'|'trusted'|'autonomous'|'remote', got: "${raw}"`)
+      }
+      // Fail fast rather than letting createBackend() construct an SshBackend
+      // with missing fields — see tools/backends/index.ts.
+      if (raw === 'remote' && (!process.env.CC_SSH_HOST || !process.env.CC_SSH_USER || !process.env.CC_SSH_KEY_PATH)) {
+        throw new Error("Trust level 'remote' requires CC_SSH_HOST, CC_SSH_USER, and CC_SSH_KEY_PATH to be set")
       }
       return raw as TrustLevel
-    })(),    cloudConsentGranted: (() => {
+    })(),
+    sshHost: process.env.CC_SSH_HOST,
+    sshPort: Number(process.env.CC_SSH_PORT ?? '22'),
+    sshUser: process.env.CC_SSH_USER,
+    sshKeyPath: process.env.CC_SSH_KEY_PATH,
+    cloudConsentGranted: (() => {
       const dataDir = process.env.CC_DATA_DIR ?? './data'
       const consentFile = join(dataDir, '.cloud-consent')
       return existsSync(consentFile)
