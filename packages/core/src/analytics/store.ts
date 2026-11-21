@@ -76,27 +76,34 @@ export class AnalyticsStore {
       successRate: Math.round(r.success_pct ?? 0),
     }))
 
-    // Last 7 days activity
-    const last7Days: DayStat[] = []
+    // Last 7 days activity — one range query covering the whole window,
+    // bucketed in JS, instead of a separate COUNT(DISTINCT ...) query per day.
+    const dayStarts: Date[] = []
     for (let i = 6; i >= 0; i--) {
       const dayStart = new Date()
       dayStart.setHours(0, 0, 0, 0)
       dayStart.setDate(dayStart.getDate() - i)
-      const dayEnd = new Date(dayStart)
-      dayEnd.setDate(dayEnd.getDate() + 1)
-
-      const row = this.db.prepare(`
-        SELECT COUNT(*) as calls, COUNT(DISTINCT session_id) as sessions
-        FROM action_log
-        WHERE created_at >= ? AND created_at < ?
-      `).get(dayStart.getTime(), dayEnd.getTime()) as { calls: number; sessions: number }
-
-      last7Days.push({
-        date: dayStart.toISOString().slice(0, 10),
-        calls: row.calls,
-        sessions: row.sessions,
-      })
+      dayStarts.push(dayStart)
     }
+    const recentRows = this.db.prepare(`
+      SELECT created_at, session_id FROM action_log WHERE created_at >= ?
+    `).all(dayStarts[0].getTime()) as Array<{ created_at: number; session_id: string }>
+
+    const buckets = dayStarts.map(() => ({ calls: 0, sessions: new Set<string>() }))
+    for (const row of recentRows) {
+      for (let i = dayStarts.length - 1; i >= 0; i--) {
+        if (row.created_at >= dayStarts[i].getTime()) {
+          buckets[i].calls++
+          buckets[i].sessions.add(row.session_id)
+          break
+        }
+      }
+    }
+    const last7Days: DayStat[] = dayStarts.map((dayStart, i) => ({
+      date: dayStart.toISOString().slice(0, 10),
+      calls: buckets[i].calls,
+      sessions: buckets[i].sessions.size,
+    }))
 
     return {
       totalToolCalls: totalRow.n,

@@ -103,6 +103,14 @@ export type CreateAgentInput = {
 export class AgentRegistry {
   private db: Database.Database
   private builtInSoulsDir: string
+  // get()/list()/listAll() resolve these per row, and are on the hot path
+  // (every chat message, every pipeline stage, every team-chain hop) — but
+  // the files they probe for (agents/<id>/config.json, agents/<id>/SYSTEM.md)
+  // are operator-installed overrides that don't change while the process is
+  // running, so the existsSync/readFileSync result is cached per agentId
+  // instead of re-probed on every call.
+  private fileConfigCache = new Map<string, AgentFileConfig | null>()
+  private soulOverrideCache = new Map<string, string | null>()
 
   constructor(dbPath: string) {
     this.db = new Database(dbPath)
@@ -164,6 +172,14 @@ export class AgentRegistry {
   get(id: string): AgentConfig | null {
     const row = this.db.prepare('SELECT * FROM agents WHERE id = ?').get(id) as any
     return row ? this.rowToConfig(row) : null
+  }
+
+  /** Batched get() — one query instead of one per id. Order is not guaranteed to match `ids`. */
+  getMany(ids: string[]): AgentConfig[] {
+    if (ids.length === 0) return []
+    const placeholders = ids.map(() => '?').join(',')
+    const rows = this.db.prepare(`SELECT * FROM agents WHERE id IN (${placeholders})`).all(...ids) as any[]
+    return rows.map(row => this.rowToConfig(row))
   }
 
   getByDomain(domain: string): AgentConfig | null {
@@ -244,27 +260,42 @@ export class AgentRegistry {
   close(): void { this.db.close() }
 
   private loadFileConfig(agentId: string): AgentFileConfig | null {
+    const cached = this.fileConfigCache.get(agentId)
+    if (cached !== undefined) return cached
+
     const candidates = [
       join(process.cwd(), 'agents', agentId, 'config.json'),
       join(__dirname, '..', '..', '..', '..', 'agents', agentId, 'config.json'),
     ]
+    let result: AgentFileConfig | null = null
     for (const p of candidates) {
       if (existsSync(p)) {
-        try { return JSON.parse(readFileSync(p, 'utf8')) as AgentFileConfig } catch {}
+        try { result = JSON.parse(readFileSync(p, 'utf8')) as AgentFileConfig; break } catch {}
       }
     }
-    return null
+    this.fileConfigCache.set(agentId, result)
+    return result
   }
 
   private resolvedSoulPath(agentId: string, dbSoulPath: string): string {
+    return this.findSoulOverride(agentId) ?? dbSoulPath
+  }
+
+  /** Resolved separately from the db path so db-stored soulPath changes (update()) are never masked by a stale cache entry. */
+  private findSoulOverride(agentId: string): string | null {
+    const cached = this.soulOverrideCache.get(agentId)
+    if (cached !== undefined) return cached
+
     const candidates = [
       join(process.cwd(), 'agents', agentId, 'SYSTEM.md'),
       join(__dirname, '..', '..', '..', '..', 'agents', agentId, 'SYSTEM.md'),
     ]
+    let found: string | null = null
     for (const p of candidates) {
-      if (existsSync(p)) return p
+      if (existsSync(p)) { found = p; break }
     }
-    return dbSoulPath
+    this.soulOverrideCache.set(agentId, found)
+    return found
   }
 
   private rowToConfig(row: any): AgentConfig {

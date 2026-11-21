@@ -164,17 +164,21 @@ export async function createAppContext(): Promise<AppContext> {
   const pipelineStore = new PipelineStore(db)
   const steerQueue = new SteerQueue()
 
-  const chatBackend = await createBackend(config.agentTrustLevel, [config.agentWorkdir])
+  // One shared backend for both registries — chatToolRegistry/pipelineToolRegistry
+  // differ only in browser-tool wiring (see the comment on those fields above),
+  // not in trustLevel/workdir, so a second createBackend() call would just
+  // re-run NamespaceBackend.isAvailable()'s blocking unshare(1) probe for an
+  // identical result.
+  const sharedBackend = await createBackend(config.agentTrustLevel, [config.agentWorkdir])
   const chatBrowserManager = config.agentTrustLevel !== 'sandboxed' ? new BrowserSessionManager() : undefined
   const chatToolRegistry = new ToolRegistry({
-    backend: chatBackend,
+    backend: sharedBackend,
     browserManager: chatBrowserManager,
     trustLevel: config.agentTrustLevel,
     workdir: config.agentWorkdir,
   })
-  const pipelineBackend = await createBackend(config.agentTrustLevel, [config.agentWorkdir])
   const pipelineToolRegistry = new ToolRegistry({
-    backend: pipelineBackend,
+    backend: sharedBackend,
     trustLevel: config.agentTrustLevel,
     workdir: config.agentWorkdir,
   })

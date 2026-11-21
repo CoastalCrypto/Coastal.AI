@@ -79,11 +79,20 @@ export async function skillPackRoutes(
     '/api/admin/skill-packs/export',
     async (req, reply) => {
       const { metadata, skillIds, agentIds } = req.body
-      
-      const skills = skillIds.map(id => skillStore.get(id)).filter((s): s is any => s !== null)
-      
-      const agents = agentIds 
-        ? agentIds.map(id => agentRegistry.get(id)).filter((a): a is any => a !== null)
+
+      const skills = skillStore.getMany(skillIds)
+      // agentRegistry.getMany() returns AgentConfig (soulPath/modelPref) — the
+      // pack format (SkillPack['agents']) uses soul/model instead; the previous
+      // per-id `.map(id => agentRegistry.get(id)).filter((a): a is any => ...)`
+      // masked this same mismatch behind an `any` cast rather than satisfying it.
+      const agents = agentIds
+        ? agentRegistry.getMany(agentIds).map(a => ({
+            name: a.name,
+            role: a.role,
+            soul: a.soulPath,
+            model: a.modelPref,
+            voice: a.voice,
+          }))
         : []
 
       const pack = SkillPackManager.export(metadata, skills, agents)

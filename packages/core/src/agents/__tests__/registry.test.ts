@@ -59,6 +59,17 @@ describe('AgentRegistry', () => {
     expect(registry.get(id)!.name).toBe('Z')
   })
 
+  it('soulPath updates are reflected immediately, not masked by the file-override cache', () => {
+    // Regression guard: findSoulOverride() caches only the file-existence
+    // check (which candidate SYSTEM.md, if any, overrides the db value) —
+    // never the merged soulPath — so a db-stored soulPath update must stay
+    // visible even after an earlier get() already populated that cache.
+    const id = registry.create({ name: 'X', role: 'Y', soulPath: '/old', tools: [] })
+    expect(registry.get(id)!.soulPath).toBe('/old')
+    registry.update(id, { soulPath: '/new' })
+    expect(registry.get(id)!.soulPath).toBe('/new')
+  })
+
   it('delete removes custom agent', () => {
     const id = registry.create({ name: 'X', role: 'Y', soulPath: '/p', tools: [] })
     registry.delete(id)

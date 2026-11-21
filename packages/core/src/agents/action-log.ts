@@ -31,6 +31,13 @@ export class ActionLog {
         created_at  INTEGER
       )
     `)
+    // getForSession() filters+orders by (session_id, created_at); analytics'
+    // day-bucket and 30-day top-tools queries range-scan created_at; agent-events'
+    // readToolEdgeUsage() groups by (agent_id, tool_name) — all were full table
+    // scans before these existed.
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_action_log_session_created ON action_log(session_id, created_at)')
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_action_log_created_at ON action_log(created_at)')
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_action_log_agent_tool ON action_log(agent_id, tool_name)')
   }
 
   record(entry: Omit<ActionLogEntry, 'id' | 'createdAt' | 'resultFull'>): void {

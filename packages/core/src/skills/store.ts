@@ -47,6 +47,14 @@ export class SkillStore {
     return row ? this.map(row) : null
   }
 
+  /** Batched get() — one query instead of one per id. Order is not guaranteed to match `ids`. */
+  getMany(ids: string[]): Skill[] {
+    if (ids.length === 0) return []
+    const placeholders = ids.map(() => '?').join(',')
+    const rows = this.db.prepare(`SELECT * FROM skills WHERE id IN (${placeholders})`).all(...ids) as any[]
+    return rows.map(this.map)
+  }
+
   create(data: Pick<Skill, 'name' | 'description' | 'prompt' | 'agentId'>): Skill {
     const id = randomUUID()
     const now = Date.now()
