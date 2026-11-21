@@ -38,9 +38,19 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             live-build qemu-system-x86 ovmf curl syslinux-utils
 
+      - name: Resolve version
+        id: version
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME#os-v}"
+          else
+            VERSION="${{ github.event.inputs.version || 'ci' }}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Build ISO
         env:
-          VERSION: ${{ github.event.inputs.version || 'ci' }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           sudo bash os/kiosk/build/build.sh "$VERSION"
           ls -lh coastalos-*.iso
@@ -60,13 +70,26 @@ jobs:
       - name: Upload ISO artifact
         uses: actions/upload-artifact@v7
         with:
-          name: coastalos-${{ github.event.inputs.version || 'ci' }}-${{ github.run_number }}.iso
+          name: coastalos-${{ steps.version.outputs.version }}-${{ github.run_number }}.iso
           path: coastalos-*.iso
           retention-days: 30
           if-no-files-found: error
 
-      - name: Attach ISO to GitHub Release
-        if: ${{ github.event.inputs.attach_release != '' }}
+      - name: Publish GitHub Release (tag push)
+        if: ${{ github.ref_type == 'tag' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISO=$(ls coastalos-*.iso | head -1)
+          gh release create "${{ github.ref_name }}" "$ISO" \
+            --repo "${{ github.repository }}" \
+            --title "CoastalOS ${{ github.ref_name }}" \
+            --prerelease \
+            --notes "Automated CoastalOS kiosk ISO build for ${{ github.ref_name }}. Passed the CI boot smoke test (QEMU liveness check); not yet dogfooded on real hardware." \
+            || gh release upload "${{ github.ref_name }}" "$ISO" --repo "${{ github.repository }}" --clobber
+
+      - name: Attach ISO to GitHub Release (manual dispatch)
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.attach_release != '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
