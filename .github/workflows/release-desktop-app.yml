@@ -47,7 +47,7 @@ jobs:
       APPIMAGE_EXTRACT_AND_RUN: 1
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Linux Tauri system dependencies
         if: matrix.os == 'ubuntu-22.04'
@@ -59,7 +59,7 @@ jobs:
       # package.json "packageManager" field (specifying both is an error).
       - uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -69,7 +69,7 @@ jobs:
           targets: ${{ matrix.triple }}
 
       - name: Cache cargo
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
@@ -97,7 +97,7 @@ jobs:
         run: pnpm --filter @coastal-ai/desktop build
 
       - name: Upload installers as workflow artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coastal-desktop-${{ matrix.triple }}
           path: |

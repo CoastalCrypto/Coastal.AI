@@ -12,6 +12,7 @@ import { EventEmitter } from 'node:events'
 import type { A2AMessage, AgentIdentity } from '../types.js'
 import type { A2ATransport } from './types.js'
 import { verifyMessage } from './a2a-envelope.js'
+import { createReplayGuard } from './replay-guard.js'
 
 /**
  * Shared event bus that multiple LocalhostTransport instances connect
@@ -61,6 +62,13 @@ export interface LocalhostTransportConfig {
 export function createLocalhostTransport(config: LocalhostTransportConfig): A2ATransport {
   const { bus, identity, peerKeys, echo = false } = config
   const subscribers = new Set<(msg: A2AMessage) => void>()
+  // One guard per transport (= per receiving agent), not the shared
+  // module-level default — a broadcast reaches every subscribed transport
+  // with the *same* messageId, and each of those is a distinct legitimate
+  // delivery, not a replay against each other. Scoping per-transport is
+  // what makes "has this receiver seen this message before" the actual
+  // question being asked.
+  const replayGuard = createReplayGuard()
 
   const dispatch = (msg: A2AMessage) => {
     // Filter: only deliver messages addressed to this agent or
@@ -70,7 +78,7 @@ export function createLocalhostTransport(config: LocalhostTransportConfig): A2AT
     if (!echo && msg.from.agentId === identity.agentId) return
     // Verify signature (and TOFU key match if we know this peer).
     const knownPublicKey = peerKeys?.get(msg.from.agentId)
-    const result = verifyMessage(msg, { knownPublicKey })
+    const result = verifyMessage(msg, { knownPublicKey, replayGuard })
     if (!result.valid) {
       // Drop silently — production-grade transports would log/alarm,
       // but the v0.0.x default is to ignore and rely on monitor agents

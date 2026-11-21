@@ -50,27 +50,39 @@ HEALTH=$(curl -sf "$BASE/health")
 echo "$HEALTH" | grep -q '"status":"ok"' && echo "✓" || { echo "✗ FAIL: $HEALTH"; exit 1; }
 
 echo -n "[smoke] POST /api/chat ... "
-# Use -s (no -f) so a 500 from a missing Ollama model doesn't fail the smoke
-# test — the purpose here is to verify the server routes and responds, not
-# that inference works (Ollama isn't running in the smoke container).
+# No admin session is available to this script, and every route but the
+# PUBLIC_ROUTES allowlist now requires one at every bind address (see
+# api/auth-policy.ts) — so the only correct response here is 401, proving
+# the route is wired up and the deny-by-default gate is live. 404 (endpoint
+# missing) or an empty body (server crashed) are real failures.
 CHAT=$(curl -s -w "\n%{http_code}" -X POST "$BASE/api/chat" \
   -H "Content-Type: application/json" \
   -d '{"message":"ping","sessionId":"smoke-test"}')
 CHAT_CODE=$(echo "$CHAT" | tail -1)
 CHAT_BODY=$(echo "$CHAT" | head -1)
-# Accept 2xx (inference worked) or 5xx (model unavailable) — reject only
-# if the endpoint is completely missing (404) or server crashed (no body).
 if [ -z "$CHAT_BODY" ]; then
   echo "✗ FAIL: no response body"; exit 1
 elif [ "$CHAT_CODE" = "404" ]; then
   echo "✗ FAIL: 404 — endpoint missing"; exit 1
+elif [ "$CHAT_CODE" != "401" ]; then
+  echo "✗ FAIL: expected 401 (unauthenticated), got $CHAT_CODE — $CHAT_BODY"; exit 1
 else
-  echo "✓ (HTTP $CHAT_CODE)"
+  echo "✓ (HTTP 401 — auth required, route reachable)"
 fi
 
 echo -n "[smoke] GET /api/persona ... "
-PERSONA=$(curl -sf "$BASE/api/persona")
-echo "$PERSONA" | grep -q '"configured"' && echo "✓" || { echo "✗ FAIL: $PERSONA"; exit 1; }
+# Same deny-by-default gate as above — unauthenticated, so 401 is the only
+# correct response.
+PERSONA=$(curl -s -w "\n%{http_code}" "$BASE/api/persona")
+PERSONA_CODE=$(echo "$PERSONA" | tail -1)
+PERSONA_BODY=$(echo "$PERSONA" | head -1)
+if [ "$PERSONA_CODE" = "404" ]; then
+  echo "✗ FAIL: 404 — endpoint missing"; exit 1
+elif [ "$PERSONA_CODE" != "401" ]; then
+  echo "✗ FAIL: expected 401 (unauthenticated), got $PERSONA_CODE — $PERSONA_BODY"; exit 1
+else
+  echo "✓ (HTTP 401 — auth required, route reachable)"
+fi
 
 echo ""
 echo "[smoke] All checks passed."
