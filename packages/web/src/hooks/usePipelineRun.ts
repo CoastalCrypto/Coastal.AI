@@ -54,11 +54,14 @@ export interface PipelineRunState {
 
 export function usePipelineRun(runId: string | null, stageCount: number) {
   const [state, setState] = useState<PipelineRunState | null>(null)
+  const [initializedRunId, setInitializedRunId] = useState<string | null>(null)
   const esRef = useRef<EventSource | null>(null)
 
-  useEffect(() => {
-    if (!runId) return
-    setState({
+  // Reset run state as soon as the run identity changes, rather than in an
+  // effect — this is state derived from props, not a side effect.
+  if (runId !== initializedRunId) {
+    setInitializedRunId(runId)
+    setState(runId ? {
       runId,
       status: 'running',
       stageCount,
@@ -67,7 +70,11 @@ export function usePipelineRun(runId: string | null, stageCount: number) {
         stageIdx: i, agentId: '', agentName: `Stage ${i + 1}`,
         status: 'waiting', toolCalls: [], steerMessages: [], iteration: 0,
       })),
-    })
+    } : null)
+  }
+
+  useEffect(() => {
+    if (!runId) return
 
     let cancelled = false
     void (async () => {
@@ -118,7 +125,16 @@ export function usePipelineRun(runId: string | null, stageCount: number) {
   return { state, steer, abort }
 }
 
-function applyEvent(state: PipelineRunState, event: any): PipelineRunState {
+type PipelineEvent =
+  | { type: 'stage_start'; stageIdx: number; agentId: string; agentName: string; iteration: number }
+  | { type: 'tool_call_start'; sessionId: string; toolName: string; args: Record<string, unknown> }
+  | { type: 'tool_call_end'; sessionId: string; toolName: string; durationMs?: number }
+  | { type: 'stage_steer'; message: string }
+  | { type: 'stage_end'; stageIdx: number; output?: string; durationMs?: number }
+  | { type: 'pipeline_done'; finalOutput?: string }
+  | { type: 'pipeline_error'; stageIdx: number; error?: string }
+
+function applyEvent(state: PipelineRunState, event: PipelineEvent): PipelineRunState {
   const stages = [...state.stages]
   switch (event.type) {
     case 'stage_start': {

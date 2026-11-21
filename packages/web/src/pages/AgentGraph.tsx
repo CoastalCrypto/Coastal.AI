@@ -532,7 +532,7 @@ export function AgentGraph({ onNav: _onNav }: { onNav: (page: NavPage) => void }
   // When a note is selected, fetch its full body for the sidebar preview.
   const [selectedNoteDetail, setSelectedNoteDetail] = useState<NoteWithLinks | null>(null)
   useEffect(() => {
-    if (!isNoteSelected || !selectedId) { setSelectedNoteDetail(null); return }
+    if (!isNoteSelected || !selectedId) return
     const noteId = selectedId.replace(/^note:/, '')
     let cancelled = false
     coreClient.getNote(noteId)
@@ -665,7 +665,7 @@ export function AgentGraph({ onNav: _onNav }: { onNav: (page: NavPage) => void }
             isLoading={isLoading}
             errors={analysisErrors}
             onClose={() => setSelectedId(null)}
-            noteDetail={selectedNoteDetail}
+            noteDetail={isNoteSelected ? selectedNoteDetail : null}
             noteBacklinks={selectedNoteBacklinks}
             noteOutgoing={selectedNoteOutgoing}
             onUnlinkNote={handleUnlinkNote}

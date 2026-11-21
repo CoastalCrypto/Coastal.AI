@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 interface Step {
   id: string
@@ -9,7 +9,12 @@ interface Step {
 }
 
 // Electron IPC bridge (window.electron set by preload)
-const ipc = (window as any).electron ?? {
+interface ElectronIpc {
+  invoke: (channel: string, ...args: unknown[]) => Promise<unknown>
+  on: (channel: string, listener: (...args: unknown[]) => void) => void
+}
+
+const ipc: ElectronIpc = (window as unknown as { electron?: ElectronIpc }).electron ?? {
   invoke: async (_ch: string, ..._args: unknown[]) => [],
   on: () => {},
 }
@@ -30,27 +35,28 @@ export function InstallerWizard({ onComplete }: { onComplete: () => void }) {
   }
 
   useEffect(() => {
-    ipc.on('installer:pull-progress', (_: unknown, data: string) => {
+    ipc.on('installer:pull-progress', (...args: unknown[]) => {
+      const data = args[1] as string
       setPullLog(prev => (prev + data).split('\n').slice(-5).join('\n'))
     })
   }, [])
 
-  useEffect(() => {
-    runChecks()
-  }, [])
-
-  const runChecks = async () => {
+  const runChecks = useCallback(async () => {
     setPhase('checking')
     updateStep('node', { status: 'running' })
     try {
-      const results: Step[] = await ipc.invoke('installer:check')
+      const results = await ipc.invoke('installer:check') as Step[]
       for (const r of results) updateStep(r.id, r)
       const allOk = results.every(r => r.status === 'ok')
       setPhase(allOk ? 'ready' : 'error')
     } catch {
       setPhase('error')
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    void (async () => { await runChecks() })()
+  }, [runChecks])
 
   const pullModel = async () => {
     setPhase('pulling')

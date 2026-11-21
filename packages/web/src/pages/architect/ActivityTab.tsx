@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
-import { coreClient } from '../../api/client'
+import { coreClient, type Cycle } from '../../api/client'
 import { failureLabel, stageLabel } from '../../utils/architect-labels'
 import { relativeTime } from '../../utils/relative-time'
 import { useArchitectSSE } from '../../hooks/useArchitectSSE'
 import { ApprovalButtons } from './ApprovalButtons'
 
 export function ActivityTab() {
-  const [cycles, setCycles] = useState<any[]>([])
+  const [cycles, setCycles] = useState<Cycle[]>([])
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [filter, setFilter] = useState('all')

@@ -3,14 +3,14 @@ import { coreHttpOrigin } from '../platform/coreOrigin'
 
 const BASE_URL = coreHttpOrigin()
 
-type Listener = (event: any) => void
+type Listener = (event: unknown) => void
 
 // Shared SSE connection — one EventSource for all subscribers
 let es: EventSource | null = null
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 const listeners = new Set<Listener>()
 
-function broadcast(event: any) {
+function broadcast(event: unknown) {
   for (const fn of listeners) {
     try { fn(event) } catch (err) { console.error('[useArchitectSSE] listener threw', err) }
   }
@@ -61,7 +61,7 @@ function unsubscribe(fn: Listener) {
  * A single EventSource is shared across all subscribers.
  * Connection closes when the last subscriber unmounts.
  */
-export function useArchitectSSE(onEvent: (event: any) => void) {
+export function useArchitectSSE(onEvent: (event: unknown) => void) {
   const onEventRef = useRef(onEvent)
   useEffect(() => {
     onEventRef.current = onEvent

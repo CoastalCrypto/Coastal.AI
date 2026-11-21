@@ -5,6 +5,10 @@ interface Props {
   onLogin: (sessionToken: string, user: { id: string; username: string; role: string }) => void | Promise<void>
 }
 
+function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e)
+}
+
 export function Login({ onLogin }: Props) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -20,8 +24,8 @@ export function Login({ onLogin }: Props) {
     try {
       const { sessionToken, user } = await coreClient.loginUser(username, password)
       onLogin(sessionToken, user)
-    } catch (e: any) {
-      setError(e.message ?? 'Login failed')
+    } catch (e: unknown) {
+      setError(errorMessage(e) || 'Login failed')
     } finally {
       setLoading(false)
     }

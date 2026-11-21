@@ -21,6 +21,10 @@ const EXAMPLE_IMPL = `// 'args' contains the tool arguments
 const { query } = args
 return \`You asked: \${query}\``
 
+function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e)
+}
+
 function ToolCard({ tool, onEdit, onDelete, onToggle }: {
   tool: CustomTool
   onEdit: () => void
@@ -91,8 +95,8 @@ export function Tools({ onNav: _onNav }: { onNav: (page: NavPage) => void }) {
       }
       closeForm()
       load()
-    } catch (e: any) {
-      setError(e.message ?? 'Save failed')
+    } catch (e: unknown) {
+      setError(errorMessage(e) || 'Save failed')
     } finally {
       setSaving(false)
     }
@@ -117,8 +121,8 @@ export function Tools({ onNav: _onNav }: { onNav: (page: NavPage) => void }) {
       try { args = JSON.parse(testArgs) } catch { /* invalid JSON, run with empty args */ }
       const result = await coreClient.testTool({ implBody: form.implBody, parameters: form.parameters, args })
       setTestResult(result)
-    } catch (e: any) {
-      setTestResult({ output: e.message, success: false })
+    } catch (e: unknown) {
+      setTestResult({ output: errorMessage(e), success: false })
     } finally {
       setTesting(false)
     }

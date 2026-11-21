@@ -17,14 +17,15 @@ export function PipelineRun({ runId, pipelineName, stageCount, onBack, onNav: _o
   const { state, steer, abort } = usePipelineRun(runId, stageCount)
   const [steerMsg, setSteerMsg] = useState('')
   const [expanded, setExpanded] = useState<Set<number>>(new Set([0]))
+  const [autoExpandedStageIdx, setAutoExpandedStageIdx] = useState<number | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  // Auto-expand the active stage
-  useEffect(() => {
-    if (state?.activeStageIdx != null) {
-      setExpanded(prev => new Set([...prev, state.activeStageIdx]))
-    }
-  }, [state?.activeStageIdx])
+  // Auto-expand the active stage — derived during render from the latest
+  // stream state rather than in an effect.
+  if (state?.activeStageIdx != null && state.activeStageIdx !== autoExpandedStageIdx) {
+    setAutoExpandedStageIdx(state.activeStageIdx)
+    setExpanded(prev => new Set([...prev, state.activeStageIdx]))
+  }
 
   // Auto-scroll to bottom of active stage
   useEffect(() => {

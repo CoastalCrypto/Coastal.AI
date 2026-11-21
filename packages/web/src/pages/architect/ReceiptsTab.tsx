@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
-import { coreClient } from '../../api/client'
+import { coreClient, type ArchitectReceipts } from '../../api/client'
 import { relativeTime } from '../../utils/relative-time'
 import { useArchitectSSE } from '../../hooks/useArchitectSSE'
 
 export function ReceiptsTab() {
-  const [data, setData] = useState<any>(null)
+  const [data, setData] = useState<ArchitectReceipts | null>(null)
   const [loading, setLoading] = useState(true)
 
   const refresh = useCallback(() => {
@@ -31,7 +31,7 @@ export function ReceiptsTab() {
         <span className="text-xs font-mono" style={{ color: '#00e5ff' }}>{data.totals.prsMerged} PRs merged</span>
       </div>
       <div className="space-y-2">
-        {data.prs.map((pr: any) => (
+        {data.prs.map((pr) => (
           <div key={pr.cycleId} className="p-3 rounded-lg" style={{ background: '#0d1f33', border: '1px solid rgba(255,255,255,0.05)' }}>
             <div className="flex items-center justify-between">
               <span className="text-sm" style={{ color: '#e2f4ff' }}>{pr.planText?.slice(0, 80) ?? 'Untitled'}</span>
