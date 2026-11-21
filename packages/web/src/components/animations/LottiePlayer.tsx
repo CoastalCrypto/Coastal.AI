@@ -16,8 +16,7 @@
  *   <LottieSpinner />
  */
 
-import Lottie, { type LottieRefCurrentProps } from 'lottie-react'
-import { useRef } from 'react'
+import { Lottie } from 'lottie-react'
 import type { CSSProperties } from 'react'
 
 interface LottiePlayerProps {
@@ -46,20 +45,22 @@ export function LottiePlayer({
   onComplete,
   speed = 1,
 }: LottiePlayerProps) {
-  const ref = useRef<LottieRefCurrentProps>(null)
-
   const style: CSSProperties = { width: size, height: size }
 
   return (
     <Lottie
-      lottieRef={ref}
-      animationData={animationData}
+      // lottie-react 3.x: `src` replaces `animationData` (accepts the parsed
+      // object directly, compared by content — not just a URL/path), `speed`
+      // is now a reactive prop instead of something set imperatively via
+      // lottieRef.current.setSpeed() in an onDOMLoaded callback, and
+      // `onComplete` becomes a `subscriptions.complete` handler.
+      src={animationData}
       loop={loop}
       autoplay={autoplay}
+      speed={speed}
       style={style}
       className={className}
-      onComplete={onComplete}
-      onDOMLoaded={() => ref.current?.setSpeed(speed)}
+      subscriptions={onComplete ? { complete: onComplete } : undefined}
     />
   )
 }
