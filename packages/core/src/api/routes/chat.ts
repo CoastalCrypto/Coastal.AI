@@ -103,7 +103,7 @@ export async function chatRoutes(
       })
     }
 
-    const loop = new AgenticLoop(router.ollama, toolRegistry, gate, log, onApprovalNeeded, skillGaps)
+    const loop = new AgenticLoop(router, toolRegistry, gate, log, onApprovalNeeded, skillGaps)
     const sessionStart = Date.now()
     eventBus.publish({ type: 'session_start', ts: sessionStart, sessionId, agentId: agent.id })
     const result = await loop.run(session, message, sessionId, messages, undefined, undefined, images)
@@ -131,7 +131,7 @@ export async function chatRoutes(
         const predictiveAgent = agentRegistry.get('general')!
         const predSession = new AgentSession(predictiveAgent, toolDefs, personaMgr.get(), [], null, config.agentTrustLevel)
         const prompt = `Based on the latest user message "${message}" and your reply "${result.reply}", proactively predict the single most helpful next action or follow-up question the user might need. Respond ONLY with a short, actionable phrasing (max 6 words). Do not execute tools. Just provide the suggestion string.`
-        const predLoop = new AgenticLoop(router.ollama, toolRegistry, gate, log, onApprovalNeeded)
+        const predLoop = new AgenticLoop(router, toolRegistry, gate, log, onApprovalNeeded)
         const pResult = await predLoop.run(predSession, prompt, sessionId, [], undefined, predControllers.get(sessionId)?.signal)
         fastify.websocketServer?.clients.forEach((client: any) => {
           if (client._sessionId === sessionId) {

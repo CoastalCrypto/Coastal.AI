@@ -10,6 +10,7 @@ export interface Config {
   dataDir: string
   ollamaUrl: string
   mem0ApiKey: string | undefined
+  anthropicApiKey: string | undefined
   vramBudgetGb: number
   routerConfidence: number
   tinyRouterModel: string
@@ -63,6 +64,7 @@ export function loadConfig(): Config {
       return url
     })(),
     mem0ApiKey: process.env.MEM0_API_KEY,
+    anthropicApiKey: process.env.ANTHROPIC_API_KEY,
     vramBudgetGb: Number(process.env.CC_VRAM_BUDGET_GB ?? Math.floor(hardware.vramTotalGb || hardware.ramTotalGb * 0.5).toString()),
     routerConfidence: Number(process.env.CC_ROUTER_CONFIDENCE ?? '0.7'),
     tinyRouterModel: process.env.CC_TINY_ROUTER_MODEL ?? './data/tiny-router.onnx',

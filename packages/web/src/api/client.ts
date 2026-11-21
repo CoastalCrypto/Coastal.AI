@@ -391,7 +391,7 @@ export class CoreClient {
   }
 
   async getPersona(): Promise<{ persona: Persona; configured: boolean }> {
-    const res = await fetch(`${this.baseUrl}/api/persona`)
+    const res = await fetch(`${this.baseUrl}/api/persona`, { headers: this.adminHeaders() })
     if (!res.ok) throw new Error(`Failed to get persona (${res.status})`)
     return res.json()
   }
@@ -438,7 +438,7 @@ export class CoreClient {
 
   async listSessions(limit?: number): Promise<{ sessions: Session[] }> {
     const params = limit ? `?limit=${limit}` : ''
-    const res = await fetch(`${this.baseUrl}/api/sessions${params}`)
+    const res = await fetch(`${this.baseUrl}/api/sessions${params}`, { headers: this.adminHeaders() })
     if (!res.ok) throw new Error(`Failed to list sessions (${res.status})`)
     return res.json()
   }
@@ -454,7 +454,7 @@ export class CoreClient {
   async runTeam(task: string, sessionId?: string): Promise<{ trace: TeamTurn[] }> {
     const res = await fetch(`${this.baseUrl}/api/team/run`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...this.adminHeaders() },
       body: JSON.stringify({ task, sessionId }),
     })
     if (!res.ok) throw new Error(`Team run failed (${res.status})`)
@@ -464,6 +464,7 @@ export class CoreClient {
   async deleteSession(id: string): Promise<void> {
     const res = await fetch(`${this.baseUrl}/api/sessions/${encodeURIComponent(id)}`, {
       method: 'DELETE',
+      headers: this.adminHeaders(),
     })
     if (!res.ok) {
       const text = await res.text().catch(() => '')
@@ -474,7 +475,7 @@ export class CoreClient {
   async setPersona(updates: Partial<Persona>): Promise<{ persona: Persona; configured: boolean }> {
     const res = await fetch(`${this.baseUrl}/api/persona`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...this.adminHeaders() },
       body: JSON.stringify(updates),
     })
     if (!res.ok) throw new Error(`Failed to set persona (${res.status})`)

@@ -10,11 +10,11 @@ jobs:
     name: Test suite
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v5
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -46,5 +46,38 @@ jobs:
     runs-on: ubuntu-24.04
     needs: test
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: bash scripts/smoke-test-docker.sh
+
+  audit:
+    name: Dependency vulnerability audit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v5
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: sudo apt-get install -y portaudio19-dev
+      - run: pnpm install --no-frozen-lockfile
+
+      # Informational, not blocking (continue-on-error): as of this job's
+      # introduction the tree already carries ~130 high and 7 critical
+      # advisories in transitive dependencies accumulated before this job
+      # existed — mostly dev-tooling (vitest's tinypool, wait-on's joi) that
+      # never ships, plus a couple of real ones worth a dedicated look
+      # (nodejs-whisper's OS-command-injection advisory, currently believed
+      # unreachable through this repo's own call site — see stt.ts — but not
+      # yet fixed by a version bump since that crosses a pre-1.0 minor
+      # boundary untested here). Flipping this to a hard gate before that
+      # backlog is worked through would just make CI permanently red, which
+      # trains everyone to ignore it — exactly the failure mode a security
+      # gate is supposed to prevent. Dependabot (.github/dependabot.yml)
+      # opens PRs for these on its own schedule; this job's job is
+      # visibility in the log on every push, not blocking merges yet.
+      - run: pnpm audit --audit-level=high
+        continue-on-error: true

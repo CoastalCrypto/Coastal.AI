@@ -27,6 +27,7 @@ import { createServer, type Server, type Socket, connect } from 'node:net'
 import type { A2AMessage, AgentIdentity } from '../types.js'
 import type { A2ATransport } from './types.js'
 import { verifyMessage } from './a2a-envelope.js'
+import { createReplayGuard } from './replay-guard.js'
 import type { PeerRegistry } from '../identity/peer-registry.js'
 
 export interface TcpPeer {
@@ -105,6 +106,9 @@ export function createTcpTransport(config: TcpTransportConfig): Promise<TcpTrans
   let serverPort = 0
   let server: Server | null = null
   let closed = false
+  // One guard per transport (= per receiving node) — see localhost.ts's
+  // identical comment for why this must not be the shared module default.
+  const replayGuard = createReplayGuard()
 
   // ─── inbound: server accepting connections ──────────────────────────
 
@@ -124,7 +128,7 @@ export function createTcpTransport(config: TcpTransportConfig): Promise<TcpTrans
     const tofu = peerRegistry.recordOrVerify(msg.from.agentId, msg.from.publicKey)
     if (!tofu.trusted) return
     // Signature verify (canonical envelope match)
-    const sig = verifyMessage(msg, { knownPublicKey: msg.from.publicKey })
+    const sig = verifyMessage(msg, { knownPublicKey: msg.from.publicKey, replayGuard })
     if (!sig.valid) return
     for (const handler of subscribers) {
       try { handler(msg) } catch { /* misbehaving handler — swallow */ }

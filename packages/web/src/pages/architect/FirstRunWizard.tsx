@@ -14,7 +14,9 @@ export function FirstRunWizard({ onComplete }: { onComplete: (mode: string) => v
     try {
       await coreClient.architectSetMode(selected)
       await coreClient.architectSetPower('on')
-    } catch {}
+    } catch (err) {
+      console.error('[FirstRunWizard] failed to save architect mode/power', err)
+    }
     localStorage.setItem('architect_setup_done', '1')
     onComplete(selected)
   }

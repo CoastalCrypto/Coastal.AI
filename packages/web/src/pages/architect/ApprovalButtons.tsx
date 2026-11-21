@@ -11,7 +11,9 @@ export function ApprovalButtons({ cycleId, gate, onDone }: { cycleId: string; ga
     try {
       await coreClient.architectApproval(cycleId, { gate, decision, comment: commentText })
       onDone()
-    } catch {} finally { setActing(false) }
+    } catch (err) {
+      console.error('[ApprovalButtons] architectApproval failed', err)
+    } finally { setActing(false) }
   }
 
   return (

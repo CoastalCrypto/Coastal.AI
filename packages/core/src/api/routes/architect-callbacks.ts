@@ -6,6 +6,17 @@ export interface CallbackRouteDeps {
   verifyToken: (token: string) => { cycleId: string; gate: string; decision: string; expiresAt: number } | null
 }
 
+// verifyToken's real implementation (verify-callback-token.ts) constrains
+// decision to a fixed enum, so this can't carry attacker-controlled HTML
+// today — but that constraint lives in a different file, and this route has
+// no way to know it still holds. Escaping here is a one-line insurance
+// policy against the enum ever growing a value with markup in it, or
+// against a future verifyToken implementation that doesn't validate as
+// tightly.
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string))
+}
+
 export async function architectCallbackRoutes(app: FastifyInstance, deps: CallbackRouteDeps): Promise<void> {
   // POST for API clients
   app.post<{ Params: { token: string } }>('/api/admin/architect/callbacks/:token', { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (req, reply) => {
@@ -28,6 +39,6 @@ export async function architectCallbackRoutes(app: FastifyInstance, deps: Callba
       decision: payload.decision,
       decidedBy: 'callback',
     })
-    return reply.type('text/html').send(`<h1>Done</h1><p>Decision: ${payload.decision}</p><p><a href="/">Back to dashboard</a></p>`)
+    return reply.type('text/html').send(`<h1>Done</h1><p>Decision: ${escapeHtml(payload.decision)}</p><p><a href="/">Back to dashboard</a></p>`)
   })
 }
