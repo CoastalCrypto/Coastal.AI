@@ -275,6 +275,9 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@22.19.15)(jsdom@29.0.1)(lightningcss@1.32.0)(terser@5.51.2)
     optionalDependencies:
+      node-portaudio:
+        specifier: ^0.4.8
+        version: 0.4.10
       nodejs-whisper:
         specifier: ^0.1.17
         version: 0.1.19
@@ -6049,6 +6052,9 @@ packages:
   mute-stream@0.0.8:
     resolution: {integrity: sha512-nnbWWOkoWyUsTjKrhgD0dcz22mdkSnpYqbEjIm2nhwhuxlSkpywJmBo8h0ZqJdkp73mb90SssHkN4rsRaBAfAA==}
 
+  nan@2.30.0:
+    resolution: {integrity: sha512-P5mokDkSvCGBz6mZDD/2l+w9QoICRXdCyZ9ONGmTePr40oihJg3Kpn0YU3twKd6PJnwSlLBWNQeOT6yWEV2c4A==}
+
   nanoid@3.3.11:
     resolution: {integrity: sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
@@ -6117,6 +6123,9 @@ packages:
   node-fetch@3.3.2:
     resolution: {integrity: sha512-dRB78srN/l6gqWulah9SrxeYnxeddIG30+GOqK/9OlLVyLg3HPnr6SqOWTWOXKRwC2eGYCkZ59NNuSgvSrpgOA==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
+
+  node-portaudio@0.4.10:
+    resolution: {integrity: sha512-OHcMBhiUc+hSjUy6jOqI1xvleoaBUYbVmfNOXnywSY2ZsQ8Hep4O2q1C6ZIGLbO6+tAi4vxKv49+DQf1p+g4JQ==}
 
   node-releases@2.0.36:
     resolution: {integrity: sha512-TdC8FSgHz8Mwtw9g5L4gR/Sh9XhSP/0DEkQxfEFXOpiul5IiHgHan2VhYYb6agDSfp4KuvltmGApc8HMgUrIkA==}
@@ -14093,6 +14102,9 @@ snapshots:
 
   mute-stream@0.0.8: {}
 
+  nan@2.30.0:
+    optional: true
+
   nanoid@3.3.11: {}
 
   nanoid@3.3.20: {}
@@ -14145,6 +14157,12 @@ snapshots:
       data-uri-to-buffer: 4.0.1
       fetch-blob: 3.2.0
       formdata-polyfill: 4.0.10
+
+  node-portaudio@0.4.10:
+    dependencies:
+      bindings: 1.5.0
+      nan: 2.30.0
+    optional: true
 
   node-releases@2.0.36: {}
 
@@ -15025,7 +15043,7 @@ snapshots:
 
   scheduler@0.27.0: {}
 
-  schema-utils@4.8.3(webpack@5.105.0(esbuild@0.28.1)(postcss@8.5.33)):
+  schema-utils@4.8.3(webpack@5.105.0(postcss@8.5.33)):
     dependencies:
       '@types/json-schema': 7.0.15
       ajv: 8.20.0
@@ -15376,11 +15394,11 @@ snapshots:
       inherits: 2.0.4
       readable-stream: 3.6.2
 
-  terser-webpack-plugin@5.6.1(esbuild@0.28.1)(postcss@8.5.33)(webpack@5.105.0(esbuild@0.28.1)(postcss@8.5.33)):
+  terser-webpack-plugin@5.6.1(esbuild@0.28.1)(postcss@8.5.33)(webpack@5.105.0(postcss@8.5.33)):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       jest-worker: 27.5.1
-      schema-utils: 4.8.3(webpack@5.105.0(esbuild@0.28.1)(postcss@8.5.33))
+      schema-utils: 4.8.3(webpack@5.105.0(postcss@8.5.33))
       terser: 5.51.2
       webpack: 5.105.0(esbuild@0.28.1)(postcss@8.5.33)
     optionalDependencies:
@@ -15996,9 +16014,9 @@ snapshots:
       loader-runner: 4.3.2
       mime-types: 2.1.35
       neo-async: 2.6.2
-      schema-utils: 4.8.3(webpack@5.105.0(esbuild@0.28.1)(postcss@8.5.33))
+      schema-utils: 4.8.3(webpack@5.105.0(postcss@8.5.33))
       tapable: 2.3.4
-      terser-webpack-plugin: 5.6.1(esbuild@0.28.1)(postcss@8.5.33)(webpack@5.105.0(esbuild@0.28.1)(postcss@8.5.33))
+      terser-webpack-plugin: 5.6.1(esbuild@0.28.1)(postcss@8.5.33)(webpack@5.105.0(postcss@8.5.33))
       watchpack: 2.6.4
       webpack-sources: 3.7.0
     transitivePeerDependencies:

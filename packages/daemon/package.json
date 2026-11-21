@@ -17,7 +17,7 @@
     "ws": "^8.20.0"
   },
   "optionalDependencies": {
-    "node-portaudio": "^0.3.2",
+    "node-portaudio": "^0.4.8",
     "nodejs-whisper": "^0.1.17"
   },
   "devDependencies": {
