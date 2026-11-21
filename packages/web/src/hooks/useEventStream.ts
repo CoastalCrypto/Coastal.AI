@@ -85,6 +85,10 @@ export function useEventStream(maxEvents = 100) {
   }, [maxEvents])
 
   useEffect(() => {
+    // connect is async (the ticket fetch) — connectRef wraps it as a bare
+    // () => void so the setTimeout reconnect call above doesn't need to
+    // await it and the returned promise is explicitly, intentionally
+    // discarded rather than left dangling.
     connectRef.current = () => { void connect() }
   }, [connect])
 

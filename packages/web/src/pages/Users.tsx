@@ -25,6 +25,10 @@ function RoleBadge({ role }: { role: UserRole }) {
   )
 }
 
+function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e)
+}
+
 function timeAgo(ts: number): string {
   const s = Math.floor((Date.now() - ts) / 1000)
   if (s < 60)   return 'just now'
@@ -72,7 +76,7 @@ export function Users({ onNav: _onNav, currentUserId }: { onNav: (page: NavPage)
       await coreClient.createUser(newUsername, newPassword, newRole)
       setCreating(false); setNewUsername(''); setNewPassword(''); setNewRole('operator')
       load()
-    } catch (e: any) { setFormError(e.message) }
+    } catch (e: unknown) { setFormError(errorMessage(e)) }
     finally { setSaving(false) }
   }
 
@@ -83,11 +87,11 @@ export function Users({ onNav: _onNav, currentUserId }: { onNav: (page: NavPage)
   const handleEdit = async (id: string) => {
     setEditSaving(true)
     try {
-      const data: any = { role: editRole }
+      const data: { role: UserRole; password?: string } = { role: editRole }
       if (editPassword) data.password = editPassword
       await coreClient.updateUser(id, data)
       setEditId(null); load()
-    } catch (e: any) { setError(e.message) }
+    } catch (e: unknown) { setError(errorMessage(e)) }
     finally { setEditSaving(false) }
   }
 

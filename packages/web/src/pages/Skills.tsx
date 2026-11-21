@@ -18,6 +18,10 @@ function adminHeaders(): Record<string, string> {
   return session ? { 'x-admin-session': session } : {}
 }
 
+function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e)
+}
+
 const EMPTY = { name: '', description: '', prompt: '', agentId: 'general' }
 
 const PLACEHOLDER_PROMPT = `Summarize the following in 3 bullet points:
@@ -97,8 +101,8 @@ export function Skills({ onNav: _onNav }: { onNav: (page: NavPage) => void }) {
       }
       cancel()
       load()
-    } catch (e: any) {
-      setError(e.message)
+    } catch (e: unknown) {
+      setError(errorMessage(e))
     } finally {
       setSaving(false)
     }

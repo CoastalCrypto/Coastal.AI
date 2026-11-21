@@ -6,7 +6,7 @@ import {
   type PreferenceQuestion,
 } from '../../api/client'
 
-export function SettingsTab({ onStatusChange }: { onStatusChange: (s: any) => void }) {
+export function SettingsTab({ onStatusChange }: { onStatusChange: (s: { power: string; mode: string }) => void }) {
   const [status, setStatus] = useState<{ power: string; mode: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [acting, setActing] = useState(false)

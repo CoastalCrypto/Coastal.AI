@@ -215,7 +215,6 @@ export async function buildServer() {
   await fastify.register(teamRoutes, {
     registry: ctx.agentRegistry,
     router: ctx.modelRouter,
-    toolRegistry: ctx.pipelineToolRegistry,
   })
   await fastify.register(personaRoutes, { registry: ctx.agentRegistry })
   await fastify.register(systemRoutes)
