@@ -44,7 +44,8 @@
     "overrides": {
       "@xmldom/xmldom": ">=0.9.10",
       "loader-utils": ">=2.0.4",
-      "protobufjs": ">=7.5.5 <8.0.0"
+      "protobufjs": ">=7.5.5 <8.0.0",
+      "undici": ">=6.27.0"
     }
   }
 }
