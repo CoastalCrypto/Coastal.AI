@@ -16,10 +16,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   portaudio19-dev \
   && rm -rf /var/lib/apt/lists/*
 
-# Node.js 22
+# Node.js 22. node-gyp installed explicitly (not just pulled in transitively
+# by pnpm) because better-sqlite3@13+ has no prebuilt binary for any platform
+# anymore — it always compiles from source via a bare `node-gyp rebuild`, and
+# a plain `npm install -g pnpm` doesn't give pnpm the bundled node-gyp fallback
+# that a corepack-managed pnpm gets.
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
   && apt-get install -y --no-install-recommends nodejs \
-  && npm install -g pnpm@latest \
+  && npm install -g pnpm@latest node-gyp \
   && rm -rf /var/lib/apt/lists/*
 
 # Create data directories
