@@ -1,7 +1,9 @@
 FROM node:26-alpine
 
-# Install minimal runtime dependencies
-RUN apk add --no-cache bash curl
+# bash/curl for the entrypoint script; python3/make/g++ because better-sqlite3
+# has no prebuilt binary for node:26-alpine yet and falls back to compiling
+# from source via node-gyp, which needs a toolchain.
+RUN apk add --no-cache bash curl python3 make g++
 
 WORKDIR /app
 
@@ -11,8 +13,11 @@ COPY . .
 # Install dependencies
 RUN npm install -g pnpm && pnpm install --frozen-lockfile
 
-# Build packages
-RUN pnpm build
+# Build packages. @coastal-ai/desktop is excluded — its build needs a
+# Rust/Cargo/Tauri toolchain this sandbox image never installs (see
+# CLAUDE.md's Health Stack, which excludes it from build/lint/test for
+# the same reason).
+RUN pnpm exec turbo run build --filter='!@coastal-ai/desktop' --
 
 # Create results directory
 RUN mkdir -p /results
