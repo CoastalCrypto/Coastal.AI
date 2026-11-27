@@ -99,7 +99,7 @@ jobs:
           fi
 
       - name: Download .deb
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ needs.deb.outputs.deb_name }}
           path: dist-deb/
@@ -154,7 +154,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download .deb
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ needs.deb.outputs.deb_name }}
           path: dist-deb/
