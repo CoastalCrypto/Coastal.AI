@@ -57,7 +57,7 @@ jobs:
 
       # No `version:` — pnpm/action-setup@v4 reads it from the root
       # package.json "packageManager" field (specifying both is an error).
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
       - uses: actions/setup-node@v7
         with:
