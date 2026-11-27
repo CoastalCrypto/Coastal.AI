@@ -155,7 +155,7 @@
     "nodejs-polars": "^0.24.1",
     "onnxruntime-node": "^1.24.3",
     "pdf-parse": "^2.4.5",
-    "playwright": "^1.59.1",
+    "playwright": "^1.65.1",
     "ssh2": "^1.17.0",
     "zod": "^4.6.6"
   },
