@@ -499,8 +499,8 @@ importers:
         specifier: ^4.39.0
         version: 4.39.0(react@19.2.4)
       '@xyflow/react':
-        specifier: ^12.10.2
-        version: 12.10.2(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        specifier: ^13.0.3
+        version: 13.0.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(use-sync-external-store@1.6.0(react@19.2.4))
       d3-force:
         specifier: ^3.0.0
         version: 3.0.0
@@ -689,16 +689,16 @@ packages:
     resolution: {integrity: sha512-rbAE25KUfjU/s3XHUdJgceoCP5dEOpMx85J04kF+QMdta73XkuG9JGHHinch+XIoKpBdqljin+KqURpJriSzLA==}
     engines: {node: '>=22.0.0'}
 
-  '@azure/msal-browser@5.29.1':
-    resolution: {integrity: sha512-+TMoU/4h3KYUvQKZH+p1/9/iDaepDlVJQ7UMUAB6q8prPsMfsOoqA9m2alpPqLUQ48Bp7sXqN2wdhA9rOg9q1A==}
+  '@azure/msal-browser@5.30.0':
+    resolution: {integrity: sha512-o/ADxWxEFcVrE65a7ssOGuxnivq8lcy+2hSGlOOwtn0gGd6iiwl3q8/BMVRorYE81UB/r4B+8WGEUxWnqP7ryA==}
     engines: {node: '>=0.8.0'}
 
   '@azure/msal-common@16.13.0':
     resolution: {integrity: sha512-rOAy0KUcyBbdwVJ+f3uPpthXatFLLZN+/KWAsTLzk1aB23Xl9DRmmXYwSvBFOZyXj4jUQQ5FKxxRkhAFW1fOow==}
     engines: {node: '>=0.8.0'}
 
-  '@azure/msal-common@16.16.2':
-    resolution: {integrity: sha512-IVoPgAup0hnpzwC8esxPxrrnDDVe0n3mmK+UU3JRmKWySKxBQrl+a30tTP3okmJ9Wc7dh+IgoNaUXkCxb2DBSg==}
+  '@azure/msal-common@16.17.0':
+    resolution: {integrity: sha512-rNvtEm7Axzj18neIk0C8kjr1ZXbJsHkWDqGedCfOiLVBjSCxWBcbJ26/I7g9owoeGKUoyrOgs73cIk7WxLd9qA==}
     engines: {node: '>=0.8.0'}
 
   '@azure/msal-node@5.6.0':
@@ -834,8 +834,8 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
 
-  '@babel/runtime@7.29.14':
-    resolution: {integrity: sha512-Y5tqevQaUAZhhj82BpYMNC1ssvLQTVAfwKdm8iy8qwmhvC2/CpcAu8OC+QEtjM7pMk7knx83u1Qj8gzkicyelw==}
+  '@babel/runtime@7.29.15':
+    resolution: {integrity: sha512-304gsbbGVmQc+cNGHzwHBlqepYdWLKj3VXCQBGt/EGcV7PUPfKI7kAUNW1FZEOCwlQiLvQjg1JEaAlRQ616h+Q==}
     engines: {node: '>=6.9.0'}
 
   '@babel/runtime@7.29.2':
@@ -3205,14 +3205,14 @@ packages:
   '@types/d3-interpolate@3.0.4':
     resolution: {integrity: sha512-mgLPETlrpVV1YRJIglr4Ez47g7Yxjl1lj7YKsiMCb27VJH9W8NVM6Bb9d8kkpG/uAQS5AmbA48q2IAolKKo1MA==}
 
-  '@types/d3-selection@3.0.11':
-    resolution: {integrity: sha512-bhAXu23DJWsrI45xafYpkQ4NtcKMwWnAC/vKrd2l+nxMFuvOT3XMYTIj2opv8vq8AO5Yh7Qac/nSeP/3zjTK0w==}
+  '@types/d3-selection@3.0.12':
+    resolution: {integrity: sha512-Qe/KWYhEiIIxGs7HrAAjMfShxKldx19SJtr5zu53f3afPsdZNz7HHtdTLXo/kqeiWNXVycI24kSnfzBYkTzpgw==}
 
   '@types/d3-transition@3.0.9':
     resolution: {integrity: sha512-uZS5shfxzO3rGlu0cC3bjmMFKsXv+SmZZcgp0KD22ts4uGXp5EVYGzu/0YdwZeKmddhcAccYtREJKkPfXkZuCg==}
 
-  '@types/d3-zoom@3.0.8':
-    resolution: {integrity: sha512-iqMC4/YlFCSlO8+2Ii1GGGliCAY4XdeG748w5vQUbevlbDu0zSjH/+jojorQVBK/se0j6DUFNPBGSqD3YWYnDw==}
+  '@types/d3-zoom@3.0.9':
+    resolution: {integrity: sha512-0sE1406XBYJGiqD3AusTl9ZqC//2mIXix51tbom25gDCA8ri4xnSZg28CaSE8Srl6FClqABUKfsn0qghgdepMA==}
 
   '@types/debug@4.1.13':
     resolution: {integrity: sha512-KSVgmQmzMwPlmtljOomayoR89W4FynCAi3E8PPs7vmDVPe84hT+vGPKkJfThkmXs0x0jAaa9U8uW8bbfyS2fWw==}
@@ -3400,10 +3400,9 @@ packages:
     resolution: {integrity: sha512-zhahknjobV2FiD6Ee9iLbS7OV9zi10rG26odsQdfBO/hjSzUQbkIYgda+iNKK1zNiW2ey+Lf8MU5btN17V3dUw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
-  '@typespec/ts-http-runtime@0.3.10':
-    resolution: {integrity: sha512-vddvvtZ7sejSlCv+OIkn2ztjB1O31Fc2JsxI/YK725r3elXXlF/J3o3lbXJFRhoeWRWK1tjdZ+GTi6Fdtrp+EA==}
+  '@typespec/ts-http-runtime@0.3.11':
+    resolution: {integrity: sha512-KZlacW7zFdcIOAcpNiV5U9fy0Tfgw7xdEc4rVyuUtQS+UR1Sn32PXuAz+AJ70Y0yzTWh62/pEEpFmWUJl6YySw==}
     engines: {node: '>=22.0.0'}
-    deprecated: A newer version 0.3.11 has been published.
 
   '@ungap/structured-clone@1.3.0':
     resolution: {integrity: sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g==}
@@ -3535,14 +3534,23 @@ packages:
   '@xtuc/long@4.2.2':
     resolution: {integrity: sha512-NuHqBY1PB/D8xU6s/thBgOAiAP7HOYDQ32+BFZILJ8ivkUkAHQnWfn6WhL79Owj1qmUnoN/YPhktdIoucipkAQ==}
 
-  '@xyflow/react@12.10.2':
-    resolution: {integrity: sha512-CgIi6HwlcHXwlkTpr0fxLv/0sRVNZ8IdwKLzzeCscaYBwpvfcH1QFOCeaTCuEn1FQEs/B8CjnTSjhs8udgmBgQ==}
+  '@xyflow/react@13.0.3':
+    resolution: {integrity: sha512-deKfJUYe1aAMd2j6g/LL+5YRbqIeebOXNfwHhdu6qk4L+h7XRY9UcBgqVSYT8WyXSX+3k6ZGr/hnfx7hLfgUtA==}
+    engines: {node: '>=20'}
     peerDependencies:
-      react: '>=17'
-      react-dom: '>=17'
+      '@types/react': '>=18'
+      '@types/react-dom': '>=18'
+      react: '>=18'
+      react-dom: '>=18'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      '@types/react-dom':
+        optional: true
 
-  '@xyflow/system@0.0.76':
-    resolution: {integrity: sha512-hvwvnRS1B3REwVDlWexsq7YQaPZeG3/mKo1jv38UmnpWmxihp14bW6VtEOuHEwJX2FvzFw8k77LyKSk/wiZVNA==}
+  '@xyflow/system@1.0.1':
+    resolution: {integrity: sha512-0vMyv9EbnV9lNe15USaIbBxJVuLF2awbzZNT+foIOd59Mpc2rw04oaozoms1TaSetTa376aHl7mJ/YNKqIoqJA==}
+    engines: {node: '>=20'}
 
   abort-controller@3.0.0:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
@@ -3591,10 +3599,6 @@ packages:
   agent-base@7.1.4:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
     engines: {node: '>= 14'}
-
-  agent-base@9.0.0:
-    resolution: {integrity: sha512-TQf59BsZnytt8GdJKLPfUZ54g/iaUL2OWDSFCCvMOhsHduDQxO8xC4PNeyIkVcA5KwL2phPSv0douC0fgWzmnA==}
-    engines: {node: '>= 20'}
 
   agentkeepalive@4.6.0:
     resolution: {integrity: sha512-kja8j7PjmncONqaTsB8fQ+wE2mSU2DJ9D4XKoJ5PFWIdRMa6SLSN1ff4mOr4jCbfRSsxR4keIiySJU0N9T5hIQ==}
@@ -4093,50 +4097,58 @@ packages:
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
 
-  d3-color@3.1.0:
-    resolution: {integrity: sha512-zg/chbXyeBtMQ1LbD/WSoW2DpC3I0mpmPdW+ynRTj/x2DAWYrIY7qeZIHidozwV24m4iavr15lNwIwLxRmOxhA==}
+  d3-color@3.1.1:
+    resolution: {integrity: sha512-lfab8x0Bj0UO7SNsY8dZSbNIA6ipbkE3X0NG9nqjCu6CfCHZseuDnOSJY7hidKrjpP++i1M2qT+FlAdPKYRilA==}
     engines: {node: '>=12'}
 
   d3-dispatch@3.0.1:
     resolution: {integrity: sha512-rzUyPU/S7rwUflMyLc1ETDeBj0NRuHKKAcvukozwhshr6g6c5d8zh4c2gQjY2bZ0dXeGLWc1PF174P2tVvKhfg==}
     engines: {node: '>=12'}
 
-  d3-drag@3.0.0:
-    resolution: {integrity: sha512-pWbUJLdETVA8lQNJecMxoXfH6x+mO2UQo8rSmZ+QqxcbyA3hfeprFgIT//HW2nlHChWeIIMwS2Fq+gEARkhTkg==}
+  d3-dispatch@3.0.2:
+    resolution: {integrity: sha512-sAzH4Y4nsLo8eSqw5jKiZt+LU2wZmL/qS+OkxQGjhwazB/D7TY34R/QK1eshfGr7cZEKymKZ/Haem7m+lu98Sg==}
     engines: {node: '>=12'}
 
-  d3-ease@3.0.1:
-    resolution: {integrity: sha512-wR/XK3D3XcLIZwpbvQwQ5fK+8Ykds1ip7A2Txe0yxncXSdq1L9skcG7blcedkOX+ZcgxGAmLX1FrRGbADwzi0w==}
+  d3-drag@3.0.1:
+    resolution: {integrity: sha512-OWeoayCq8J69hUIjvL+Mb6Q6Oaj/fyHV5XaXByEUAG+JUjIfTGDnk3qGpcXrD3VmQ3BSV96fcbM6fqq7C0tbPA==}
+    engines: {node: '>=12'}
+
+  d3-ease@3.0.2:
+    resolution: {integrity: sha512-B5znKqRmKROAN4oHWQ50W/qisVjA9GXh2WMsVKdFVp4DxWmcrOsweqgUOUVsv5th96kwaZlokU6SlV4J3gak1w==}
     engines: {node: '>=12'}
 
   d3-force@3.0.0:
     resolution: {integrity: sha512-zxV/SsA+U4yte8051P4ECydjD/S+qeYtnaIyAs9tgHCqfguma/aAQDjo85A9Z6EKhBirHRJHXIgJUlffT4wdLg==}
     engines: {node: '>=12'}
 
-  d3-interpolate@3.0.1:
-    resolution: {integrity: sha512-3bYs1rOD33uo8aqJfKP3JWPAibgw8Zm2+L9vBKEHJ2Rg+viTR7o5Mmv5mZcieN+FRYaAOWX5SJATX6k1PWz72g==}
+  d3-interpolate@3.0.2:
+    resolution: {integrity: sha512-IRzGU62DtxhvsnSTWMQIdnoZ6gA+BCWwBon1EJI6SjoN595799b6z/QRBzXfFhE8iupUPp3042yBNo0STPqnzQ==}
     engines: {node: '>=12'}
 
   d3-quadtree@3.0.1:
     resolution: {integrity: sha512-04xDrxQTDTCFwP5H6hRhsRcb9xxv2RzkcsygFzmkSIOJy3PeRJP7sNk3VRIbKXcog561P9oU0/rVH6vDROAgUw==}
     engines: {node: '>=12'}
 
-  d3-selection@3.0.0:
-    resolution: {integrity: sha512-fmTRWbNMmsmWq6xJV8D19U/gw/bwrHfNXxrIN+HfZgnzqTHp9jOmKMhsTUjXOJnZOdZY9Q28y4yebKzqDKlxlQ==}
+  d3-selection@3.0.1:
+    resolution: {integrity: sha512-ODSf35vqCrlCfp7hrm0eZjvOosSXSYLjqvIlhMBV9q9VOx7EBJG6pc+uXBswEZNJgCGJ+qnKYcWutbZDIxe/Xg==}
     engines: {node: '>=12'}
 
   d3-timer@3.0.1:
     resolution: {integrity: sha512-ndfJ/JxxMd3nw31uyKoY2naivF+r29V+Lc0svZxe1JvvIRmi8hUsrMvdOwgS1o6uBHmiz91geQ0ylPP0aj1VUA==}
     engines: {node: '>=12'}
 
-  d3-transition@3.0.1:
-    resolution: {integrity: sha512-ApKvfjsSR6tg06xrL434C0WydLr7JewBB3V+/39RMHsaXTOG0zmt/OAXeng5M5LBm0ojmxJrpomQVZ1aPvBL4w==}
+  d3-timer@3.0.2:
+    resolution: {integrity: sha512-1Il1aliroVSErrv5aulRBxAY+7+DnaoLIWGd1C6SsBTWDeobWiP/V69vwb8vT6abR1kKwaNe1196pmaQ1fK90A==}
+    engines: {node: '>=12'}
+
+  d3-transition@3.0.2:
+    resolution: {integrity: sha512-RcjCsdFgyFoDB+QXLC5m60ZkTN0k9zH+ovoLlTdJnDS1AbfbcuowiM4pCKSTOclNibS4f4J4cbv2m7O7y8NTOQ==}
     engines: {node: '>=12'}
     peerDependencies:
       d3-selection: 2 - 3
 
-  d3-zoom@3.0.0:
-    resolution: {integrity: sha512-b8AmV3kfQaqWAuacbPuNbL6vahnOJflOhexLzMMNLga62+/nh0JzvJ0aO/5a5MVgUFGS7Hu1P9P03o3fJkDCyw==}
+  d3-zoom@3.0.1:
+    resolution: {integrity: sha512-kfjD3BDQu/FOatpZ6JdMSyIoDwTxIpI29ySTI2J5ZlDaH1WbuJGQJ2Q9oJkWTEZEW98j6idezoomSD3Cn2zwiw==}
     engines: {node: '>=12'}
 
   data-uri-to-buffer@4.0.1:
@@ -4902,10 +4914,6 @@ packages:
     resolution: {integrity: sha512-T1gkAiYYDWYx3V5Bmyu7HcfcvL7mUrTWiM6yOfa3PIphViJ/gFPbvidQ+veqSOHci/PxBcDabeUNCzpOODJZig==}
     engines: {node: '>= 14'}
 
-  http-proxy-agent@9.1.0:
-    resolution: {integrity: sha512-2NxoveTT58mjYT4n3RPTEfCZGLMbidoO8XEieXfpSYxu+PQJ1qpx4ypwH6N+uF9twBPIvRRgvkvW5HUTYWENig==}
-    engines: {node: '>= 20'}
-
   https-proxy-agent@5.0.1:
     resolution: {integrity: sha512-dFcAjpTQFgoLMzC2VwU+C/CbS7uRL0lWmxDITmqm7C+7F0Odmj6s9l6alZc6AELXhrnggM2CeWSXHGOdX2YtwA==}
     engines: {node: '>= 6'}
@@ -4913,10 +4921,6 @@ packages:
   https-proxy-agent@7.0.6:
     resolution: {integrity: sha512-vK9P5/iUfdl95AI+JVyUuIcVtd4ofvtrOr3HNtM2yxC9bnMbEdp3x01OhQNnjb8IJYi38VlTE3mBXwcfvywuSw==}
     engines: {node: '>= 14'}
-
-  https-proxy-agent@9.1.0:
-    resolution: {integrity: sha512-ag87y7cJJ9/3+GxFr8Oy4O5faDsGRGnBGsJj/YjOSsSx/5eadKLYTMPlzuR6obgoCDDm0abAAZitXXQkMOPSpA==}
-    engines: {node: '>= 20'}
 
   human-signals@2.1.0:
     resolution: {integrity: sha512-B4FFZ6q/T2jhhksgkbEW3HBvWIfDW85snkQgawt07S7J5QXTk6BkNV+0yAeZrM5QpMAdYlocGoljn0sJ/WQkFw==}
@@ -5276,8 +5280,8 @@ packages:
     resolution: {integrity: sha512-eTIzlVOSUR+JxdDFepEYcBMtZ9Qqdef+rnzWdRZuMbOywu5tO2w2N7rqjoANZ5k9vywhL6Br1VRjUIgTQx4E8w==}
     engines: {node: '>=6'}
 
-  langsmith@0.13.0:
-    resolution: {integrity: sha512-5+zSEYICCC0wihmdM2neQFuT3GSOJv4jGzFEBE69uhWxnBUZe9ocG4BBl/2fngcN6bhMK+yVjs4V+odAev5gfA==}
+  langsmith@0.14.0:
+    resolution: {integrity: sha512-GpOpjx2rfsfKD6A4nnWfG9kxYbLlx9//catR1eCUwW/nMQxj4Mq2OQL7NJO9MQ5ZcGnvgsnUZdxBZLd2JJC1qA==}
     peerDependencies:
       '@opentelemetry/api': '*'
       '@opentelemetry/exporter-trace-otlp-proto': '*'
@@ -6342,15 +6346,6 @@ packages:
     resolution: {integrity: sha512-5nnx0yGyVUcY6t9RnWcARWtwT9F1D8O9rt08htPvnd49W1IgZtmLkhu9WfMzQj1cFxjHIO6connUNVW5k7AVyQ==}
     engines: {node: '>= 0.10'}
 
-  proxy-agent-negotiate@1.1.0:
-    resolution: {integrity: sha512-N8IBcM3UgCVzz2L2Lqv8DVntDnnC8/hiV4nEDUPkqq72TPUgYWjQc+bdZlBPZK9LzPAvOY//gAt0S0DApoOXWQ==}
-    engines: {node: '>= 20'}
-    peerDependencies:
-      kerberos: ^2.0.0
-    peerDependenciesMeta:
-      kerberos:
-        optional: true
-
   proxy-from-env@2.1.0:
     resolution: {integrity: sha512-cJ+oHTW1VAEa8cJslgmUZrc+sjRKgAKl3Zyse6+PV38hZe/V6Z14TbCuXcan9F9ghlz4QrFr2c92TNF82UkYHA==}
     engines: {node: '>=10'}
@@ -6384,6 +6379,11 @@ packages:
   rc@1.2.8:
     resolution: {integrity: sha512-y3bGgqKj3QBdxLbLkomlohkvsA8gdAiUQlSBJnBhfn+BPxg4bc62d8TcBW15wavDfgexCgccckhcZvywyQYPOw==}
     hasBin: true
+
+  react-compiler-runtime@1.0.0:
+    resolution: {integrity: sha512-rRfjYv66HlG8896yPUDONgKzG5BxZD1nV9U6rkm+7VCuvQc903C4MjcoZR4zPw53IKSOX9wMQVpA1IAbRtzQ7w==}
+    peerDependencies:
+      react: ^17.0.0 || ^18.0.0 || ^19.0.0 || ^0.0.0-experimental
 
   react-dom@19.2.4:
     resolution: {integrity: sha512-AXJdLo8kgMbimY95O2aKQqsz2iWi9jMgKJhRBAxECE4IFxfcazB2LmzloIoibJI3C12IlY20+KFaLv+71bUJeQ==}
@@ -7652,6 +7652,24 @@ packages:
       use-sync-external-store:
         optional: true
 
+  zustand@5.1.0:
+    resolution: {integrity: sha512-ciJZlP48M1PTQbVQq81CGVFxHTLpZNrFjKqwjtCU34AWuXTZT/jrF3p9+fI84Cf1eSCMLapxqBy/SNTfwOBuqA==}
+    engines: {node: '>=12.20.0'}
+    peerDependencies:
+      '@types/react': '>=18.0.0'
+      immer: '>=9.0.6'
+      react: '>=18.0.0'
+      use-sync-external-store: '>=1.2.0'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      immer:
+        optional: true
+      react:
+        optional: true
+      use-sync-external-store:
+        optional: true
+
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
@@ -7733,7 +7751,6 @@ snapshots:
       '@azure/core-util': 1.14.0
       tslib: 2.9.1
     transitivePeerDependencies:
-      - kerberos
       - supports-color
 
   '@azure/core-client@1.11.2':
@@ -7746,7 +7763,6 @@ snapshots:
       '@azure/logger': 1.4.0
       tslib: 2.9.1
     transitivePeerDependencies:
-      - kerberos
       - supports-color
 
   '@azure/core-http-compat@2.5.0(@azure/core-client@1.11.2)(@azure/core-rest-pipeline@1.25.1)':
@@ -7766,10 +7782,9 @@ snapshots:
       '@azure/core-tracing': 1.4.0
       '@azure/core-util': 1.14.0
       '@azure/logger': 1.4.0
-      '@typespec/ts-http-runtime': 0.3.10
+      '@typespec/ts-http-runtime': 0.3.11
       tslib: 2.9.1
     transitivePeerDependencies:
-      - kerberos
       - supports-color
 
   '@azure/core-tracing@1.4.0':
@@ -7779,10 +7794,9 @@ snapshots:
   '@azure/core-util@1.14.0':
     dependencies:
       '@azure/abort-controller': 2.2.0
-      '@typespec/ts-http-runtime': 0.3.10
+      '@typespec/ts-http-runtime': 0.3.11
       tslib: 2.9.1
     transitivePeerDependencies:
-      - kerberos
       - supports-color
 
   '@azure/identity@4.13.1':
@@ -7794,29 +7808,27 @@ snapshots:
       '@azure/core-tracing': 1.4.0
       '@azure/core-util': 1.14.0
       '@azure/logger': 1.4.0
-      '@azure/msal-browser': 5.29.1
+      '@azure/msal-browser': 5.30.0
       '@azure/msal-node': 5.6.0
       open: 10.2.0
       tslib: 2.9.1
     transitivePeerDependencies:
-      - kerberos
       - supports-color
 
   '@azure/logger@1.4.0':
     dependencies:
-      '@typespec/ts-http-runtime': 0.3.10
+      '@typespec/ts-http-runtime': 0.3.11
       tslib: 2.9.1
     transitivePeerDependencies:
-      - kerberos
       - supports-color
 
-  '@azure/msal-browser@5.29.1':
+  '@azure/msal-browser@5.30.0':
     dependencies:
-      '@azure/msal-common': 16.16.2
+      '@azure/msal-common': 16.17.0
 
   '@azure/msal-common@16.13.0': {}
 
-  '@azure/msal-common@16.16.2': {}
+  '@azure/msal-common@16.17.0': {}
 
   '@azure/msal-node@5.6.0':
     dependencies:
@@ -7836,7 +7848,6 @@ snapshots:
       events: 3.3.0
       tslib: 2.9.1
     transitivePeerDependencies:
-      - kerberos
       - supports-color
 
   '@babel/code-frame@7.29.0':
@@ -8004,7 +8015,7 @@ snapshots:
       '@babel/core': 7.29.0
       '@babel/helper-plugin-utils': 7.28.6
 
-  '@babel/runtime@7.29.14': {}
+  '@babel/runtime@7.29.15': {}
 
   '@babel/runtime@7.29.2': {}
 
@@ -9197,7 +9208,7 @@ snapshots:
       camelcase: 6.3.0
       decamelize: 1.2.0
       js-tiktoken: 1.0.21
-      langsmith: 0.13.0(openai@4.104.0(ws@8.23.0)(zod@4.6.7))(ws@8.23.0)
+      langsmith: 0.14.0(openai@4.104.0(ws@8.23.0)(zod@4.6.7))(ws@8.23.0)
       mustache: 4.2.0
       p-queue: 6.6.2
       uuid: 11.1.1
@@ -9515,13 +9526,13 @@ snapshots:
       '@remotion/timeline-utils': 4.0.544(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@rspack/core': 2.3.0
       '@rspack/plugin-react-refresh': 2.0.2(@rspack/core@2.3.0)(react-refresh@0.18.0)
-      css-loader: 7.1.4(@rspack/core@2.3.0)(webpack@5.105.0(esbuild@0.28.1)(postcss@8.5.33))
+      css-loader: 7.1.4(@rspack/core@2.3.0)(webpack@5.105.0(postcss@8.5.33))
       esbuild: 0.28.1
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
       react-refresh: 0.18.0
       remotion: 4.0.544(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      style-loader: 4.0.0(webpack@5.105.0(esbuild@0.28.1)(postcss@8.5.33))
+      style-loader: 4.0.0(webpack@5.105.0(postcss@8.5.33))
       webpack: 5.105.0(esbuild@0.28.1)(postcss@8.5.33)
     transitivePeerDependencies:
       - '@minify-html/node'
@@ -10322,7 +10333,7 @@ snapshots:
   '@testing-library/dom@10.4.1':
     dependencies:
       '@babel/code-frame': 7.29.7
-      '@babel/runtime': 7.29.14
+      '@babel/runtime': 7.29.15
       '@types/aria-query': 5.0.4
       aria-query: 5.3.0
       dom-accessibility-api: 0.5.16
@@ -10402,7 +10413,7 @@ snapshots:
 
   '@types/d3-drag@3.0.7':
     dependencies:
-      '@types/d3-selection': 3.0.11
+      '@types/d3-selection': 3.0.12
 
   '@types/d3-force@3.0.10': {}
 
@@ -10410,16 +10421,16 @@ snapshots:
     dependencies:
       '@types/d3-color': 3.1.3
 
-  '@types/d3-selection@3.0.11': {}
+  '@types/d3-selection@3.0.12': {}
 
   '@types/d3-transition@3.0.9':
     dependencies:
-      '@types/d3-selection': 3.0.11
+      '@types/d3-selection': 3.0.12
 
-  '@types/d3-zoom@3.0.8':
+  '@types/d3-zoom@3.0.9':
     dependencies:
       '@types/d3-interpolate': 3.0.4
-      '@types/d3-selection': 3.0.11
+      '@types/d3-selection': 3.0.12
 
   '@types/debug@4.1.13':
     dependencies:
@@ -10656,13 +10667,12 @@ snapshots:
       '@typescript-eslint/types': 8.57.2
       eslint-visitor-keys: 5.0.1
 
-  '@typespec/ts-http-runtime@0.3.10':
+  '@typespec/ts-http-runtime@0.3.11':
     dependencies:
-      http-proxy-agent: 9.1.0
-      https-proxy-agent: 9.1.0
+      http-proxy-agent: 7.0.2
+      https-proxy-agent: 7.0.6
       tslib: 2.9.1
     transitivePeerDependencies:
-      - kerberos
       - supports-color
 
   '@ungap/structured-clone@1.3.0': {}
@@ -10834,28 +10844,32 @@ snapshots:
 
   '@xtuc/long@4.2.2': {}
 
-  '@xyflow/react@12.10.2(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+  '@xyflow/react@13.0.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(use-sync-external-store@1.6.0(react@19.2.4))':
     dependencies:
-      '@xyflow/system': 0.0.76
+      '@xyflow/system': 1.0.1
       classcat: 5.0.5
       react: 19.2.4
+      react-compiler-runtime: 1.0.0(react@19.2.4)
       react-dom: 19.2.4(react@19.2.4)
-      zustand: 4.5.7(@types/react@19.2.14)(react@19.2.4)
+      zustand: 5.1.0(@types/react@19.2.14)(react@19.2.4)(use-sync-external-store@1.6.0(react@19.2.4))
+    optionalDependencies:
+      '@types/react': 19.2.14
+      '@types/react-dom': 19.2.3(@types/react@19.2.14)
     transitivePeerDependencies:
-      - '@types/react'
       - immer
+      - use-sync-external-store
 
-  '@xyflow/system@0.0.76':
+  '@xyflow/system@1.0.1':
     dependencies:
       '@types/d3-drag': 3.0.7
       '@types/d3-interpolate': 3.0.4
-      '@types/d3-selection': 3.0.11
+      '@types/d3-selection': 3.0.12
       '@types/d3-transition': 3.0.9
-      '@types/d3-zoom': 3.0.8
-      d3-drag: 3.0.0
-      d3-interpolate: 3.0.1
-      d3-selection: 3.0.0
-      d3-zoom: 3.0.0
+      '@types/d3-zoom': 3.0.9
+      d3-drag: 3.0.1
+      d3-interpolate: 3.0.2
+      d3-selection: 3.0.1
+      d3-zoom: 3.0.1
 
   abort-controller@3.0.0:
     dependencies:
@@ -10893,8 +10907,6 @@ snapshots:
       - supports-color
 
   agent-base@7.1.4: {}
-
-  agent-base@9.0.0: {}
 
   agentkeepalive@4.6.0:
     dependencies:
@@ -11388,7 +11400,7 @@ snapshots:
 
   crypt@0.0.2: {}
 
-  css-loader@7.1.4(@rspack/core@2.3.0)(webpack@5.105.0(esbuild@0.28.1)(postcss@8.5.33)):
+  css-loader@7.1.4(@rspack/core@2.3.0)(webpack@5.105.0(postcss@8.5.33)):
     dependencies:
       icss-utils: 5.1.0(postcss@8.5.33)
       postcss: 8.5.33
@@ -11411,16 +11423,18 @@ snapshots:
 
   csstype@3.2.3: {}
 
-  d3-color@3.1.0: {}
+  d3-color@3.1.1: {}
 
   d3-dispatch@3.0.1: {}
 
-  d3-drag@3.0.0:
-    dependencies:
-      d3-dispatch: 3.0.1
-      d3-selection: 3.0.0
+  d3-dispatch@3.0.2: {}
 
-  d3-ease@3.0.1: {}
+  d3-drag@3.0.1:
+    dependencies:
+      d3-dispatch: 3.0.2
+      d3-selection: 3.0.1
+
+  d3-ease@3.0.2: {}
 
   d3-force@3.0.0:
     dependencies:
@@ -11428,32 +11442,34 @@ snapshots:
       d3-quadtree: 3.0.1
       d3-timer: 3.0.1
 
-  d3-interpolate@3.0.1:
+  d3-interpolate@3.0.2:
     dependencies:
-      d3-color: 3.1.0
+      d3-color: 3.1.1
 
   d3-quadtree@3.0.1: {}
 
-  d3-selection@3.0.0: {}
+  d3-selection@3.0.1: {}
 
   d3-timer@3.0.1: {}
 
-  d3-transition@3.0.1(d3-selection@3.0.0):
-    dependencies:
-      d3-color: 3.1.0
-      d3-dispatch: 3.0.1
-      d3-ease: 3.0.1
-      d3-interpolate: 3.0.1
-      d3-selection: 3.0.0
-      d3-timer: 3.0.1
+  d3-timer@3.0.2: {}
 
-  d3-zoom@3.0.0:
+  d3-transition@3.0.2(d3-selection@3.0.1):
     dependencies:
-      d3-dispatch: 3.0.1
-      d3-drag: 3.0.0
-      d3-interpolate: 3.0.1
-      d3-selection: 3.0.0
-      d3-transition: 3.0.1(d3-selection@3.0.0)
+      d3-color: 3.1.1
+      d3-dispatch: 3.0.2
+      d3-ease: 3.0.2
+      d3-interpolate: 3.0.2
+      d3-selection: 3.0.1
+      d3-timer: 3.0.2
+
+  d3-zoom@3.0.1:
+    dependencies:
+      d3-dispatch: 3.0.2
+      d3-drag: 3.0.1
+      d3-interpolate: 3.0.2
+      d3-selection: 3.0.1
+      d3-transition: 3.0.2(d3-selection@3.0.1)
 
   data-uri-to-buffer@4.0.1: {}
 
@@ -12343,15 +12359,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  http-proxy-agent@9.1.0:
-    dependencies:
-      agent-base: 9.0.0
-      debug: 4.4.3
-      proxy-agent-negotiate: 1.1.0
-    transitivePeerDependencies:
-      - kerberos
-      - supports-color
-
   https-proxy-agent@5.0.1:
     dependencies:
       agent-base: 6.0.2
@@ -12364,15 +12371,6 @@ snapshots:
       agent-base: 7.1.4
       debug: 4.4.3
     transitivePeerDependencies:
-      - supports-color
-
-  https-proxy-agent@9.1.0:
-    dependencies:
-      agent-base: 9.0.0
-      debug: 4.4.3
-      proxy-agent-negotiate: 1.1.0
-    transitivePeerDependencies:
-      - kerberos
       - supports-color
 
   human-signals@2.1.0: {}
@@ -12735,7 +12733,7 @@ snapshots:
 
   kleur@3.0.3: {}
 
-  langsmith@0.13.0(openai@4.104.0(ws@8.23.0)(zod@4.6.7))(ws@8.23.0):
+  langsmith@0.14.0(openai@4.104.0(ws@8.23.0)(zod@4.6.7))(ws@8.23.0):
     dependencies:
       p-queue: 6.6.2
     optionalDependencies:
@@ -13984,8 +13982,6 @@ snapshots:
       forwarded: 0.2.0
       ipaddr.js: 1.9.1
 
-  proxy-agent-negotiate@1.1.0: {}
-
   proxy-from-env@2.1.0: {}
 
   punycode@2.3.1: {}
@@ -14019,6 +14015,10 @@ snapshots:
       minimist: 1.2.8
       strip-json-comments: 2.0.1
     optional: true
+
+  react-compiler-runtime@1.0.0(react@19.2.4):
+    dependencies:
+      react: 19.2.4
 
   react-dom@19.2.4(react@19.2.4):
     dependencies:
@@ -14553,7 +14553,7 @@ snapshots:
     dependencies:
       js-tokens: 9.0.1
 
-  style-loader@4.0.0(webpack@5.105.0(esbuild@0.28.1)(postcss@8.5.33)):
+  style-loader@4.0.0(webpack@5.105.0(postcss@8.5.33)):
     dependencies:
       webpack: 5.105.0(esbuild@0.28.1)(postcss@8.5.33)
 
@@ -15366,6 +15366,12 @@ snapshots:
       react: 19.2.4
 
   zustand@5.0.12(@types/react@19.2.14)(react@19.2.4)(use-sync-external-store@1.6.0(react@19.2.4)):
+    optionalDependencies:
+      '@types/react': 19.2.14
+      react: 19.2.4
+      use-sync-external-store: 1.6.0(react@19.2.4)
+
+  zustand@5.1.0(@types/react@19.2.14)(react@19.2.4)(use-sync-external-store@1.6.0(react@19.2.4)):
     optionalDependencies:
       '@types/react': 19.2.14
       react: 19.2.4
