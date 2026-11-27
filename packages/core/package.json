@@ -147,7 +147,7 @@
     "@modelcontextprotocol/server-sequential-thinking": "2025.12.18",
     "better-sqlite3": "^13.2.0",
     "croner": "^10.0.1",
-    "dotenv": "^16.4.0",
+    "dotenv": "^18.0.10",
     "fastify": "^5.12.8",
     "graphql": "^16.8.0",
     "mammoth": "^1.12.0",
