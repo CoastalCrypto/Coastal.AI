@@ -153,7 +153,7 @@
     "mammoth": "^1.12.0",
     "mem0ai": "^2.4.2",
     "nodejs-polars": "^0.24.1",
-    "onnxruntime-node": "^1.24.3",
+    "onnxruntime-node": "^1.31.1",
     "pdf-parse": "^2.4.5",
     "playwright": "^1.59.1",
     "ssh2": "^1.17.0",
