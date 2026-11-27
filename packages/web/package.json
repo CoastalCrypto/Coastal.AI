@@ -18,7 +18,7 @@
     "@rive-app/react-canvas": "^4.39.0",
     "@xyflow/react": "^12.10.2",
     "d3-force": "^3.0.0",
-    "graphql": "^16.8.0",
+    "graphql": "^17.1.0",
     "graphql-tag": "^2.12.6",
     "gsap": "^3.15.1",
     "lottie-react": "^3.1.2",
