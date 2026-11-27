@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@coastal-ai/core": "workspace:*",
-    "@types/ws": "^8.18.1",
+    "@types/ws": "^8.18.2",
     "better-sqlite3": "^13.2.0",
     "dotenv": "^16.4.0",
     "ws": "^8.21.0"
@@ -22,9 +22,9 @@
   },
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0",
-    "@types/node": "^22.0.0",
+    "@types/node": "^26.6.6",
     "ts-node": "^10.9.0",
-    "typescript": "~5.9.3",
-    "vitest": "^1.6.0"
+    "typescript": "~7.0.2",
+    "vitest": "^5.1.1"
   }
 }
